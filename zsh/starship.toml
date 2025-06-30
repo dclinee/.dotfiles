@@ -1,0 +1,63 @@
+# 精简高效的 Starship 配置
+format = """
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_state\
+$git_status\
+$cmd_duration\
+$line_break\
+$character
+"""
+
+# 禁用不需要的模块
+[aws]
+disabled = true
+
+[gcloud]
+disabled = true
+
+[helm]
+disabled = true
+
+[kubernetes]
+disabled = true
+
+# 自定义模块
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[✗](bold red)"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = false
+style = "bold blue"
+
+[git_branch]
+symbol = "🌱 "
+style = "bold green"
+
+[git_status]
+style = "bold yellow"
+
+[cmd_duration]
+format = "[$duration]($style) "
+min_time = 1000
+style = "bold yellow"
+
+[line_break]
+disabled = false
+
+[username]
+style_user = "bold purple"
+style_root = "bold red"
+format = "[$user]($style)@"
+disabled = false
+show_always = false
+
+[hostname]
+ssh_only = false
+format = "[$hostname]($style) "
+style = "bold green"
+trim_at = ".local"
