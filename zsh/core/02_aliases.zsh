@@ -12,7 +12,7 @@ alias lt='ls -T'
 alias grep='grep --color=auto'
 alias df='df -h'
 alias du='du -h'
-alias vim='nvim'
+#alias vim='nvim'
 
 # Git 别名
 alias g='git'

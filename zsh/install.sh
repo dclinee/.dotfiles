@@ -25,17 +25,17 @@ if ! command -v starship > /dev/null; then
 fi
 
 # 安装必备工具
-if ! command -v exa > /dev/null; then
+if ! command -v eza > /dev/null; then
   if command -v brew > /dev/null; then
-    brew install exa zoxide
+    brew install eza zoxide
   elif command -v apt > /dev/null; then
-    sudo apt install -y exa zoxide
+    sudo apt install -y eza zoxide
   elif command -v dnf > /dev/null; then
-    sudo dnf install -y exa zoxide
+    sudo dnf install -y eza zoxide
   elif command -v pacman > /dev/null; then
-    sudo pacman -S --noconfirm exa zoxide
+    sudo pacman -S --noconfirm eza zoxide
   else
-    echo "无法安装 exa 和 zoxide，请手动安装"
+    echo "无法安装 eza 和 zoxide，请手动安装"
   fi
 fi
 

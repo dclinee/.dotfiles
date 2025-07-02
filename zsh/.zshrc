@@ -30,3 +30,4 @@ esac
 
 # 加载本地覆盖配置
 [[ -f "${HOME}/.zshrc.local" ]] && source "${HOME}/.zshrc.local"
+eval "$(starship init zsh)"
