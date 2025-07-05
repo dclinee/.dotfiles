@@ -1,14 +1,23 @@
-# ~/.dotfiles/zsh/
-├── core/
-│   ├── 00_env.zsh          # 环境变量
-│   ├── 01_options.zsh      # Zsh 选项
-│   ├── 02_aliases.zsh      # 别名
-│   ├── 03_functions.zsh    # 自定义函数
-│   ├── 04_plugins.zsh      # 插件管理
-│   └── 05_starship.zsh     # Starship 配置
-├── platform/
-│   ├── linux.zsh           # Linux 专用配置
-│   └── macos.zsh           # macOS 专用配置
-├── .zshrc                  # 主入口文件
-├── install.sh              # 安装脚本
-└── starship.toml           # Starship 配置文件
+# ZSH 配置系统
+
+## 架构演进路线
+
+## 沙盒模式操作矩阵
+| 模式        | 参数              | 日志保留 | 环境隔离 |
+|-------------|-------------------|----------|----------|
+| 生产模式    | 无参数            | 否       | 否       |
+| 标准沙盒    | --sandbox         | 否       | 是       |
+| 调试沙盒    | --sandbox --debug | 是       | 是       |
+
+## 核心能力清单
+1. **环境隔离**：通过SANDBOX_DIR实现
+2. **配置继承**：$ZDOTDIR/.zshrc.local
+3. **故障溯源**：ZSH_DEBUG=1 追踪加载过程
+
+## 完整性验证
+```bash
+# 检查配置加载完整性
+zgrep -h '^source' core/* | sort -u
+
+# 验证沙盒边界
+[[ "$HOME" == *dotfiles-sandbox* ]] && echo "隔离生效"

@@ -1,5 +1,28 @@
 # 忽略日志文件
 *.log
+logs/
+
+# IDE配置
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 系统生成文件
+.DS_Store
+Thumbs.db
+
+# 沙盒环境
+dotfiles-sandbox-*/
+
+# 依赖目录
+node_modules/
+
+# 编译产物
+*.o
+*.class
+*.exe
+*.log
 
 # 忽略测试目录
 tmp/

@@ -24,7 +24,12 @@ export HISTFILE="${HOME}/.cache/zsh/history"
 # Starship 配置路径
 export STARSHIP_CONFIG="${ZSH_HOME}/starship.toml"
 
-# 对于 M1 Mac 的 Homebrew
+# ARM架构Homebrew路径
 if [[ "$(uname -m)" == "arm64" ]]; then
   export PATH="/opt/homebrew/bin:$PATH"
+fi
+
+# x86架构Linux专用路径
+if [[ "$(uname -s)" == "Linux" ]]; then
+  export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 fi

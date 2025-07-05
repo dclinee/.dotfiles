@@ -46,4 +46,3 @@ zinit light-mode for \
   zdharma-continuum/zinit-annex-bin-gem-node \
   zsh-users/zsh-autosuggestions \
   zsh-users/zsh-syntax-highlighting
-export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
