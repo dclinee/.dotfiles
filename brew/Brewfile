@@ -1,0 +1,9 @@
+# 加载平台特定的 Brewfile
+if OS.mac?
+  brewfile 'Brewfile.macos'
+elsif OS.linux?
+  brewfile 'Brewfile.linux'
+end
+
+# 加载通用 Brewfile
+brewfile 'Brewfile.common'

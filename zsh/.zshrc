@@ -11,7 +11,8 @@ ZSH_HOME="${DOTFILES_DIR}"
 # 加载核心模块
 for config in ${ZSH_HOME}/core/*.zsh; do
   # 跳过非标准文件和目录
-  [[ ${config} =~ ".*/core/\..*" ]] && continue
+  # 原代码（行13）
+  [[ ${config} =~ ".*/core/\\..*" ]] && continue
   [[ -d ${config} ]] && continue
   
   source "${config}"
@@ -31,3 +32,17 @@ esac
 # 加载本地覆盖配置
 [[ -f "${HOME}/.zshrc.local" ]] && source "${HOME}/.zshrc.local"
 eval "$(starship init zsh)"
+
+# 使用 zinit 的配置示例
+if [[ ! -f "${ZSH_HOME}/lib/zinit.zsh" ]]; then
+  [[ ! -d "${ZSH_HOME}/lib/zinit" ]] && \
+    git clone https://github.com/zdharma-continuum/zinit "${ZSH_HOME}/lib/zinit"
+fi
+source "${ZSH_HOME}/lib/zinit/zinit.zsh"
+
+# 异步加载插件
+zinit light-mode for \
+  zdharma-continuum/zinit-annex-as-monitor \
+  zdharma-continuum/zinit-annex-bin-gem-node \
+  zsh-users/zsh-autosuggestions \
+  zsh-users/zsh-syntax-highlighting

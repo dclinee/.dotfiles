@@ -1,0 +1,55 @@
+\u001b[34m[INFO] 正在检测清华镜像源...\u001b[0m
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0 22268    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+HTTP/2 200 
+server: nginx/1.22.1
+date: Thu, 03 Jul 2025 16:23:13 GMT
+content-type: text/html
+content-length: 22268
+last-modified: Tue, 10 Jun 2025 11:07:06 GMT
+vary: Accept-Encoding
+etag: "684811da-56fc"
+strict-transport-security: max-age=31536000
+x-tuna-mirror-id: nanomirrors
+accept-ranges: bytes
+
+HTTP/2 301 
+server: nginx/1.22.1
+date: Thu, 03 Jul 2025 16:23:14 GMT
+content-type: text/html
+content-length: 169
+location: https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles/api/
+strict-transport-security: max-age=31536000
+x-tuna-mirror-id: nanomirrors
+
+Reading package lists...
+Building dependency tree...
+Reading state information...
+ca-certificates is already the newest version (20240203).
+0 upgraded, 0 newly installed, 0 to remove and 96 not upgraded.
+1 not fully installed or removed.
+After this operation, 0 B of additional disk space will be used.
+Setting up postfix (3.8.6-1build2) ...
+
+Postfix (main.cf) configuration was not changed.  If you need to make changes, 
+edit /etc/postfix/main.cf (and others) as needed.  To view Postfix 
+configuration values, see postconf(1).
+
+After modifying main.cf, be sure to run 'systemctl reload postfix'.
+
+Running newaliases
+newaliases: fatal: bad string length 0 < 1: mydomain = 
+dpkg: error processing package postfix (--configure):
+ installed postfix package post-installation script subprocess returned error exit status 75
+Errors were encountered while processing:
+ postfix
+\u001b[33m[WARN] 证书更新失败\u001b[0m
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+=== 环境校验 ===
+forgit not found

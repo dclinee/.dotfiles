@@ -1,0 +1,15 @@
+\u001b[34m[INFO] 初始化测试环境\u001b[0m
+Setting up postfix (3.8.6-1build2) ...
+
+Postfix (main.cf) configuration was not changed.  If you need to make changes, 
+edit /etc/postfix/main.cf (and others) as needed.  To view Postfix 
+configuration values, see postconf(1).
+
+After modifying main.cf, be sure to run 'systemctl reload postfix'.
+
+Running newaliases
+newaliases: fatal: bad string length 0 < 1: mydomain = 
+dpkg: error processing package postfix (--configure):
+ installed postfix package post-installation script subprocess returned error exit status 75
+Errors were encountered while processing:
+ postfix

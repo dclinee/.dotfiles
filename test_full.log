@@ -1,0 +1,23 @@
+\u001b[34m[INFO] 正在检测清华镜像源...\u001b[0m
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0 22268    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+HTTP/2 200 
+server: nginx/1.22.1
+date: Thu, 03 Jul 2025 16:16:01 GMT
+content-type: text/html
+content-length: 22268
+last-modified: Tue, 10 Jun 2025 11:07:06 GMT
+vary: Accept-Encoding
+etag: "684811da-56fc"
+strict-transport-security: max-age=31536000
+x-tuna-mirror-id: nanomirrors
+accept-ranges: bytes
+
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+zsh:source:1: no such file or directory: /zsh/.zshrc
