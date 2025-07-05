@@ -51,6 +51,20 @@ install_plugin() {
   fi
 }
 
+verify_checksum() {
+  local file=$1
+  local expected=$2
+  actual=$(sha256sum $file | cut -d' ' -f1)
+  [[ "$actual" == "$expected" ]] || return 1
+}
+
+verify_zshrc() {
+  diff -u <(grep -v '# Generated' .zshrc) <(grep -v '# Generated' .zshrc.backup) || {
+    echo "⚠️  .zshrc has manual modifications"
+    return 1
+  }
+}
+
 install_plugin "zsh-autosuggestions" "https://github.com/zsh-users/zsh-autosuggestions"
 install_plugin "zsh-syntax-highlighting" "https://github.com/zsh-users/zsh-syntax-highlighting"
 install_plugin "zoxide" "https://github.com/ajeetdsouza/zoxide"

@@ -1,0 +1,17 @@
+# macOS专属生态
+brew "mas"
+brew "iterm2"
+brew "visual-studio-code"
+
+# 系统增强套件
+cask "homebrew/cask-versions/google-chrome-canary"
+
+# 开发工作流
+brew "postgresql", restart_service: true
+brew "redis", restart_service: :changed
+
+# 生产力套件
+cask "alfred"
+
+# 引用通用配置
+eval "$(cat ../Brewfile.common)"

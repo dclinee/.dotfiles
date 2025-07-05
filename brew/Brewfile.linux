@@ -1,0 +1,18 @@
+# Linux专属生态
+brew "wget"
+brew "htop"
+brew "neofetch"
+
+# 系统级工具
+brew "sysbench"
+brew "inxi"
+
+# 开发基础设施
+brew "gcc"
+brew "llvm"
+
+# 图形环境增强
+cask "xquartz"
+
+# 引用通用配置
+eval "$(cat ../Brewfile.common)"

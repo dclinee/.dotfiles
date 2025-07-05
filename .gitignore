@@ -1,2 +1,13 @@
-git/gitconfig.local.symlink
-Brewfile.lock.json
+# 忽略日志文件
+*.log
+
+# 忽略测试目录
+tmp/
+
+# 忽略IDE配置文件
+.vscode/
+.idea/
+
+# 忽略编译产物
+*.deb
+*.pkg

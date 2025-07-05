@@ -1,0 +1,4 @@
+LOG_FILE="${HOME}/.dotfiles/brew-sync.log"
+log() {
+  echo "[$(date +%FT%T)] $*" | tee -a $LOG_FILE
+}

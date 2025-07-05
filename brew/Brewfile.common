@@ -1,0 +1,18 @@
+# 通用开发工具
+brew "git"
+brew "gh"
+brew "python"
+brew "node"
+
+# 跨平台CLI工具
+brew "fzf"
+brew "ripgrep"
+brew "bat"
+brew "eza"
+
+# 开发环境依赖
+brew "docker"
+brew "docker-compose"
+
+# 通用配置
+cask "font-fira-code"
