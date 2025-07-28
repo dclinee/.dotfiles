@@ -7,10 +7,13 @@
 # 基础路径设置
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export PATH="${HOME}/.local/bin:${PATH}"
+# ZSH 配置入口
+export ZSH_HOME="${HOME}/.dotfiles/zsh"
+export ZINIT_DIR="${ZSH_HOME}/plugins/zinit"
 
 # 默认编辑器
-export EDITOR='nvim'
-export VISUAL='nvim'
+export EDITOR='vim'
+export VISUAL='vim'
 
 # 语言设置
 export LANG='en_US.UTF-8'

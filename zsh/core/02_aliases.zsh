@@ -5,7 +5,7 @@
 # ======================
 
 # 通用别名
-alias ls='exa --group-directories-first --icons'
+alias ls='eza --group-directories-first --icons'
 alias ll='ls -l'
 alias la='ls -a'
 alias lt='ls -T'

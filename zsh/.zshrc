@@ -7,42 +7,51 @@
 # 基础配置目录
 DOTFILES_DIR="${HOME}/.dotfiles/zsh"
 ZSH_HOME="${DOTFILES_DIR}"
+# ZSH 配置入口
+export ZSH_HOME="${HOME}/.dotfiles/zsh"
+export ZINIT_DIR="${ZSH_HOME}/plugins/zinit"
 
-# 加载核心模块
-for config in ${ZSH_HOME}/core/*.zsh; do
-  # 跳过非标准文件和目录
-  # 原代码（行13）
-  [[ ${config} =~ ".*/core/\\..*" ]] && continue
-  [[ -d ${config} ]] && continue
-  
-  source "${config}"
+# 初始化 zinit
+if [ -f "${ZINIT_DIR}/zinit.zsh" ]; then
+  source "${ZINIT_DIR}/zinit.zsh"
+else
+  echo "警告：zinit 未找到，请重新运行 install.sh"
+fi
+
+# 加载核心配置模块
+for file in "${ZSH_HOME}/core"/*.zsh; do
+  [ -f "$file" ] && [ ! -d "$file" ] && source "$file"
 done
-unset config
 
-# 加载平台专用配置
+# 按系统加载平台配置
 case "$OSTYPE" in
-  darwin*) 
-    [[ -f "${ZSH_HOME}/platform/macos.zsh" ]] && source "${ZSH_HOME}/platform/macos.zsh" 
+  darwin*)
+    [ -f "${ZSH_HOME}/platform/darwin.zsh" ] && source "${ZSH_HOME}/platform/darwin.zsh"
     ;;
-  linux*) 
-    [[ -f "${ZSH_HOME}/platform/linux.zsh" ]] && source "${ZSH_HOME}/platform/linux.zsh" 
+  linux*)
+    [ -f "${ZSH_HOME}/platform/linux.zsh" ] && source "${ZSH_HOME}/platform/linux.zsh"
     ;;
 esac
 
-# 加载本地覆盖配置
-[[ -f "${HOME}/.zshrc.local" ]] && source "${HOME}/.zshrc.local"
-eval "$(starship init zsh)"
+# 加载 zinit 插件配置
+zinit load zsh-users/zsh-autosuggestions
+zinit load zsh-users/zsh-syntax-highlighting
+zinit load wfxr/forgit
+zinit load zsh-users/zsh-history-substring-search
+zinit load agkozak/zsh-z
 
-# 使用 zinit 的配置示例
-if [[ ! -f "${ZSH_HOME}/lib/zinit.zsh" ]]; then
-  [[ ! -d "${ZSH_HOME}/lib/zinit" ]] && \
-    git clone https://github.com/zdharma-continuum/zinit "${ZSH_HOME}/lib/zinit"
+# 配置历史命令搜索插件
+bindkey '^[[A' history-substring-search-up   # 上箭头
+bindkey '^[[B' history-substring-search-down # 下箭头
+
+# 初始化 zoxide
+[ -f "${ZSH_HOME}/plugins/zoxide/init.zsh" ] && source "${ZSH_HOME}/plugins/zoxide/init.zsh"
+
+# 初始化 starship 主题
+if command -v starship > /dev/null; then
+  eval "$(starship init zsh)"
 fi
-source "${ZSH_HOME}/lib/zinit/zinit.zsh"
 
-# 异步加载插件
-zinit light-mode for \
-  zdharma-continuum/zinit-annex-as-monitor \
-  zdharma-continuum/zinit-annex-bin-gem-node \
-  zsh-users/zsh-autosuggestions \
-  zsh-users/zsh-syntax-highlighting
+# 加载本地自定义配置（不会被仓库覆盖）
+[ -f "${HOME}/.zshrc.local" ] && source "${HOME}/.zshrc.local"
+
