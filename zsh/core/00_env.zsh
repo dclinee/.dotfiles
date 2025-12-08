@@ -12,8 +12,8 @@ export ZSH_HOME="${HOME}/.dotfiles/zsh"
 export ZINIT_DIR="${ZSH_HOME}/plugins/zinit"
 
 # 默认编辑器
-export EDITOR='vim'
-export VISUAL='vim'
+export EDITOR='emacs'
+export VISUAL='emacs'
 
 # 语言设置
 export LANG='en_US.UTF-8'
