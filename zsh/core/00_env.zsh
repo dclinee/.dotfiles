@@ -78,7 +78,7 @@ if [[ -d "${PYENV_ROOT}" ]]; then
   export PATH="${PYENV_ROOT}/bin:${PATH}"
   eval "$(pyenv init --path)" 2>/dev/null || true
   eval "$(pyenv init -s)" 2>/dev/null || true
-  
+
   # 添加 pyenv virtualenv 支持
   if command -v pyenv-virtualenv > /dev/null; then
     eval "$(pyenv virtualenv-init -)" 2>/dev/null || true
@@ -105,9 +105,4 @@ mkdir -p "${HOME}/.virtualenvs" "${HOME}/.cache/pip" 2>/dev/null
 # 如果当前目录存在 .venv 目录，自动激活
 if [[ -d ".venv" ]]; then
   source .venv/bin/activate 2>/dev/null || true
-fi
-
-# 创建Vim配置符号链接
-if [[ ! -L "${HOME}/.vimrc" ]] || [[ "$(readlink "${HOME}/.vimrc")" != "${HOME}/.dotfiles/vim/.vimrc" ]]; then
-  ln -sf "${HOME}/.dotfiles/vim/.vimrc" "${HOME}/.vimrc"
 fi
