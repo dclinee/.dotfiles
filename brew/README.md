@@ -1,7 +1,7 @@
 # Homebrew 生态管理模块
 
 ## 架构设计
-```
+``` 
 brew/
 ├── Brewfile.common    # 跨平台通用包
 ├── Brewfile.linux    # Linux专属生态
@@ -68,4 +68,4 @@ tail -f /tmp/brew-install.log
 2. 优先使用formula替代cask
 3. 使用 `brew deps --tree` 分析依赖
 
-> 最后更新: {{UPDATE_DATE}}
+> 最后更新: 2025-12-09

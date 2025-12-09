@@ -1,4 +1,59 @@
+#!/usr/bin/env bash
+# 同步 Brew 配置和包
+
 LOG_FILE="${HOME}/.dotfiles/brew-sync.log"
+
+# 日志函数
 log() {
-  echo "[$(date +%FT%T)] $*" | tee -a $LOG_FILE
+  echo "[$(date +%FT%T)] $*" | tee -a "$LOG_FILE"
 }
+
+# 检查 Brew 是否安装
+check_brew() {
+  if ! command -v brew > /dev/null; then
+    log "错误：Brew 未安装"
+    exit 1
+  fi
+}
+
+# 同步函数
+sync_brew() {
+  log "开始同步 Brew 配置..."
+  
+  # 更新 Brew 自身
+  log "更新 Brew 自身..."
+  brew update
+  
+  # 升级已安装的包
+  log "升级已安装的包..."
+  brew upgrade
+  
+  # 清理旧版本
+  log "清理旧版本..."
+  brew cleanup
+  
+  # 检查是否有过时的包
+  log "检查过时的包..."
+  brew outdated
+  
+  # 同步 Brewfile
+  log "同步 Brewfile..."
+  if [ -f "${HOME}/.dotfiles/brew/Brewfile" ]; then
+    brew bundle install --file="${HOME}/.dotfiles/brew/Brewfile" --no-lock
+  fi
+  
+  # 检查 Brew 运行状况
+  log "检查 Brew 运行状况..."
+  brew doctor
+  
+  log "Brew 同步完成！"
+}
+
+# 主函数
+main() {
+  check_brew
+  sync_brew
+}
+
+# 执行主函数
+main

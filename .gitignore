@@ -1,4 +1,4 @@
-# 忽略日志文件
+# 日志文件
 *.log
 logs/
 
@@ -22,15 +22,45 @@ node_modules/
 *.o
 *.class
 *.exe
-*.log
-
-# 忽略测试目录
-tmp/
-
-# 忽略IDE配置文件
-.vscode/
-.idea/
-
-# 忽略编译产物
 *.deb
 *.pkg
+
+# 临时目录
+tmp/
+temp/
+
+# Zsh 相关文件
+*.zwc
+.zcompdump*
+.cache/zsh/
+.zsh_history
+
+# Zinit 插件管理器
+.zinit/
+.local/share/zinit/
+
+# Starship 相关
+.starship/
+
+# 本地配置文件
+*.local
+*.local.zsh
+
+# 测试相关
+.coverage
+coverage/
+*.pyc
+__pycache__/
+
+# 权限相关
+*.pem
+*.key
+*.crt
+
+# 安装脚本生成的文件
+*.bak
+*.orig
+
+# 其他临时文件
+*~
+._*
