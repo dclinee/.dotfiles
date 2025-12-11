@@ -8,7 +8,8 @@
 - **现代化 Zsh 配置**：基于 Zsh 5.9+，提供高效的命令行体验
 - **插件管理**：使用 Zinit 作为插件管理器，支持并行加载和异步安装
 - **美观主题**：集成 Starship 主题，提供现代化的提示符设计
-- **跨平台支持**：完美兼容 Linux (Ubuntu/Debian) 和 macOS
+- **Wezterm 终端支持**：跨平台终端配置，提供现代化的终端体验
+- **跨平台支持**：完美兼容 Linux (Ubuntu/Debian)、macOS 和 Windows
 - **自动配置**：一键安装脚本，自动处理依赖和配置
 - **模块化设计**：核心配置、插件、主题分离，易于维护和扩展
 
@@ -42,8 +43,11 @@ git clone https://github.com/dclinee/dotfiles.git ~/.dotfiles
 # 进入目录
 cd ~/.dotfiles
 
-# 运行安装脚本
+# 运行 Zsh 安装脚本
 ./zsh/install.sh
+
+# 运行 Wezterm 配置安装脚本 (可选)
+./wezterm/install.sh
 ```
 
 ### 使用国内镜像加速

@@ -24,10 +24,4 @@ esac
 # 加载本地自定义配置（不会被仓库覆盖）
 [ -f "${HOME}/.zshrc.local" ] && source "${HOME}/.zshrc.local"
 
-# Dotfiles Python配置
-export PYTHONSTARTUP="/home/dclinee/.dotfiles/python/pythonrc.py"
-export PIP_CONFIG_FILE="/home/dclinee/.dotfiles/python/pip.conf"
 
-# Dotfiles Python配置
-export PYTHONSTARTUP="/home/dclinee/.dotfiles/python/pythonrc.py"
-export PIP_CONFIG_FILE="/home/dclinee/.dotfiles/python/pip.conf"

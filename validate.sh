@@ -94,7 +94,8 @@ validate_functionality() {
   log INFO "验证功能..."
   
   # 复制配置到临时目录
-  rsync -a --exclude='*.md' "${DOTFILES_DIR}/zsh" "${DOTFILES_DIR}/brew" "${DOTFILES_DIR}/vim" "${temp_dir}/"
+  rsync -a --exclude='*.md' "${DOTFILES_DIR}/zsh" "${DOTFILES_DIR}/brew" "${DOTFILES_DIR}/vim" "${DOTFILES_DIR}/wezterm" "${temp_dir}/"
+  chmod -R +x "${temp_dir}/wezterm/install.sh" "${temp_dir}/wezterm/setup_link.sh" 2>/dev/null || true
   chmod -R +x "${temp_dir}/zsh/install.sh" "${temp_dir}/brew/install.sh" 2>/dev/null || true
   
   # 验证Zsh配置 - 只检查语法错误，忽略非致命警告
@@ -127,6 +128,38 @@ validate_functionality() {
   # 验证Vim配置 - 跳过语法检查以避免交互式编辑器
   log INFO "跳过Vim配置语法检查..."
   log SUCCESS "Vim配置验证跳过"
+  
+  # 验证Wezterm配置 - 只检查语法错误
+  log INFO "验证Wezterm配置..."
+  
+  # 检查所有wezterm配置文件
+  local wezterm_files=(
+    "${temp_dir}/wezterm/wezterm.lua"
+    "${temp_dir}/wezterm/core"/*.lua
+    "${temp_dir}/wezterm/platform"/*.lua
+  )
+  
+  local all_valid_wezterm=true
+  for file in "${wezterm_files[@]}"; do
+    if [[ -f "${file}" ]]; then
+      # 使用luac检查Lua语法（如果可用）
+      if command -v luac &> /dev/null; then
+        if ! luac -p "${file}"; then
+          log ERROR "${file} Lua语法检查失败"
+          all_valid_wezterm=false
+        fi
+      else
+        log INFO "跳过${file}语法检查，因为luac不可用"
+      fi
+    fi
+  done
+  
+  if $all_valid_wezterm; then
+    log SUCCESS "Wezterm配置验证通过"
+  else
+    log ERROR "Wezterm配置验证失败"
+    return 1
+  fi
   
   # 注释掉实际的Vim验证，因为它会打开交互式编辑器
   # 检查所有vim配置文件

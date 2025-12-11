@@ -85,10 +85,9 @@ if [[ -d "${PYENV_ROOT}" ]]; then
   fi
 fi
 
-# 添加 dotfiles python 模块路径
-export PYTHONPATH="${HOME}/.dotfiles/python:${PYTHONPATH}"
-# 添加本地 Python 库路径
-export PYTHONPATH="${HOME}/.local/lib/python3.*/site-packages:${PYTHONPATH}"
+# 直接设置 Python 模块路径，避免重复
+unset PYTHONPATH
+export PYTHONPATH="${HOME}/.local/lib/python3.*/site-packages:${HOME}/.dotfiles/python"
 
 # Python 配置文件
 export PYTHONSTARTUP="${HOME}/.dotfiles/python/pythonrc.py"
