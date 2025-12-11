@@ -21,6 +21,17 @@ end
 
 local function is_windows() 
   return wezterm.target_triple:find 'windows' ~= nil 
+end
+
+-- Lua 内置文件存在检查函数
+local function file_exists(name)
+    local f = io.open(name, "r")
+    if f then
+        io.close(f)
+        return true
+    else
+        return false
+    end
 end 
 
 -- 获取配置目录路径
@@ -47,7 +58,7 @@ end
 -- 加载平台特定配置
 if is_macos() then
   local macos_file = wezterm_dir .. '/platform/macos.lua'
-  if wezterm.path.file_exists(macos_file) then
+  if file_exists(macos_file) then
     local macos_config = dofile(macos_file)
     for k, v in pairs(macos_config) do
       if type(v) == 'table' and type(config[k]) == 'table' then
@@ -61,7 +72,7 @@ if is_macos() then
   end
 elseif is_linux() then
   local linux_file = wezterm_dir .. '/platform/linux.lua'
-  if wezterm.path.file_exists(linux_file) then
+  if file_exists(linux_file) then
     local linux_config = dofile(linux_file)
     for k, v in pairs(linux_config) do
       if type(v) == 'table' and type(config[k]) == 'table' then
@@ -75,7 +86,7 @@ elseif is_linux() then
   end
 elseif is_windows() then
   local windows_file = wezterm_dir .. '/platform/windows.lua'
-  if wezterm.path.file_exists(windows_file) then
+  if file_exists(windows_file) then
     local windows_config = dofile(windows_file)
     for k, v in pairs(windows_config) do
       if type(v) == 'table' and type(config[k]) == 'table' then
