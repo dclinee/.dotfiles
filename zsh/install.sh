@@ -52,16 +52,13 @@ echo_error() {
 }
 
 echo_separator() {
-exec > >(tee -a ${LOG_FILE}) 2>&1
   echo -e "${SEPARATOR}"
 }
 
 echo_title() {
   echo_separator
-exec > >(tee -a ${LOG_FILE}) 2>&1
   echo -e "${BOLD}${CYAN}${1}${RESET}"
   echo_separator
-exec > >(tee -a ${LOG_FILE}) 2>&1
 }
 
 # 开始安装
@@ -204,14 +201,12 @@ main() {
   install_essential_tools
   
   echo_separator
-exec > >(tee -a ${LOG_FILE}) 2>&1
   
   # 安装并初始化 zinit
   install_zinit
   init_zinit
   
   echo_separator
-exec > >(tee -a ${LOG_FILE}) 2>&1
   
   # 通过 zinit 安装插件
   echo_step "安装 zinit 插件..."
@@ -222,13 +217,11 @@ exec > >(tee -a ${LOG_FILE}) 2>&1
   install_plugin "agkozak/zsh-z" "目录跳转增强"
   
   echo_separator
-exec > >(tee -a ${LOG_FILE}) 2>&1
   
   # 配置 Python 环境
   install_python_config
   
   echo_separator
-exec > >(tee -a ${LOG_FILE}) 2>&1
   
   # 初始化 zoxide
   if command -v zoxide > /dev/null; then
@@ -244,9 +237,7 @@ exec > >(tee -a ${LOG_FILE}) 2>&1
   echo -e "${BOLD}${WHITE}source ~/.zshrc${RESET}"
   echo -e "${BOLD}${YELLOW}${ARROW} 或重启终端${RESET}"
   echo_separator
-exec > >(tee -a ${LOG_FILE}) 2>&1
 }
 
 # 执行主流程
 main
-
