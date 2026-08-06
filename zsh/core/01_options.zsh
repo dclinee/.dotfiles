@@ -17,13 +17,22 @@ zstyle ':completion:*:descriptions' format '[%d]'
 # 补全描述
 zstyle ':completion:*:options' description 'yes'
 zstyle ':completion:*:options' auto-description '%d'
-# 补全缓存
-typeset -i updated_at=$(date +'%j' -r "${HOME}/.cache/zsh/zcompdump" 2>/dev/null || echo 0)
-if [ $(date +'%j') != $updated_at ]; then
+# 补全缓存 - 每天检查一次
+local _today=$(date +'%Y-%m-%d')
+local _compdump_date=""
+if [[ -f "${HOME}/.cache/zsh/zcompdump" ]]; then
+  if [[ "$(uname)" == "Darwin" ]]; then
+    _compdump_date=$(stat -f '%Sm' -t '%Y-%m-%d' "${HOME}/.cache/zsh/zcompdump" 2>/dev/null || echo "")
+  else
+    _compdump_date=$(date -d "@$(stat -c %Y "${HOME}/.cache/zsh/zcompdump" 2>/dev/null || echo 0)" +'%Y-%m-%d' 2>/dev/null || echo "")
+  fi
+fi
+if [[ "$_today" != "$_compdump_date" ]]; then
   compinit -u -d "${HOME}/.cache/zsh/zcompdump"
 else
   compinit -C -d "${HOME}/.cache/zsh/zcompdump"
 fi
+unset _today _compdump_date
 
 # 历史记录配置
 # 追加历史记录
@@ -63,7 +72,7 @@ setopt glob
 # 自动纠正命令错误
 setopt correct
 # 自动纠正参数错误
-setopt correct_all
+# setopt correct_all  # 已移除: 过于激进，会纠正文件名
 # 禁用蜂鸣声
 setopt no_beep
 # 禁用视觉蜂鸣声
@@ -109,7 +118,9 @@ setopt numeric_glob_sort
 # 补全时显示隐藏文件
 zstyle ':completion:*' file-patterns '*(D)' '*(D):hidden-files'
 # 补全时使用 ls 的颜色
-zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+if [[ -n "$LS_COLORS" ]]; then
+  zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+fi
 # 补全时使用最近使用的文件
 zstyle ':completion:*' recent-dirs-insert both
 # 补全时使用缓存
@@ -117,4 +128,4 @@ zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "${HOME}/.cache/zsh/compcache"
 
 # 确保补全目录存在
-mkdir -p "${HOME}/.cache/zsh/compcache" 2>/dev/null
+[[ -d "${HOME}/.cache/zsh/compcache" ]] || mkdir -p "${HOME}/.cache/zsh/compcache" 2>/dev/null

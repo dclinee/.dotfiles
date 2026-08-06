@@ -1,0 +1,144 @@
+# ======================
+# Git 全局配置模板
+# ======================
+#
+# 使用方法:
+#   1. 安装时自动创建符号链接: ln -sf ~/.dotfiles/git/.gitconfig ~/.gitconfig
+#   2. 个人信息请在 ~/.gitconfig.local 中覆盖（不会提交到仓库）
+#
+# 在 ~/.gitconfig.local 中添加:
+#   [user]
+#       name = Your Name
+#       email = your@email.com
+
+# --- 用户信息（请在 .gitconfig.local 中覆盖）---
+[user]
+    name = Dclinee
+    email = dengchanglin8@outlook.com
+
+# --- 核心配置 ---
+[core]
+    editor = nvim
+    pager = less -FRX
+    autocrlf = input
+    quotepath = false
+    excludesfile = ~/.dotfiles/git/.gitignore_global
+    attributesfile = ~/.dotfiles/git/.gitattributes
+
+# --- 初始化配置 ---
+[init]
+    defaultBranch = main
+
+# --- 拉取配置 ---
+[pull]
+    rebase = false
+
+# --- 推送配置 ---
+[push]
+    default = current
+    autoSetupRemote = true
+
+# --- diff 配置 ---
+[diff]
+    algorithm = histogram
+    tool = nvimdiff
+
+[difftool]
+    prompt = false
+
+# --- merge 配置 ---
+[merge]
+    tool = nvimdiff
+    conflictstyle = zdiff3
+
+[mergetool]
+    prompt = false
+    keepBackup = false
+
+# --- 颜色 ---
+[color]
+    ui = auto
+[color "status"]
+    added = green bold
+    changed = yellow bold
+    untracked = red bold
+[color "branch"]
+    current = cyan bold
+    local = green
+    remote = yellow
+
+# --- 别名 ---
+[alias]
+    # 基础操作
+    co = checkout
+    ci = commit
+    st = status -sb
+    br = branch -vv
+    sw = switch
+
+    # 日志
+    lg = log --oneline --graph --decorate -20
+    lga = log --oneline --graph --decorate --all -20
+    ll = log --pretty=format:'%C(yellow)%h%C(reset) %C(green)(%cr)%C(reset) %C(bold)%s%C(reset) %C(blue)<%an>%C(reset)' --abbrev-commit
+    lll = log --pretty=format:'%C(yellow)%h%C(reset) %C(green)(%cr)%C(reset) %C(bold)%s%C(reset) %C(blue)<%an>%C(reset)%C(red)%d%C(reset)' --abbrev-commit --name-status
+
+    # 差异
+    d = diff
+    dc = diff --cached
+    ds = diff --staged
+    dt = difftool
+
+    # 暂存
+    unstage = reset HEAD --
+    amend = commit --amend --no-edit
+    amend-new = commit --amend
+
+    # 分支
+    bd = branch -d
+    bD = branch -D
+    bm = branch -m
+    ba = branch -a
+
+    # 远程
+    ra = remote add
+    rr = remote rm
+    rv = remote -v
+    ru = remote update
+
+    # 标签
+    t = tag
+    td = tag -d
+
+    # 储藏
+    sh = stash
+    shp = stash pop
+    shl = stash list
+    shd = stash drop
+
+    # 清理
+    clean-dry = clean -nd
+    clean-go = clean -fd
+
+    # 实用
+    last = log -1 HEAD
+    uncommit = reset --soft HEAD~1
+    contribute = shortlog -sne --all
+    whoami = config user.name && config user.email
+    aliases = config --get-regexp ^alias\\.
+    edit = !git diff --name-only --diff-filter=U | xargs -r ${EDITOR:-vim}
+
+# --- 凭证 ---
+[credential]
+    helper = store
+
+# --- rerere ---
+[rerere]
+    enabled = true
+
+# --- 子模块 ---
+[submodule]
+    recurse = true
+
+# --- include local 覆盖 ---
+[include]
+    path = ~/.gitconfig.local

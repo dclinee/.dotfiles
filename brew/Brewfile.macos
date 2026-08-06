@@ -1,17 +1,20 @@
-# macOS专属生态
+# ======================
+# macOS 专属生态
+# ======================
+# 通用包请在主 Brewfile 中维护，本文件仅包含 macOS 特定的包
+
+# Mac App Store
 brew "mas"
-brew "iterm2"
-brew "visual-studio-code"
 
-# 系统增强套件
-cask "homebrew/cask-versions/google-chrome-canary"
-
-# 开发工作流
-brew "postgresql", restart_service: true
-brew "redis", restart_service: :changed
-
-# 生产力套件
+# 常用应用
+cask "iterm2"
+cask "visual-studio-code"
+cask "google-chrome"
 cask "alfred"
 
-# 引用通用配置
-eval "$(cat ../Brewfile.common)"
+# 字体
+cask "font-fira-code-nerd-font"
+
+# 服务（按需启动）
+brew "postgresql", restart_service: true
+brew "redis", restart_service: :changed

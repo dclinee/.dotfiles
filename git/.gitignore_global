@@ -1,0 +1,65 @@
+# ======================
+# Git 全局忽略文件
+# ======================
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+._*
+
+# 编译产物
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.exe
+*.class
+*.jar
+
+# 包文件
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# 日志
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+.cache/
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 密钥
+*.pem
+*.key
+*.crt
+*.p12
+
+# 依赖
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 构建
+dist/
+build/
+out/
+target/

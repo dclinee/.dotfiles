@@ -1,0 +1,86 @@
+# ======================
+# EditorConfig 跨编辑器配置
+# ======================
+# https://editorconfig.org
+
+root = true
+
+# --- 所有文件 ---
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+max_line_length = 100
+
+# --- Python ---
+[*.py]
+indent_size = 4
+max_line_length = 88
+
+# --- JavaScript / TypeScript ---
+[*.{js,jsx,ts,tsx,mjs,cjs}]
+indent_size = 2
+
+# --- JSON / YAML / TOML ---
+[*.{json,yml,yaml,toml}]
+indent_size = 2
+
+# --- HTML / CSS / SCSS ---
+[*.{html,htm,css,scss,sass,less}]
+indent_size = 2
+
+# --- Markdown ---
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+
+# --- Shell ---
+[*.{sh,bash,zsh}]
+indent_size = 2
+
+# --- Makefile (必须用 Tab) ---
+[Makefile]
+indent_style = tab
+
+# --- Go ---
+[*.go]
+indent_style = tab
+
+# --- Rust ---
+[*.rs]
+indent_size = 4
+
+# --- Lua ---
+[*.lua]
+indent_size = 2
+
+# --- Vim ---
+[*.{vim,vimrc}]
+indent_size = 2
+
+# --- Git ---
+[*.{gitconfig,gitignore,gitattributes}]
+indent_size = 2
+
+# --- Dockerfile ---
+[Dockerfile*]
+indent_size = 4
+
+# --- C / C++ ---
+[*.{c,h,cpp,hpp,cc,hh}]
+indent_size = 4
+
+# --- Java ---
+[*.java]
+indent_size = 4
+
+# --- Ruby ---
+[*.rb]
+indent_size = 2
+
+# --- PHP ---
+[*.php]
+indent_size = 4

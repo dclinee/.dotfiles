@@ -1,7 +1,10 @@
-# Linux专属生态
-brew "wget"
-brew "htop"
-brew "neofetch"
+# ======================
+# Linux 专属生态
+# ======================
+# 通用包请在主 Brewfile 中维护，本文件仅包含 Linux 特定的包
+
+# 系统信息
+brew "fastfetch"
 
 # 系统级工具
 brew "sysbench"
@@ -10,9 +13,4 @@ brew "inxi"
 # 开发基础设施
 brew "gcc"
 brew "llvm"
-
-# 图形环境增强
-cask "xquartz"
-
-# 引用通用配置
-eval "$(cat ../Brewfile.common)"
+brew "glibc"

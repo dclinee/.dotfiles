@@ -19,9 +19,5 @@ case "$(uname -s)" in
     ;;
 esac
 
-# 初始化 starship 主题（core/05_starship.zsh 中已包含）
-
 # 加载本地自定义配置（不会被仓库覆盖）
 [ -f "${HOME}/.zshrc.local" ] && source "${HOME}/.zshrc.local"
-
-

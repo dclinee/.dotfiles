@@ -64,3 +64,19 @@ __pycache__/
 # 其他临时文件
 *~
 ._*
+
+# 本地 Git 个人配置（不纳入仓库）
+.gitconfig.local
+
+# Brew bundle 锁文件（每台机器独立）
+Brewfile.lock.json
+
+# Tmux 插件目录（由 TPM 管理）
+.tmux/plugins/
+
+# Vim 插件目录（由 vim-plug 管理）
+.vim/plugged/
+
+# 性能分析输出
+profile_*.txt
+zprof_*.txt

@@ -1,144 +1,139 @@
 #!/usr/bin/env zsh
 
 # ======================
-# 高效插件管理
+# 插件管理（使用 zinit）
 # ======================
+#
+# 工作流程:
+# 1. 初始化 zinit
+# 2. 加载核心插件（自动补全、Git 增强、搜索等）
+# 3. 懒加载非核心插件（fzf-tab、zsh-syntax-highlighting）
+#
+# 调试: ZSH_DEBUG_PLUGINS=1 zsh 可查看详细加载日志
+# 禁用: ZSH_DISABLE_PLUGINS=1 跳过所有插件
 
-# 插件目录
-PLUGIN_DIR="${ZSH_HOME}/plugins"
-mkdir -p "${PLUGIN_DIR}" 2>/dev/null
-
-# 初始化 zinit 插件管理器
-ZINIT_DIR="${PLUGIN_DIR}/zinit"
-if [ -f "${ZINIT_DIR}/zinit.zsh" ]; then
-  # 初始化 zinit - zinit 会自动检测其主目录
-  source "${ZINIT_DIR}/zinit.zsh"
-  
-  # 显式更新 ZINIT[HOME_DIR] 为我们的自定义目录
-  ZINIT[HOME_DIR]="${ZINIT_DIR}"
-  
-  # 确保完成文件目录存在
-  mkdir -p "${ZINIT[COMPLETIONS_DIR]}" 2>/dev/null
-  
-  # 手动创建 zinit 完成文件链接
-  if [ -f "${ZINIT_DIR}/_zinit" ] && [ ! -f "${ZINIT[COMPLETIONS_DIR]}/_zinit" ]; then
-    ln -sf "${ZINIT_DIR}/_zinit" "${ZINIT[COMPLETIONS_DIR]}/_zinit"
-  fi
+# 支持 ZSH_DISABLE_PLUGINS=1 跳过所有插件
+if [[ "${ZSH_DISABLE_PLUGINS:-0}" == "1" ]]; then
+  return 0
 fi
 
-# 已加载插件跟踪数组
-declare -A LOADED_PLUGINS
+# zinit 初始化
+# zinit 是 zsh 库，需要 source zinit.zsh 才能使用
 
-# 高效加载插件函数
-function load_plugin() {
-  local plugin_name=$1
-  local plugin_repo=$2
-  local plugin_dir="${PLUGIN_DIR}/${plugin_name}"
-  
-  # 检查插件是否已加载
-  if [[ -n ${LOADED_PLUGINS[${plugin_name}]} ]]; then
-    return 0
+# 调试日志（提前定义，供初始化使用）
+_plugins_debug() {
+  if [[ "${ZSH_DEBUG_PLUGINS:-0}" == "1" ]]; then
+    echo -e "\033[36m[PLUGIN DEBUG]\033[0m $*" >&2
   fi
-  
-  # 带错误处理的克隆
-  if [[ ! -d "${plugin_dir}" ]]; then
-    mkdir -p "${plugin_dir}" && git clone "${plugin_repo}" "${plugin_dir}" 2>/dev/null || {
-      echo "[31m[ERROR] Failed to clone plugin ${plugin_name} from ${plugin_repo}[0m" >&2
-      return 1
-    }
-  fi
+}
 
-  # 版本锁定机制
-  local lock_file="${plugin_dir}/.lock"
-  if [[ -f "${lock_file}" ]]; then
-    git -C "${plugin_dir}" checkout $(cat "${lock_file}") 2>/dev/null || {
-      echo "[33m[WARN] Failed to checkout locked version for ${plugin_name}[0m" >&2
-    }
-  fi
+_zinit_init() {
+  local zinit_zsh=""
 
-  # 增强文件加载 - 完善初始化文件列表
-  local init_files=(
-    "${plugin_dir}/${plugin_name}.plugin.zsh"
-    "${plugin_dir}/${plugin_name}.zsh"
-    "${plugin_dir}/init.zsh"
+  # 查找 zinit.zsh 安装路径
+  local candidates=(
+    # Homebrew 安装路径
+    "/home/linuxbrew/.linuxbrew/opt/zinit/zinit.zsh"
+    "/opt/homebrew/opt/zinit/zinit.zsh"
+    "/usr/local/opt/zinit/zinit.zsh"
+    "$(brew --prefix zinit 2>/dev/null)/zinit.zsh"
+    # 手动 git clone 安装路径
+    "${HOME}/.zinit/zinit.zsh"
+    "${HOME}/.zinit-git/zinit.zsh"
+    # 系统路径
+    "/usr/share/zinit/zinit.zsh"
+    "/usr/local/share/zinit/zinit.zsh"
   )
-  
-  # 处理特殊情况：zsh-syntax-highlighting 插件
-  if [[ "${plugin_name}" == "zsh-syntax-highlighting" ]]; then
-    init_files+=("${plugin_dir}/zsh-syntax-highlighting.zsh")
-  fi
-  
-  # 安全添加匹配的 plugin.zsh 文件，避免 no match 错误
-  local plugin_files=("${plugin_dir}"/*.plugin.zsh(N))
-  if [[ ${#plugin_files[@]} -gt 0 ]]; then
-    init_files+=(${plugin_files[@]})
-  fi
-  
-  # 安全添加匹配的 zsh 文件，避免 no match 错误
-  local zsh_files=("${plugin_dir}"/*.zsh(N))
-  if [[ ${#zsh_files[@]} -gt 0 ]]; then
-    init_files+=(${zsh_files[@]})
-  fi
-  
-  local loaded=false
-  for init_file in "${init_files[@]}"; do
-    if [[ -f "${init_file}" ]]; then
-      if source "${init_file}" 2>/dev/null; then
-        LOADED_PLUGINS[${plugin_name}]=1
-        loaded=true
-      else
-        echo "[33m[WARN] Failed to load ${init_file}[0m" >&2
-      fi
+
+  for candidate in "${candidates[@]}"; do
+    if [[ -f "${candidate}" ]]; then
+      zinit_zsh="${candidate}"
       break
     fi
   done
-  
-  # 特殊处理 zsh-syntax-highlighting 插件
-  if [[ "${plugin_name}" == "zsh-syntax-highlighting" ]] && ! $loaded; then
-    local syntax_file="${plugin_dir}/zsh-syntax-highlighting.zsh"
-    if [[ -f "${syntax_file}" ]]; then
-      if source "${syntax_file}" 2>/dev/null; then
-        LOADED_PLUGINS[${plugin_name}]=1
-        loaded=true
-      else
-        echo "[33m[WARN] Failed to load zsh-syntax-highlighting from ${syntax_file}[0m" >&2
-      fi
-    fi
+
+  if [[ -z "${zinit_zsh}" ]]; then
+    echo -e "\033[33m[WARN]\033[0m zinit 未安装，跳过插件加载" >&2
+    echo -e "\033[33m[INFO]\033[0m 安装方式: brew install zinit" >&2
+    echo -e "\033[33m[INFO]\033[0m 或: git clone https://github.com/zdharma-continuum/zinit.git ~/.zinit" >&2
+    return 1
   fi
+
+  _plugins_debug "加载 zinit: ${zinit_zsh}"
+  source "${zinit_zsh}" 2>/dev/null
+  return $?
 }
 
-# 安全更新函数
+if ! _zinit_init; then
+  return 0
+fi
+
+_plugins_debug "zinit 已就绪，开始加载插件..."
+
+# ======================
+# 加载核心插件（同步加载，确保基础功能）
+# ======================
+
+# 自动补全建议
+zinit light zsh-users/zsh-autosuggestions
+
+# Git 增强（forgit 提供 g、ga、gd 等别名）
+zinit light wfxr/forgit
+
+# 历史命令子串搜索
+zinit light zsh-users/zsh-history-substring-search
+
+# 智能目录跳转（zoxide 替代）
+zinit light agkozak/zsh-z
+
+# zoxide 初始化脚本（由 install.sh 生成）
+ZOXIDE_INIT="${ZSH_HOME}/plugins/zoxide/init.zsh"
+if [[ -f "${ZOXIDE_INIT}" ]]; then
+  source "${ZOXIDE_INIT}" 2>/dev/null
+fi
+
+# ======================
+# 懒加载插件（首次使用时才加载）
+# ======================
+
+# fzf-tab - Tab 补全增强（首次触发 Tab 补全时加载）
+zinit ice wait lucid
+zinit light Aloxaf/fzf-tab
+
+# zsh-syntax-highlighting - 语法高亮（必须最后加载，首次键入时激活）
+zinit ice wait lucid
+zinit light zsh-users/zsh-syntax-highlighting
+
+_plugins_debug "所有插件加载完成"
+
+# ======================
+# 插件管理辅助函数
+# ======================
+
+# 列出所有已加载插件
+function list_plugins() {
+  echo "zinit 已加载插件:"
+  echo ""
+  zinit loaded
+  echo ""
+  echo "可用命令: zinit help 查看所有命令"
+  echo "  zinit loaded   - 列出已加载插件"
+  echo "  zinit ls       - 列出 snippets"
+  echo "  zbindkeys      - 列出快捷键绑定"
+  echo "  zinit times    - 插件加载耗时统计"
+}
+
+# 更新所有插件
 function update_plugins() {
-  for dir in "${PLUGIN_DIR}"/*; do
-    if [[ -d "${dir}/.git" ]]; then
-      git -C "${dir}" fetch --all 2>/dev/null && git -C "${dir}" reset --hard origin/HEAD 2>/dev/null || {
-        echo "[33m[WARN] Failed to update plugin in ${dir}[0m" >&2
-      }
-    fi
-  done
+  echo "正在更新所有 zinit 插件..."
+  zinit update
+  echo "更新完成"
 }
 
-# ======================
-# 加载核心插件
-# ======================
-
-# Zsh 自动建议
-load_plugin "zsh-autosuggestions" "https://github.com/zsh-users/zsh-autosuggestions"
-
-# 快速目录跳转
-load_plugin "zoxide" "https://github.com/ajeetdsouza/zoxide"
-
-# 模糊查找
-load_plugin "fzf-tab" "https://github.com/Aloxaf/fzf-tab"
-
-# Git 增强
-load_plugin "forgit" "https://github.com/wfxr/forgit"
-
-# 历史命令搜索
-load_plugin "zsh-history-substring-search" "https://github.com/zsh-users/zsh-history-substring-search"
-
-# 智能目录跳转
-load_plugin "zsh-z" "https://github.com/agkozak/zsh-z"
-
-# Zsh 语法高亮 - 必须在最后加载
-load_plugin "zsh-syntax-highlighting" "https://github.com/zsh-users/zsh-syntax-highlighting"
+# 清理未使用的插件
+function clean_plugins() {
+  echo "正在清理 zinit 缓存..."
+  zinit delete --all 2>/dev/null || echo "请手动使用 zinit delete <plugin> 删除不需要的插件"
+  echo "提示: 可使用 zinit status 查看所有插件状态"
+  echo "清理完成"
+}

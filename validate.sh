@@ -161,32 +161,6 @@ validate_functionality() {
     return 1
   fi
   
-  # 注释掉实际的Vim验证，因为它会打开交互式编辑器
-  # 检查所有vim配置文件
-  # local vim_files=(
-  #   "${temp_dir}/vim/.vimrc"
-  #   "${temp_dir}/vim/core"/*.vim
-  #   "${temp_dir}/vim/plugins"/*.vim
-  #   "${temp_dir}/vim/platform"/*.vim
-  # )
-  
-  # 使用vim -n（非交互式模式）检查语法
-  # for file in "${vim_files[@]}"; do
-  #   if [[ -f "${file}" ]]; then
-  #     if ! vim -T dumb -n -u NONE -c "syntax on" -c "quit" ${file} 2>&1 >/dev/null; then
-  #       log ERROR "${file} 语法检查失败"
-  #       all_valid=false
-  #     fi
-  #   fi
-  # done
-  
-  # if $all_valid; then
-  #   log SUCCESS "Vim配置语法检查通过"
-  # else
-  #   log ERROR "Vim配置语法检查失败"
-  #   return 1
-  # fi
-  
   log SUCCESS "功能验证通过！"
   return 0
 }

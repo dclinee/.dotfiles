@@ -1,17 +1,23 @@
 # dclinee 的 Dotfiles
 
 这是一个现代化的 Dotfiles 配置，专注于提供高效、美观且易于维护的 Zsh 开发环境。
+**开箱即用**，让大多数开发者在新机器上几分钟内即可获得完整的开发环境，无需花费大量时间配置。
 
 ## ✨ 功能特性
 
 ### 🎯 核心功能
+- **一键安装**：`bootstrap.sh` 或 `make install` 自动完成全部配置
 - **现代化 Zsh 配置**：基于 Zsh 5.9+，提供高效的命令行体验
 - **插件管理**：使用 Zinit 作为插件管理器，支持并行加载和异步安装
 - **美观主题**：集成 Starship 主题，提供现代化的提示符设计
 - **Wezterm 终端支持**：跨平台终端配置，提供现代化的终端体验
-- **跨平台支持**：完美兼容 Linux (Ubuntu/Debian)、macOS 和 Windows
-- **自动配置**：一键安装脚本，自动处理依赖和配置
+- **Vim 配置**：内置 vim-plug 与常用插件，开箱即用
+- **Tmux 配置**：内置 TPM 插件管理与 Vim 风格快捷键
+- **Git 全局配置**：常用别名、颜色、pager 模板，支持 `~/.gitconfig.local` 覆盖
+- **EditorConfig**：跨编辑器统一缩进、换行、编码规则
+- **跨平台支持**：完美兼容 Linux (Ubuntu/Debian) 和 macOS
 - **模块化设计**：核心配置、插件、主题分离，易于维护和扩展
+- **统一命令入口**：Makefile 暴露 install/update/backup/test/check 等命令
 
 ### 📦 内置插件
 - `zsh-users/zsh-autosuggestions` - 智能命令补全
@@ -26,6 +32,7 @@
 - **Starship** - 现代化、高度可定制的提示符
 - **响应式设计** - 根据屏幕宽度自动调整
 - **丰富的状态信息** - 显示 Git 状态、命令执行时间、Python 虚拟环境等
+- **Nerd Font 自动降级** - 未安装 Nerd Font 时自动切换到无图标配置
 
 ## 🚀 安装
 
@@ -34,20 +41,51 @@
 - **Zsh** - 5.9+ 版本
 - **curl** - 用于下载安装脚本
 
-### 快速安装
+### 方式一：一键安装（推荐新机器使用）
 
 ```bash
-# 克隆仓库
+# 直接远程执行（会自动克隆仓库到 ~/.dotfiles）
+curl -fsSL https://raw.githubusercontent.com/dclinee/dotfiles/main/bootstrap.sh | bash
+```
+
+或手动克隆后执行：
+
+```bash
 git clone https://github.com/dclinee/dotfiles.git ~/.dotfiles
-
-# 进入目录
 cd ~/.dotfiles
+./bootstrap.sh
+```
 
-# 运行 Zsh 安装脚本
-./zsh/install.sh
+支持选择性安装组件：
 
-# 运行 Wezterm 配置安装脚本 (可选)
-./wezterm/install.sh
+```bash
+./bootstrap.sh --zsh      # 仅安装 Zsh
+./bootstrap.sh --vim      # 仅安装 Vim
+./bootstrap.sh --tmux     # 仅安装 Tmux
+./bootstrap.sh --git      # 仅安装 Git 配置
+./bootstrap.sh --brew     # 仅安装 Brew 包
+./bootstrap.sh --all      # 安装全部（默认）
+```
+
+### 方式二：使用 Makefile
+
+```bash
+cd ~/.dotfiles
+make install    # 一键安装所有配置
+make zsh        # 仅安装 Zsh
+make vim        # 仅安装 Vim
+make tmux       # 仅安装 Tmux
+make git        # 仅安装 Git 配置
+make brew       # 执行 brew bundle
+make help       # 查看所有可用命令
+```
+
+### 方式三：单独运行各模块安装脚本
+
+```bash
+./zsh/install.sh        # Zsh + Homebrew + zinit + starship + zoxide
+./vim/install.sh        # Vim + vim-plug
+./wezterm/install.sh    # WezTerm 配置
 ```
 
 ### 使用国内镜像加速
@@ -62,31 +100,30 @@ export USE_MIRROR=tsinghua
 
 ```
 ~/.dotfiles/
+├── bootstrap.sh          # 一键安装入口（新机器推荐）
+├── Makefile              # 统一命令入口（install/update/backup/test/check）
+├── .editorconfig         # 跨编辑器代码风格统一配置
 ├── zsh/                  # Zsh 配置
 │   ├── .zshrc            # 主配置入口
+│   ├── .zshenv           # 最早加载的环境变量（PATH/Homebrew）
 │   ├── core/             # 核心配置模块
 │   │   ├── 00_env.zsh     # 环境变量配置
 │   │   ├── 01_options.zsh # Zsh 选项配置
 │   │   ├── 02_aliases.zsh # 别名配置
-│   │   ├── 03_functions.zsh # 自定义函数
-│   │   ├── 04_plugins.zsh # 插件配置
+│   │   ├── 03_functions.zsh # 自定义函数（含 check_env 诊断）
+│   │   ├── 04_plugins.zsh # 插件配置（zinit）
 │   │   └── 05_starship.zsh # Starship 主题配置
+│   ├── lib/              # 公共库
+│   │   └── output.sh      # 统一输出函数（echo_step/echo_success...）
 │   ├── platform/         # 平台特定配置
 │   │   ├── linux.zsh      # Linux 配置
 │   │   └── macos.zsh      # macOS 配置
 │   ├── plugins/          # 插件目录
 │   │   ├── zinit/        # Zinit 插件管理器
 │   │   └── zoxide/       # Zoxide 插件
-│   ├── install.sh        # Zsh 安装脚本
+│   ├── install.sh        # Zsh 安装脚本（集成 brew bundle）
+│   ├── profile_performance.sh # 启动性能分析
 │   └── starship.toml     # Starship 主题配置
-├── python/               # Python 配置
-│   ├── __init__.py       # Python 模块入口
-│   ├── pythonrc.py       # Python 交互式配置
-│   ├── pip.conf          # Pip 配置
-│   ├── requirements.txt  # Python 依赖
-│   ├── setup.py          # 简化的安装脚本（主配置已迁移到pyproject.toml）
-│   ├── pyproject.toml    # 现代打包配置（符合PEP 517/518标准）
-│   └── setup_env.py      # 环境设置脚本
 ├── vim/                  # Vim 配置
 │   ├── core/             # 核心配置
 │   │   ├── 00_basic.vim     # 基础配置
@@ -95,18 +132,32 @@ export USE_MIRROR=tsinghua
 │   │   └── plugins.vim      # 插件管理配置
 │   ├── platform/         # 平台特定配置
 │   │   ├── linux.vim        # Linux 配置
-│   │   ├── macos.vim        # macOS 配置
-│   │   └── windows.vim      # Windows 配置
+│   │   └── macos.vim        # macOS 配置
 │   ├── .vimrc            # 主配置入口
+│   ├── install.sh        # Vim 安装脚本
 │   └── README.md         # Vim 配置文档
+├── tmux/                 # Tmux 配置
+│   └── .tmux.conf        # Tmux 主配置（TPM + Vim 风格快捷键）
+├── git/                  # Git 全局配置
+│   ├── .gitconfig        # Git 配置模板（别名/颜色/pager）
+│   └── .gitignore_global # 全局忽略规则
 ├── brew/                 # Homebrew 配置
-│   ├── Brewfile          # 主 Brewfile
-│   ├── Brewfile.common   # 通用包
+│   ├── Brewfile          # 主 Brewfile（按平台分发）
+│   ├── Brewfile.common   # 通用包（git/gh/fzf/ripgrep/bat/eza...）
 │   ├── Brewfile.linux    # Linux 特定包
 │   ├── Brewfile.macos    # macOS 特定包
 │   └── install_brew.sh   # Brew 安装脚本
+├── python/               # Python 配置
+│   ├── __init__.py       # Python 模块入口
+│   ├── pythonrc.py       # Python 交互式配置
+│   ├── pip.conf          # Pip 配置
+│   ├── requirements.txt  # Python 依赖
+│   ├── pyproject.toml    # 现代打包配置（符合PEP 517/518标准）
+│   └── setup_env.py      # 环境设置脚本
+├── wezterm/              # WezTerm 终端配置
 ├── bin/                  # 自定义脚本
 │   └── brew-sync         # Brew 同步脚本
+├── test_install.sh       # 静态与动态测试脚本
 ├── validate.sh           # 配置验证脚本
 └── README.md             # 项目文档
 ```
@@ -174,7 +225,22 @@ function myfunc() {
 
 ## 🔄 更新与维护
 
-### 更新配置
+### 使用 Makefile 维护（推荐）
+
+```bash
+cd ~/.dotfiles
+
+make update     # 一键更新：git pull + zinit update + brew upgrade
+make backup     # 备份当前配置
+make check      # 环境检查（调用 check_env）
+make test       # 运行静态测试
+make perf       # Zsh 启动性能分析
+make validate   # 验证所有配置文件语法
+make clean      # 清理缓存（zcompdump / brew / zinit）
+make help       # 查看所有可用命令
+```
+
+### 手动更新配置
 
 ```bash
 # 进入 dotfiles 目录

@@ -4,11 +4,6 @@
 # Linux 专用配置
 # ======================
 
-# Linuxbrew 路径
-if [[ -d "${HOME}/.linuxbrew" ]]; then
-  eval "$(${HOME}/.linuxbrew/bin/brew shellenv)"
-fi
-
 # 包管理器别名
 if command -v apt > /dev/null; then
   alias update='sudo apt update && sudo apt upgrade'

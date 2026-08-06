@@ -6,45 +6,28 @@
 
 # ZSH 配置入口
 export ZSH_HOME="${HOME}/.dotfiles/zsh"
-export ZINIT_DIR="${ZSH_HOME}/plugins/zinit"
 
-# 基础路径设置 - 只添加自定义路径，保持系统默认PATH
+# 基础路径设置
 if [[ -d "${HOME}/.local/bin" ]]; then
   export PATH="${HOME}/.local/bin:${PATH}"
 fi
 
-# Homebrew 路径配置 - 根据架构和系统自动设置
-if [[ "$(uname -m)" == "arm64" ]] && [[ "$(uname -s)" == "Darwin" ]]; then
-  # macOS ARM64
-  if [[ -d "/opt/homebrew/bin" ]]; then
-    export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}"
-    export HOMEBREW_PREFIX="/opt/homebrew"
-  fi
-elif [[ "$(uname -s)" == "Linux" ]]; then
-  # Linux
-  if [[ -d "/home/linuxbrew/.linuxbrew/bin" ]]; then
-    export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
-    export HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
-  fi
-elif [[ "$(uname -s)" == "Darwin" ]]; then
-  # macOS x86_64
-  if [[ -d "/usr/local/bin" ]]; then
-    export PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
-    export HOMEBREW_PREFIX="/usr/local"
-  fi
+# Homebrew 路径配置
+# 注：PATH 已由 .zshenv 统一处理，此处仅设置 HOMEBREW_PREFIX
+if command -v brew > /dev/null 2>&1; then
+  export HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || echo '')"
 fi
 
-# 默认编辑器 - 智能选择可用的编辑器
-if command -v emacs > /dev/null; then
-  export EDITOR='emacs'
-  export VISUAL='emacs'
-elif command -v vim > /dev/null; then
-  export EDITOR='vim'
-  export VISUAL='vim'
-elif command -v nvim > /dev/null; then
-  export EDITOR='nvim'
-  export VISUAL='nvim'
-fi
+# 默认编辑器 - 循环检测第一个可用的编辑器
+local _editor
+for _editor in emacs nvim vim vi; do
+  if command -v "$_editor" > /dev/null 2>&1; then
+    export EDITOR="$_editor"
+    export VISUAL="$_editor"
+    break
+  fi
+done
+unset _editor
 
 # 语言设置
 export LANG='en_US.UTF-8'
@@ -55,39 +38,41 @@ export HISTSIZE=100000
 export SAVEHIST=100000
 export HISTFILE="${HOME}/.cache/zsh/history"
 
-# 历史记录增强选项
-export HISTTIMEFORMAT="%Y-%m-%d %H:%M:%S "  # 显示时间戳
-export HISTORY_IGNORE="(ls|cd|pwd|exit|clear)"  # 忽略常见命令
-export HIST_FCNTL_LOCK="2"  # 使用fcntl锁定历史文件
-export HIST_SAVE_BY_COPY="yes"  # 保存历史时使用复制而不是重命名
-export HIST_REDUCE_BLANKS="yes"  # 移除空白行
+# 历史记录增强选项（在 01_options.zsh 中通过 setopt 设置）
+export HISTTIMEFORMAT="%Y-%m-%d %H:%M:%S "
+export HISTORY_IGNORE_ALL="(ls|cd|pwd|exit|clear)"
+export HIST_FCNTL_LOCK="2"
+export HIST_SAVE_BY_COPY="yes"
+export HIST_REDUCE_BLANKS="yes"
 
 # 确保历史记录目录存在
 mkdir -p "${HOME}/.cache/zsh" 2>/dev/null
 
-# Starship 配置路径
-export STARSHIP_CONFIG="${ZSH_HOME}/starship.toml"
-export STARSHIP_SHELL="zsh"
-
 # ----------------------
 # Python 配置
 # ----------------------
-# Python 版本管理
+# Python 版本管理 (懒加载，减少启动开销)
 export PYENV_ROOT="${HOME}/.pyenv"
-if [[ -d "${PYENV_ROOT}" ]]; then
+if [[ -d "${PYENV_ROOT}/bin" ]]; then
   export PATH="${PYENV_ROOT}/bin:${PATH}"
-  eval "$(pyenv init --path)" 2>/dev/null || true
-  eval "$(pyenv init -s)" 2>/dev/null || true
-
-  # 添加 pyenv virtualenv 支持
-  if command -v pyenv-virtualenv > /dev/null; then
-    eval "$(pyenv virtualenv-init -)" 2>/dev/null || true
-  fi
+  # 懒加载: 首次调用 pyenv 时才初始化
+  pyenv() {
+    unset -f pyenv
+    eval "$(command pyenv init -)" 2>/dev/null || true
+    if command -v pyenv-virtualenv > /dev/null 2>&1; then
+      eval "$(pyenv virtualenv-init -)" 2>/dev/null || true
+    fi
+    pyenv "$@"
+  }
 fi
 
-# 直接设置 Python 模块路径，避免重复
+# Python 模块路径（先 glob 展开，再赋值）
+local _py_site_packages=""
+for dir in ${HOME}/.local/lib/python*/site-packages(N); do
+  [[ -d "$dir" ]] && _py_site_packages="${_py_site_packages}:${dir}"
+done
 unset PYTHONPATH
-export PYTHONPATH="${HOME}/.local/lib/python3.*/site-packages:${HOME}/.dotfiles/python"
+export PYTHONPATH="${_py_site_packages}:${HOME}/.dotfiles/python"
 
 # Python 配置文件
 export PYTHONSTARTUP="${HOME}/.dotfiles/python/pythonrc.py"
@@ -100,8 +85,7 @@ export VIRTUALENVWRAPPER_PYTHON="$(command -v python3)"
 # 确保 Python 相关目录存在
 mkdir -p "${HOME}/.virtualenvs" "${HOME}/.cache/pip" 2>/dev/null
 
-# 虚拟环境自动激活
-# 如果当前目录存在 .venv 目录，自动激活
-if [[ -d ".venv" ]]; then
+# 虚拟环境自动激活 (仅交互式 shell)
+if [[ -o interactive ]] && [[ -d ".venv" ]]; then
   source .venv/bin/activate 2>/dev/null || true
 fi

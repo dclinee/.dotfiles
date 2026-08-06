@@ -7,57 +7,42 @@
 set -euo pipefail
 LOG_FILE="/tmp/wezterm_install_$(date +%Y%m%d_%H%M%S).log"
 
-# 美化输出配置
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-BLUE="\033[34m"
-MAGENTA="\033[35m"
-CYAN="\033[36m"
-WHITE="\033[37m"
-RESET="\033[0m"
-BOLD="\033[1m"
-
-# 图标配置
-CHECK="✅"
-INFO="ℹ️"
-WARN="⚠️"
-ERROR="❌"
-ARROW="➡️"
-
-# 分隔线
-SEPARATOR="${BLUE}=============================================${RESET}"
-
 # 确定配置目录
 DOTFILES_DIR="${HOME}/.dotfiles"
 WEZTERM_DIR="${DOTFILES_DIR}/wezterm"
 
-# 输出美化函数
-echo_step() {
-  echo -e "${BOLD}${BLUE}${INFO} ${1}${RESET}"
-}
+# 加载公共输出函数（带内联回退）
+_OUTPUT_LIB="${DOTFILES_DIR}/zsh/lib/output.sh"
+if [[ -f "${_OUTPUT_LIB}" ]]; then
+  source "${_OUTPUT_LIB}"
+else
+  # 内联回退 - 当 lib 不可用时使用
+  RED="\033[31m"
+  GREEN="\033[32m"
+  YELLOW="\033[33m"
+  BLUE="\033[34m"
+  CYAN="\033[36m"
+  WHITE="\033[37m"
+  RESET="\033[0m"
+  BOLD="\033[1m"
+  CHECK="✅"
+  INFO="ℹ️"
+  WARN="⚠️"
+  ERROR="❌"
+  ARROW="➡️"
+  SEPARATOR="${BLUE}=============================================${RESET}"
 
-echo_success() {
-  echo -e "${GREEN}${CHECK} ${1}${RESET}"
-}
-
-echo_warning() {
-  echo -e "${YELLOW}${WARN} ${1}${RESET}"
-}
-
-echo_error() {
-  echo -e "${RED}${ERROR} ${1}${RESET}"
-}
-
-echo_separator() {
-  echo -e "${SEPARATOR}"
-}
-
-echo_title() {
-  echo_separator
-  echo -e "${BOLD}${CYAN}${1}${RESET}"
-  echo_separator
-}
+  echo_step() { echo -e "${BOLD}${BLUE}${INFO} ${1}${RESET}"; }
+  echo_success() { echo -e "${GREEN}${CHECK} ${1}${RESET}"; }
+  echo_warning() { echo -e "${YELLOW}${WARN} ${1}${RESET}"; }
+  echo_error() { echo -e "${RED}${ERROR} ${1}${RESET}"; }
+  echo_separator() { echo -e "${SEPARATOR}"; }
+  echo_title() {
+    echo_separator
+    echo -e "${BOLD}${CYAN}${1}${RESET}"
+    echo_separator
+  }
+fi
 
 # 开始安装
 echo_title "Wezterm 配置安装器"

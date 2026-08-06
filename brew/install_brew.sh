@@ -1,4 +1,5 @@
 #!/bin/bash
+set -eo pipefail
 
 # 使用 USTC 镜像安装 Homebrew (macOS/Linux) - 修正版
 # 来源：https://mirrors.ustc.edu.cn/help/brew.git.html
@@ -22,10 +23,19 @@ else
     exit 1
 fi
 
-# 配置镜像源 (修正了无效选项)
+# 配置镜像源
 echo "正在配置 USTC 镜像源..."
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 2>/dev/null  # Linux
-eval "$(/usr/local/bin/brew shellenv)" 2>/dev/null  # macOS
+if [[ "$(uname)" == "Linux" ]] && [[ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" 2>/dev/null || true
+elif [[ "$(uname)" == "Darwin" ]] && [[ -x "/opt/homebrew/bin/brew" ]]; then
+    # Apple Silicon (M1/M2/M3)
+    eval "$(/opt/homebrew/bin/brew shellenv)" 2>/dev/null || true
+elif [[ "$(uname)" == "Darwin" ]] && [[ -x "/usr/local/bin/brew" ]]; then
+    # Intel Mac
+    eval "$(/usr/local/bin/brew shellenv)" 2>/dev/null || true
+elif command -v brew > /dev/null 2>&1; then
+    eval "$(brew shellenv)" 2>/dev/null || true
+fi
 
 brew update
 
@@ -33,5 +43,7 @@ echo -e "\n✅ Homebrew 安装完成！"
 echo "已配置以下镜像源："
 echo "  brew.git:       $HOMEBREW_BREW_GIT_REMOTE"
 echo "  homebrew-core:  $HOMEBREW_CORE_GIT_REMOTE"
-echo "  homebrew-cask:  https://mirrors.ustc.edu.cn/homebrew-cask.git"
 echo "  Bottles:        $HOMEBREW_BOTTLE_DOMAIN"
+echo ""
+echo "请将以下内容添加到你的 shell 配置文件中以持久化："
+echo '  eval "$(brew shellenv)"'

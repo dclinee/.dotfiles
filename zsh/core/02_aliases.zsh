@@ -7,7 +7,11 @@
 # ----------------------
 # 1. 通用文件管理
 # ----------------------
-alias ls='eza --group-directories-first --icons'
+if command -v eza > /dev/null 2>&1; then
+  alias ls='eza --group-directories-first --icons'
+else
+  alias ls='ls --color=auto --group-directories-first'
+fi
 alias ll='ls -l'             # 详细列表
 alias la='ls -a'             # 显示隐藏文件
 alias lt='ls -T'             # 树形结构
@@ -37,10 +41,14 @@ alias fgrep='fgrep --color=auto'
 alias df='df -h'             # 显示磁盘使用情况
 alias du='du -h'             # 显示目录大小
 alias du1='du -h --max-depth=1'  # 只显示一级目录大小
-alias free='free -h'         # 显示内存使用情况
+if command -v free > /dev/null 2>&1; then
+  alias free='free -h'         # 显示内存使用情况
+fi
 alias psa='ps aux'           # 显示所有进程
 alias pst='ps aux | grep -i'  # 搜索进程
-alias top='htop'             # 使用 htop 替代 top
+if command -v htop > /dev/null 2>&1; then
+  alias top='htop'             # 使用 htop 替代 top
+fi
 alias c='clear'
 alias cls='clear'
 alias q='exit'
@@ -124,9 +132,13 @@ alias dv='docker volume'
 alias ping='ping -c 5'        # 只发送5个包
 alias fastping='ping -c 100 -s.2'
 alias ip='ip -c'
-alias ifconfig='ip addr show'
-alias netstat='ss -tuln'      # 替代 netstat
-alias ss='ss -tuln'
+if command -v ip > /dev/null 2>&1; then
+  alias ifconfig='ip addr show'
+fi
+if command -v ss > /dev/null 2>&1; then
+  alias netstat='ss -tuln'      # 替代 netstat
+fi
+# alias ss='ss -tuln'  # 已移除: 避免覆盖系统 ss 命令
 alias wget='wget -c'         # 断点续传
 alias curl='curl -L'         # 自动跟随重定向
 
@@ -147,8 +159,12 @@ alias nano='nano -w'         # 禁用自动换行
 alias which='which -a'       # 显示所有匹配结果
 alias path='echo -e ${PATH//:/\n}'  # 分行显示 PATH
 alias 1024='echo $((1024*$1))'  # 快速计算字节大小
-alias md5='md5sum'
-alias sha256='sha256sum'
+if command -v md5sum > /dev/null 2>&1; then
+  alias md5='md5sum'
+fi
+if command -v sha256sum > /dev/null 2>&1; then
+  alias sha256='sha256sum'
+fi
 alias sum='sum -s'
 alias b='bc -l'              # 启动计算器
 

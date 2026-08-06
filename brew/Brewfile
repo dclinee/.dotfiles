@@ -1,9 +1,45 @@
-# 加载平台特定的 Brewfile
-if OS.mac?
-  brewfile 'Brewfile.macos'
-elsif OS.linux?
-  brewfile 'Brewfile.linux'
-end
+# ======================
+# 通用开发工具（跨平台）
+# ======================
+# 本文件包含所有平台通用的 Homebrew 包
+# 平台特定的包请见 Brewfile.linux 和 Brewfile.macos
 
-# 加载通用 Brewfile
-brewfile 'Brewfile.common'
+# --- 版本控制 ---
+brew "git"
+brew "gh"
+brew "lazygit"
+
+# --- 编程语言 ---
+brew "python"
+brew "node"
+brew "go"
+brew "rust"
+
+# --- 终端增强 ---
+brew "fzf"
+brew "ripgrep"
+brew "bat"
+brew "eza"
+brew "zoxide"
+brew "starship"
+brew "tmux"
+
+# --- 系统工具 ---
+brew "jq"
+brew "htop"
+brew "tree"
+brew "wget"
+brew "curl"
+brew "unzip"
+brew "gzip"
+
+# --- 容器 ---
+brew "docker"
+brew "docker-compose"
+
+# --- 编辑器 ---
+brew "neovim"
+
+# --- 文本处理 ---
+brew "gnu-sed"
+brew "grep"
