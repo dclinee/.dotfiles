@@ -1,0 +1,8 @@
+# Python Web 开发依赖（按需安装）
+# 安装: pip3 install -r requirements-web.txt
+
+# Web 框架
+flask
+django
+fastapi
+uvicorn

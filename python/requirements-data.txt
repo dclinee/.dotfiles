@@ -1,0 +1,8 @@
+# Python 数据处理依赖（按需安装）
+# 安装: pip3 install -r requirements-data.txt
+
+# 数据处理
+numpy
+pandas
+matplotlib
+seaborn

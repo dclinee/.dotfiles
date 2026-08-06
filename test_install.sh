@@ -265,11 +265,23 @@ MOCK_EOF
   chmod +x "$TEST_DIR/bin/starship"
 
   # === 其他通用 mock ===
-  for cmd in eza grep sed awk find mkdir ln rm cat date stat python3 pip3 apt dnf pacman free lscpu top ip ifconfig vm_stat sysctl; do
+  # 文件操作 + 文本处理命令透传真实命令（用绝对路径避免递归调用 mock 自身）
+  local real_cmd
+  for cmd in mkdir ln rm cat cp mv touch chmod chown grep sed awk find wc; do
+    real_cmd=$(command -v "$cmd" 2>/dev/null || echo "/bin/$cmd")
+    cat > "$TEST_DIR/bin/$cmd" << MOCK_EOF
+#!/usr/bin/env bash
+exec "$real_cmd" "\$@"
+MOCK_EOF
+    chmod +x "$TEST_DIR/bin/$cmd"
+  done
+
+  # 其余命令纯 mock（不影响文件系统）
+  for cmd in eza date stat python3 pip3 apt dnf pacman free lscpu top ip ifconfig vm_stat sysctl; do
     cat > "$TEST_DIR/bin/$cmd" << MOCK_EOF
 #!/usr/bin/env bash
 echo "[MOCK] $cmd \$*" >&2
-return 0
+exit 0
 MOCK_EOF
     chmod +x "$TEST_DIR/bin/$cmd"
   done
@@ -472,9 +484,9 @@ test_cross_platform_compat() {
   assert_file_contains "03_functions 有 ifconfig 降级" "$func_file" "command -v ifconfig"
 
   local opt_file="$DOTFILES_DIR/zsh/core/01_options.zsh"
-  assert_file_contains "01_options 有 Darwin 判断" "$opt_file" "Darwin"
-  assert_file_contains "01_options 有 stat -f (macOS)" "$opt_file" "stat -f"
-  assert_file_contains "01_options 有 stat -c %Y (Linux)" "$opt_file" "stat -c %Y"
+  assert_file_contains "01_options 有 ZSH_COMPDUMP 缓存" "$opt_file" "ZSH_COMPDUMP"
+  assert_file_contains "01_options 有 compinit -C 快速路径" "$opt_file" "compinit -C"
+  assert_file_contains "01_options 有 compinit -u 重建路径" "$opt_file" "compinit -u"
   assert_file_contains "01_options 有 LS_COLORS 非空检查" "$opt_file" 'LS_COLORS'
 }
 
@@ -698,9 +710,9 @@ test_install_simulated() {
     assert_fail "[$ostype] 安装完成信息未输出"
   fi
 
-  # 检查无 zinit 相关错误
-  if echo "$output" | grep -qi "zinit"; then
-    assert_fail "[$ostype] 输出包含 zinit 引用"
+  # 检查无 zinit 相关错误（注意: 正常输出会包含 "zinit"，只检查错误关键词）
+  if echo "$output" | grep -qiE "zinit.*(失败|错误|error|fail|未安装)"; then
+    assert_fail "[$ostype] 输出包含 zinit 错误信息"
   else
     assert_pass "[$ostype] 无 zinit 相关错误"
   fi

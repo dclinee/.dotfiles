@@ -1,0 +1,13 @@
+# Python 开发工具（按需安装）
+# 安装: pip3 install -r requirements-dev.txt
+
+# 代码格式化与检查
+black
+flake8
+mypy
+pylint
+isort
+
+# 测试框架
+pytest
+pytest-cov

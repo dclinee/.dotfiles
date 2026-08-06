@@ -4,17 +4,15 @@
 #
 # 使用方法:
 #   1. 安装时自动创建符号链接: ln -sf ~/.dotfiles/git/.gitconfig ~/.gitconfig
-#   2. 个人信息请在 ~/.gitconfig.local 中覆盖（不会提交到仓库）
+#   2. 个人信息请在 ~/.gitconfig.local 中配置（不会提交到仓库）
 #
 # 在 ~/.gitconfig.local 中添加:
 #   [user]
 #       name = Your Name
 #       email = your@email.com
 
-# --- 用户信息（请在 .gitconfig.local 中覆盖）---
-[user]
-    name = Dclinee
-    email = dengchanglin8@outlook.com
+# --- 用户信息（请在 ~/.gitconfig.local 中配置）---
+# 本文件不包含个人信息，请在 .gitconfig.local 中设置 user.name 和 user.email
 
 # --- 核心配置 ---
 [core]

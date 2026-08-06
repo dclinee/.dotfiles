@@ -1,4 +1,5 @@
-# Python 基础依赖
+# Python 基础依赖（必装）
+# 安装: pip3 install -r requirements.txt
 requests
 click
 tqdm
@@ -6,28 +7,7 @@ wheel
 setuptools
 pip
 
-# 开发工具
-black
-flake8
-mypy
-pytest
-pytest-cov
-pylint
-isort
-
-# 数据处理
-numpy
-pandas
-matplotlib
-seaborn
-
-# Web 开发
-flask
-django
-fastapi
-uvicorn
-
-# 其他实用库
+# 实用库
 python-dotenv
 rich
 loguru

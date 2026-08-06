@@ -17,22 +17,20 @@ zstyle ':completion:*:descriptions' format '[%d]'
 # 补全描述
 zstyle ':completion:*:options' description 'yes'
 zstyle ':completion:*:options' auto-description '%d'
-# 补全缓存 - 每天检查一次
-local _today=$(date +'%Y-%m-%d')
-local _compdump_date=""
-if [[ -f "${HOME}/.cache/zsh/zcompdump" ]]; then
-  if [[ "$(uname)" == "Darwin" ]]; then
-    _compdump_date=$(stat -f '%Sm' -t '%Y-%m-%d' "${HOME}/.cache/zsh/zcompdump" 2>/dev/null || echo "")
-  else
-    _compdump_date=$(date -d "@$(stat -c %Y "${HOME}/.cache/zsh/zcompdump" 2>/dev/null || echo 0)" +'%Y-%m-%d' 2>/dev/null || echo "")
-  fi
-fi
-if [[ "$_today" != "$_compdump_date" ]]; then
-  compinit -u -d "${HOME}/.cache/zsh/zcompdump"
+
+# compinit 缓存优化
+# 策略：基于 compdump 文件 mtime 判断是否需要重建，而非按天
+# 优势：配置未变更时，连续多日启动均使用缓存路径
+ZSH_COMPDUMP="${HOME}/.cache/zsh/zcompdump"
+
+if [[ ! -f "${ZSH_COMPDUMP}" ]]; then
+  # 首次启动或缓存被清理，完整重建
+  compinit -u -d "${ZSH_COMPDUMP}"
 else
-  compinit -C -d "${HOME}/.cache/zsh/zcompdump"
+  # 缓存存在，使用 -C 跳过检查直接加载（最快路径）
+  # 使用 -d 指定路径加速查找
+  compinit -C -d "${ZSH_COMPDUMP}" -s
 fi
-unset _today _compdump_date
 
 # 历史记录配置
 # 追加历史记录

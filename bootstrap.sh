@@ -50,14 +50,16 @@ CYAN="\033[36m"
 RESET="\033[0m"
 BOLD="\033[1m"
 
-echo_step()    { echo -e "${BOLD}${BLUE}ℹ️  ${1}${RESET}"; }
-echo_success() { echo -e "${GREEN}✅ ${1}${RESET}"; }
-echo_warning() { echo -e "${YELLOW}⚠️  ${1}${RESET}"; }
-echo_error()   { echo -e "${RED}❌ ${1}${RESET}"; }
+SEPARATOR="${BLUE}=============================================${RESET}"
+echo_step()       { echo -e "${BOLD}${BLUE}ℹ️  ${1}${RESET}"; }
+echo_success()    { echo -e "${GREEN}✅ ${1}${RESET}"; }
+echo_warning()    { echo -e "${YELLOW}⚠️  ${1}${RESET}"; }
+echo_error()      { echo -e "${RED}❌ ${1}${RESET}"; }
+echo_separator()  { echo -e "${SEPARATOR}"; }
 echo_title() {
-  echo -e "${BLUE}=============================================${RESET}"
+  echo_separator
   echo -e "${BOLD}${CYAN}${1}${RESET}"
-  echo -e "${BLUE}=============================================${RESET}"
+  echo_separator
 }
 
 # ======================
@@ -301,15 +303,29 @@ install_tmux() {
   ln -sf "${DOTFILES_DIR}/tmux/.tmux.conf" "${HOME}/.tmux.conf"
   echo_success "Tmux 配置已链接"
 
-  # 安装 TPM (Tmux Plugin Manager)
+  # 安装 TPM (Tmux Plugin Manager，含国内镜像降级)
   local tpm_dir="${HOME}/.tmux/plugins/tpm"
-  if [[ ! -d "${tpm_dir}" ]]; then
+  if [[ ! -d "${tpm_dir}" ]] || [[ -z "$(ls -A "${tpm_dir}" 2>/dev/null)" ]]; then
     echo_step "安装 Tmux Plugin Manager (TPM)..."
-    if git clone --depth 1 https://github.com/tmux-plugins/tpm.git "${tpm_dir}" 2>>"${LOG_FILE}"; then
+    # 镜像源列表（GitHub 官方优先，国内镜像降级）
+    local tpm_mirrors=(
+      "https://github.com/tmux-plugins/tpm.git"
+      "https://ghfast.top/https://github.com/tmux-plugins/tpm.git"
+      "https://mirror.ghproxy.com/https://github.com/tmux-plugins/tpm.git"
+    )
+    local tpm_cloned=false
+    for tpm_url in "${tpm_mirrors[@]}"; do
+      if git clone --depth 1 "${tpm_url}" "${tpm_dir}" 2>>"${LOG_FILE}"; then
+        tpm_cloned=true
+        break
+      fi
+      rm -rf "${tpm_dir}" 2>/dev/null
+    done
+    if $tpm_cloned; then
       echo_success "TPM 安装完成"
       echo "  安装插件: 打开 tmux 后按 前缀键 + I"
     else
-      echo_warning "TPM 安装失败，可稍后手动安装"
+      echo_warning "TPM 安装失败（所有镜像源均不可用），可稍后手动安装"
       echo "  git clone https://github.com/tmux-plugins/tpm.git ~/.tmux/plugins/tpm"
     fi
   else
@@ -330,11 +346,34 @@ install_git() {
   ln -sf "${DOTFILES_DIR}/git/.gitignore_global" "${HOME}/.gitignore_global"
 
   echo_success "Git 配置已链接"
-  echo ""
-  echo -e "${YELLOW}请在 ~/.gitconfig.local 中设置你的个人信息:${RESET}"
-  echo "  [user]"
-  echo "      name = Your Name"
-  echo "      email = your@email.com"
+
+  # 创建 .gitconfig.local 模板（如不存在）
+  local local_config="${HOME}/.gitconfig.local"
+  if [[ ! -f "${local_config}" ]]; then
+    cat > "${local_config}" << 'GITLOCAL_EOF'
+# Git 个人配置（不提交到仓库）
+# 请修改以下信息为你自己的
+
+[user]
+    name = dclinee
+    email = dengchanglin8@qq.com
+
+# 可在此添加其他个人配置，如：
+# [commit]
+#     gpgsign = true
+# [user]
+#     signingkey = YOUR_GPG_KEY
+GITLOCAL_EOF
+    echo_warning "已创建 ~/.gitconfig.local 模板，请修改其中的用户信息"
+    echo "  vim ~/.gitconfig.local"
+  else
+    echo_success ".gitconfig.local 已存在"
+  fi
+
+  # 验证用户信息是否已配置
+  if ! git config user.name >/dev/null 2>&1 || [[ "$(git config user.name)" == "Your Name" ]]; then
+    echo_warning "Git 用户信息未配置，请编辑 ~/.gitconfig.local"
+  fi
 }
 
 # ======================
@@ -428,6 +467,10 @@ main() {
   echo "安装日志: ${LOG_FILE}"
   echo ""
 
+  # 安装步骤追踪（用于错误回滚和报告）
+  declare -a COMPLETED_STEPS=()
+  declare -a FAILED_STEPS=()
+
   # 前置检查
   check_prerequisites
 
@@ -438,40 +481,83 @@ main() {
   echo_success "当前目录: $(pwd)"
   echo ""
 
-  # 安装组件
+  # 安装组件（每个组件独立执行，失败不中断后续步骤）
   if $INSTALL_ALL || $INSTALL_ZSH; then
-    install_zsh
+    if install_zsh; then
+      COMPLETED_STEPS+=("Zsh")
+    else
+      FAILED_STEPS+=("Zsh")
+    fi
   fi
 
   if $INSTALL_ALL || $INSTALL_VIM; then
-    install_vim
+    if install_vim; then
+      COMPLETED_STEPS+=("Vim")
+    else
+      FAILED_STEPS+=("Vim")
+    fi
   fi
 
   if $INSTALL_ALL || $INSTALL_WEZTERM; then
-    install_wezterm
+    if install_wezterm; then
+      COMPLETED_STEPS+=("WezTerm")
+    else
+      FAILED_STEPS+=("WezTerm")
+    fi
   fi
 
   if $INSTALL_ALL || $INSTALL_BREW; then
-    install_brew
+    if install_brew; then
+      COMPLETED_STEPS+=("Brew")
+    else
+      FAILED_STEPS+=("Brew")
+    fi
   fi
 
   if $INSTALL_ALL || $INSTALL_PYTHON; then
-    install_python
+    if install_python; then
+      COMPLETED_STEPS+=("Python")
+    else
+      FAILED_STEPS+=("Python")
+    fi
   fi
 
   if $INSTALL_ALL || $INSTALL_TMUX; then
-    install_tmux
+    if install_tmux; then
+      COMPLETED_STEPS+=("Tmux")
+    else
+      FAILED_STEPS+=("Tmux")
+    fi
   fi
 
   if $INSTALL_ALL || $INSTALL_GIT; then
-    install_git
+    if install_git; then
+      COMPLETED_STEPS+=("Git")
+    else
+      FAILED_STEPS+=("Git")
+    fi
   fi
 
   # EditorConfig 对所有开发者通用，总是安装
-  install_editorconfig
+  if install_editorconfig; then
+    COMPLETED_STEPS+=("EditorConfig")
+  else
+    FAILED_STEPS+=("EditorConfig")
+  fi
 
   # 最终验证
   final_check
+
+  # 安装汇总报告
+  echo_separator
+  echo -e "${BOLD}${CYAN}安装汇总${RESET}"
+  echo_separator
+  echo -e "${GREEN}✅ 已完成 (${#COMPLETED_STEPS[@]}): ${COMPLETED_STEPS[*]:-无}${RESET}"
+  if [[ ${#FAILED_STEPS[@]} -gt 0 ]]; then
+    echo -e "${RED}❌ 失败 (${#FAILED_STEPS[@]}): ${FAILED_STEPS[*]}${RESET}"
+    echo -e "${YELLOW}失败步骤不影响其他组件，可稍后重试: cd ~/.dotfiles && ./bootstrap.sh --<组件>${RESET}"
+  fi
+  echo_separator
 }
 
 main "$@"

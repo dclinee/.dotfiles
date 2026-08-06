@@ -21,6 +21,26 @@ cdls() {
   dirs -v
 }
 
+# zoxide 懒加载（首次使用 z 命令时才初始化）
+_zoxide_lazy_init() {
+  local zoxide_init="${ZSH_HOME}/plugins/zoxide/init.zsh"
+  if [[ -f "${zoxide_init}" ]]; then
+    source "${zoxide_init}" 2>/dev/null
+    hash -r
+  fi
+}
+
+# zoxide 目录跳转（懒加载包装）
+z() {
+  if ! command -v zoxide > /dev/null 2>&1; then
+    echo "zoxide 未安装，请先安装: brew install zoxide"
+    return 1
+  fi
+  _zoxide_lazy_init
+  unfunction z
+  z "$@"
+}
+
 # ----------------------
 # 文件操作
 # ----------------------

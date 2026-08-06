@@ -4,6 +4,12 @@
 # 环境变量配置
 # ======================
 
+# 启动性能计时（ZSH_PROFILE=1 时记录开始时间，在 .zshrc 末尾输出）
+if [[ "${ZSH_PROFILE:-0}" == "1" ]]; then
+  zmodload zsh/datetime
+  typeset -gF _zsh_start_time=$EPOCHREALTIME
+fi
+
 # ZSH 配置入口
 export ZSH_HOME="${HOME}/.dotfiles/zsh"
 
@@ -13,14 +19,14 @@ if [[ -d "${HOME}/.local/bin" ]]; then
 fi
 
 # Homebrew 路径配置
-# 注：PATH 已由 .zshenv 统一处理，此处仅设置 HOMEBREW_PREFIX
-if command -v brew > /dev/null 2>&1; then
+# 注：HOMEBREW_PREFIX 已由 .zshenv 统一设置，此处仅 fallback
+if [[ -z "${HOMEBREW_PREFIX:-}" ]] && command -v brew > /dev/null 2>&1; then
   export HOMEBREW_PREFIX="$(brew --prefix 2>/dev/null || echo '')"
 fi
 
-# 默认编辑器 - 循环检测第一个可用的编辑器
+# 默认编辑器 - 优先 nvim，然后 vim，最后其他
 local _editor
-for _editor in emacs nvim vim vi; do
+for _editor in nvim vim vi nano emacs; do
   if command -v "$_editor" > /dev/null 2>&1; then
     export EDITOR="$_editor"
     export VISUAL="$_editor"

@@ -30,13 +30,12 @@ _plugins_debug() {
 _zinit_init() {
   local zinit_zsh=""
 
-  # 查找 zinit.zsh 安装路径
+  # 查找 zinit.zsh 安装路径（固定路径优先，brew 查询作为 fallback）
   local candidates=(
-    # Homebrew 安装路径
+    # Homebrew 常见固定路径
     "/home/linuxbrew/.linuxbrew/opt/zinit/zinit.zsh"
     "/opt/homebrew/opt/zinit/zinit.zsh"
     "/usr/local/opt/zinit/zinit.zsh"
-    "$(brew --prefix zinit 2>/dev/null)/zinit.zsh"
     # 手动 git clone 安装路径
     "${HOME}/.zinit/zinit.zsh"
     "${HOME}/.zinit-git/zinit.zsh"
@@ -51,6 +50,14 @@ _zinit_init() {
       break
     fi
   done
+
+  # Fallback: 通过 brew 查询路径
+  if [[ -z "${zinit_zsh}" ]] && command -v brew > /dev/null 2>&1; then
+    local brew_zinit_path="$(brew --prefix zinit 2>/dev/null)/zinit.zsh"
+    if [[ -f "${brew_zinit_path}" ]]; then
+      zinit_zsh="${brew_zinit_path}"
+    fi
+  fi
 
   if [[ -z "${zinit_zsh}" ]]; then
     echo -e "\033[33m[WARN]\033[0m zinit 未安装，跳过插件加载" >&2
@@ -71,30 +78,27 @@ fi
 _plugins_debug "zinit 已就绪，开始加载插件..."
 
 # ======================
-# 加载核心插件（同步加载，确保基础功能）
+# 核心插件（同步加载，确保基础功能）
 # ======================
 
-# 自动补全建议
+# 自动补全建议（核心功能，同步加载）
 zinit light zsh-users/zsh-autosuggestions
 
-# Git 增强（forgit 提供 g、ga、gd 等别名）
-zinit light wfxr/forgit
-
-# 历史命令子串搜索
+# 历史命令子串搜索（核心功能，同步加载）
 zinit light zsh-users/zsh-history-substring-search
 
-# 智能目录跳转（zoxide 替代）
+# ======================
+# 懒加载插件（首次使用时才加载，节省启动时间）
+# ======================
+
+# forgit - Git 增强（首次使用 g/ga/gd 时加载）
+zinit ice wait lucid
+zinit light wfxr/forgit
+
+# zsh-z - 智能目录跳转（首次使用 z 命令时加载）
+# 注：zoxide 已提供相同功能，zsh-z 作为 fallback
+zinit ice wait lucid
 zinit light agkozak/zsh-z
-
-# zoxide 初始化脚本（由 install.sh 生成）
-ZOXIDE_INIT="${ZSH_HOME}/plugins/zoxide/init.zsh"
-if [[ -f "${ZOXIDE_INIT}" ]]; then
-  source "${ZOXIDE_INIT}" 2>/dev/null
-fi
-
-# ======================
-# 懒加载插件（首次使用时才加载）
-# ======================
 
 # fzf-tab - Tab 补全增强（首次触发 Tab 补全时加载）
 zinit ice wait lucid
@@ -112,15 +116,17 @@ _plugins_debug "所有插件加载完成"
 
 # 列出所有已加载插件
 function list_plugins() {
-  echo "zinit 已加载插件:"
+  echo "zinit 已加载插件（含加载耗时）:"
   echo ""
-  zinit loaded
+  # 注: zinit v3.15+ 中 `loaded`/`list` 子命令解析有 bug，
+  # 会把参数误认为 ice modifier。改用 `times` 显示插件+耗时。
+  zinit times 2>/dev/null
   echo ""
   echo "可用命令: zinit help 查看所有命令"
-  echo "  zinit loaded   - 列出已加载插件"
-  echo "  zinit ls       - 列出 snippets"
-  echo "  zbindkeys      - 列出快捷键绑定"
   echo "  zinit times    - 插件加载耗时统计"
+  echo "  zinit status   - 插件 git 状态"
+  echo "  zbindkeys      - 列出快捷键绑定"
+  echo "  zinit update   - 更新所有插件"
 }
 
 # 更新所有插件

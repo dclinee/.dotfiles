@@ -7,7 +7,7 @@
 # ----------------------
 # 1. 通用文件管理
 # ----------------------
-if command -v eza > /dev/null 2>&1; then
+if (( $+commands[eza] )); then
   alias ls='eza --group-directories-first --icons'
 else
   alias ls='ls --color=auto --group-directories-first'

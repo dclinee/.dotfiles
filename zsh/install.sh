@@ -190,17 +190,35 @@ install_plugins() {
   fi
 }
 
-# 手动安装 zinit（当 brew 不可用时）
+# 手动安装 zinit（当 brew 不可用时，含国内镜像降级）
 _install_zinit_manual() {
   echo -e "${BOLD}${CYAN}${ARROW} 手动安装 zinit...${RESET}"
   local zinit_dir="${HOME}/.zinit"
 
-  if [[ -d "${zinit_dir}" ]]; then
+  if [[ -d "${zinit_dir}" ]] && [[ -n "$(ls -A "${zinit_dir}" 2>/dev/null)" ]]; then
     echo_warning "zinit 目录已存在: ${zinit_dir}"
     return 0
   fi
 
-  if git clone --depth 1 https://github.com/zdharma-continuum/zinit.git "${zinit_dir}" 2>>"${LOG_FILE}"; then
+  # 镜像源列表（按优先级，GitHub 官方优先，国内镜像降级）
+  local mirrors=(
+    "https://github.com/zdharma-continuum/zinit.git"
+    "https://ghfast.top/https://github.com/zdharma-continuum/zinit.git"
+    "https://mirror.ghproxy.com/https://github.com/zdharma-continuum/zinit.git"
+  )
+
+  local cloned=false
+  for url in "${mirrors[@]}"; do
+    echo -e "${BOLD}${CYAN}${ARROW} 尝试: ${url}${RESET}"
+    if git clone --depth 1 "${url}" "${zinit_dir}" 2>>"${LOG_FILE}"; then
+      cloned=true
+      break
+    fi
+    echo_warning "此源失败，尝试下一个..."
+    rm -rf "${zinit_dir}" 2>/dev/null
+  done
+
+  if $cloned; then
     # 添加到 PATH
     if ! grep -q 'zinit' "${HOME}/.zshrc" 2>/dev/null; then
       echo "# zinit 插件管理器" >> "${HOME}/.zshrc"
@@ -209,7 +227,7 @@ _install_zinit_manual() {
     echo_success "zinit 安装完成（手动）"
     echo_warning "请重启终端或执行: source ~/.zshrc"
   else
-    echo_error "zinit 安装失败，请查看日志: ${LOG_FILE}"
+    echo_error "zinit 安装失败（所有镜像源均不可用），请查看日志: ${LOG_FILE}"
     return 1
   fi
 }
@@ -292,12 +310,16 @@ install_python_config() {
 
   # 安装 Python 依赖
   if [[ -f "${HOME}/.dotfiles/python/requirements.txt" ]]; then
-    echo -e "${BOLD}${CYAN}${ARROW} 安装 Python 依赖...${RESET}"
+    echo -e "${BOLD}${CYAN}${ARROW} 安装 Python 基础依赖...${RESET}"
     if pip3 install --upgrade -r "${HOME}/.dotfiles/python/requirements.txt" > /dev/null 2>&1; then
-      echo_success "Python 依赖安装完成"
+      echo_success "Python 基础依赖安装完成"
     else
-      echo_warning "Python 依赖安装失败，请手动安装: pip3 install -r ${HOME}/.dotfiles/python/requirements.txt"
+      echo_warning "Python 基础依赖安装失败，请手动安装: pip3 install -r ~/.dotfiles/python/requirements.txt"
     fi
+    echo "  按需安装其他依赖:"
+    echo "    开发工具: pip3 install -r ~/.dotfiles/python/requirements-dev.txt"
+    echo "    数据处理: pip3 install -r ~/.dotfiles/python/requirements-data.txt"
+    echo "    Web 开发: pip3 install -r ~/.dotfiles/python/requirements-web.txt"
   fi
 
   # 确保 Python 相关目录存在
@@ -356,7 +378,7 @@ _has_nerd_font_install() {
   return 1
 }
 
-# 安装 Nerd Font (Fira Code Nerd Font)
+# 安装 Nerd Font (Fira Code Nerd Font，含国内镜像降级)
 install_nerd_font() {
   echo_step "检查 Nerd Font..."
 
@@ -370,14 +392,29 @@ install_nerd_font() {
   local font_dir="${HOME}/.local/share/fonts"
   local font_name="FiraCode"
   local nerd_version="3.3.0"
-  local url="https://github.com/ryanoasis/nerd-fonts/releases/download/v${nerd_version}/${font_name}.zip"
   local tmp_zip
-
   tmp_zip="$(mktemp /tmp/nerd-font-XXXXXX.zip)"
 
-  # 下载
-  if ! curl -fsSL "${url}" -o "${tmp_zip}" 2>>"${LOG_FILE}"; then
-    echo_warning "Nerd Font 下载失败，Starship 将使用降级模式（无图标）"
+  # 镜像源列表（GitHub 官方优先，国内镜像降级）
+  local mirrors=(
+    "https://github.com/ryanoasis/nerd-fonts/releases/download/v${nerd_version}/${font_name}.zip"
+    "https://ghfast.top/https://github.com/ryanoasis/nerd-fonts/releases/download/v${nerd_version}/${font_name}.zip"
+    "https://mirror.ghproxy.com/https://github.com/ryanoasis/nerd-fonts/releases/download/v${nerd_version}/${font_name}.zip"
+  )
+
+  # 下载（依次尝试镜像源）
+  local downloaded=false
+  for url in "${mirrors[@]}"; do
+    echo -e "${BOLD}${CYAN}${ARROW} 尝试下载: ${url}${RESET}"
+    if curl -fsSL --connect-timeout 15 --max-time 60 "${url}" -o "${tmp_zip}" 2>>"${LOG_FILE}"; then
+      downloaded=true
+      break
+    fi
+    echo_warning "此源下载失败，尝试下一个..."
+  done
+
+  if ! $downloaded; then
+    echo_warning "Nerd Font 所有镜像源下载失败，Starship 将使用降级模式（无图标）"
     echo "  手动安装: https://www.nerdfonts.com/font-downloads"
     rm -f "${tmp_zip}"
     return 1

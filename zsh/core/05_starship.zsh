@@ -13,15 +13,21 @@ ZSH_HOME="${ZSH_HOME:-${HOME}/.dotfiles/zsh}"
 FALLBACK_CONFIG="${ZSH_HOME}/starship_fallback.toml"
 MAIN_CONFIG="${ZSH_HOME}/starship.toml"
 
-# 检测 Nerd Font (带每日缓存)
+# 检测 Nerd Font (带智能缓存 + mtime 校验)
 _has_nerd_font() {
-  # 缓存检查 - 每天只检测一次
   local cache_file="${HOME}/.cache/zsh/nerd_font_cache"
-  local today=$(date +'%Y-%m-%d')
+  local font_dir="${HOME}/.local/share/fonts"
+
+  # 快速路径：检查字体缓存文件是否已存在（无需解析内容）
   if [[ -f "$cache_file" ]]; then
-    local cache_date=$(head -1 "$cache_file" 2>/dev/null)
-    local cache_result=$(tail -1 "$cache_file" 2>/dev/null)
-    if [[ "$cache_date" == "$today" ]] && [[ -n "$cache_result" ]]; then
+    # 检查字体目录 mtime 是否变化（字体安装/删除后会更新 mtime）
+    local cache_mtime font_mtime
+    cache_mtime=$(stat -c %Y "$cache_file" 2>/dev/null || echo 0)
+    font_mtime=$(stat -c %Y "$font_dir" 2>/dev/null || echo 0)
+
+    if [[ "$font_mtime" -le "$cache_mtime" ]]; then
+      # 字体目录未变化，使用缓存结果
+      local cache_result=$(tail -1 "$cache_file" 2>/dev/null)
       [[ "$cache_result" == "yes" ]] && return 0
       return 1
     fi
