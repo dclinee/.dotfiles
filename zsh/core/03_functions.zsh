@@ -380,6 +380,10 @@ check_env() {
     echo "✅ Nerd Font: 已检测 (使用完整图标)"
   elif [[ -n "${STARSHIP_CONFIG:-}" ]] && [[ "$(basename "${STARSHIP_CONFIG}")" == "starship_fallback.toml" ]]; then
     echo "⚠️  Nerd Font: 未检测 (使用降级符号)"
+    echo "   安装方式:"
+    echo "     cd ~/.dotfiles && ./zsh/install.sh  # 自动安装"
+    echo "     或手动: https://www.nerdfonts.com/font-downloads"
+    echo "   安装后请在终端设置中选择 Nerd Font 字体"
   else
     echo "❌ Starship: 未配置"
   fi

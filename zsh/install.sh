@@ -326,6 +326,96 @@ init_zoxide() {
 }
 
 # ======================
+# Nerd Font 检测与安装
+# ======================
+# 检测 Nerd Font 是否已安装
+_has_nerd_font_install() {
+  # 方法1: fc-list
+  if command -v fc-list > /dev/null 2>&1; then
+    fc-list : family 2>/dev/null | grep -qi "Nerd" && return 0
+  fi
+
+  # 方法2: 检查常见字体目录
+  local dir
+  for dir in \
+    "${HOME}/.local/share/fonts" \
+    "${HOME}/.fonts" \
+    "/usr/local/share/fonts" \
+    "/usr/share/fonts" \
+    "/usr/share/fonts/truetype" \
+    "/usr/share/fonts/opentype"; do
+    [[ -d "${dir}" ]] && find "${dir}" -iname "*Nerd*" -print -quit 2>/dev/null | grep -q . && return 0
+  done
+
+  # 方法3: brew 字体
+  if command -v brew > /dev/null 2>&1; then
+    local prefix="${HOMEBREW_PREFIX:-/home/linuxbrew/.linuxbrew}"
+    [[ -d "${prefix}/share/fonts" ]] && find "${prefix}/share/fonts" -iname "*Nerd*" -print -quit 2>/dev/null | grep -q . && return 0
+  fi
+
+  return 1
+}
+
+# 安装 Nerd Font (Fira Code Nerd Font)
+install_nerd_font() {
+  echo_step "检查 Nerd Font..."
+
+  if _has_nerd_font_install; then
+    echo_success "Nerd Font 已安装"
+    return 0
+  fi
+
+  echo -e "${BOLD}${CYAN}${ARROW} 安装 Fira Code Nerd Font...${RESET}"
+
+  local font_dir="${HOME}/.local/share/fonts"
+  local font_name="FiraCode"
+  local nerd_version="3.3.0"
+  local url="https://github.com/ryanoasis/nerd-fonts/releases/download/v${nerd_version}/${font_name}.zip"
+  local tmp_zip
+
+  tmp_zip="$(mktemp /tmp/nerd-font-XXXXXX.zip)"
+
+  # 下载
+  if ! curl -fsSL "${url}" -o "${tmp_zip}" 2>>"${LOG_FILE}"; then
+    echo_warning "Nerd Font 下载失败，Starship 将使用降级模式（无图标）"
+    echo "  手动安装: https://www.nerdfonts.com/font-downloads"
+    rm -f "${tmp_zip}"
+    return 1
+  fi
+
+  # 解压到字体目录
+  mkdir -p "${font_dir}"
+  if command -v unzip > /dev/null 2>&1; then
+    if unzip -o -q "${tmp_zip}" -d "${font_dir}" 2>>"${LOG_FILE}"; then
+      echo_success "Nerd Font 已安装到 ${font_dir}"
+    else
+      echo_warning "Nerd Font 解压失败"
+      rm -f "${tmp_zip}"
+      return 1
+    fi
+  else
+    echo_warning "未安装 unzip，无法解压字体包"
+    echo "  安装 unzip: sudo apt install unzip"
+    rm -f "${tmp_zip}"
+    return 1
+  fi
+
+  # 刷新字体缓存
+  if command -v fc-cache > /dev/null 2>&1; then
+    fc-cache -fv "${font_dir}" > /dev/null 2>&1
+    echo_success "字体缓存已刷新"
+  fi
+
+  # 清理下载的临时文件
+  rm -f "${tmp_zip}"
+
+  # 清除 Nerd Font 检测缓存（让下次启动重新检测）
+  rm -f "${HOME}/.cache/zsh/nerd_font_cache" 2>/dev/null
+
+  echo_warning "请重启终端或在终端设置中选择 Nerd Font 字体"
+}
+
+# ======================
 # 主安装流程
 # ======================
 main() {
@@ -384,6 +474,11 @@ main() {
 
   # 初始化 zoxide
   init_zoxide
+
+  echo_separator
+
+  # 安装 Nerd Font（用于 Starship 图标显示）
+  install_nerd_font
 
   echo_title "安装完成"
   echo -e "${GREEN}${CHECK} ${BOLD}所有配置安装完成！${RESET}"

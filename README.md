@@ -96,7 +96,241 @@ export USE_MIRROR=tsinghua
 ./zsh/install.sh
 ```
 
-## 📁 配置结构
+## � Zsh 部署详解
+
+本章节详细介绍如何在新机器上从零部署 Zsh 环境，适用于只想部署 Zsh 而不需要其他组件的开发者。
+
+### 前置条件
+
+| 依赖 | 最低版本 | 安装命令 |
+|------|---------|---------|
+| Zsh  | 5.9     | `sudo apt install zsh` / `brew install zsh` |
+| Git  | 2.20+   | `sudo apt install git` / `brew install git` |
+| curl | 任意    | `sudo apt install curl` / `brew install curl` |
+
+### 一键部署（推荐）
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/dclinee/dotfiles.git ~/.dotfiles
+
+# 2. 运行 Zsh 安装脚本（自动安装 Homebrew、zinit、starship、zoxide、eza）
+cd ~/.dotfiles && ./zsh/install.sh
+
+# 3. 设为默认 shell
+chsh -s "$(command -v zsh)"
+
+# 4. 重启终端或重新加载配置
+exec zsh
+```
+
+### 分步部署（手动控制）
+
+如果你希望精确控制每一步，可以按以下顺序手动部署：
+
+#### 步骤 1：安装 Zsh 并设为默认 shell
+
+```bash
+# Ubuntu/Debian
+sudo apt update && sudo apt install -y zsh
+
+# CentOS/RHEL/Fedora
+sudo dnf install -y zsh
+
+# macOS（系统自带，如需升级）
+brew install zsh
+
+# Arch Linux
+sudo pacman -S --noconfirm zsh
+
+# 设为默认 shell
+chsh -s "$(command -v zsh)"
+```
+
+#### 步骤 2：克隆 Dotfiles 仓库
+
+```bash
+git clone https://github.com/dclinee/dotfiles.git ~/.dotfiles
+cd ~/.dotfiles
+```
+
+#### 步骤 3：创建符号链接
+
+```bash
+# .zshrc - 主配置入口
+ln -sf ~/.dotfiles/zsh/.zshrc ~/.zshrc
+
+# .zshenv - 环境变量（PATH、Homebrew）
+ln -sf ~/.dotfiles/zsh/.zshenv ~/.zshenv
+```
+
+#### 步骤 4：安装 Homebrew
+
+```bash
+# Linux
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 配置 PATH（写入 .zshenv，install.sh 会自动处理）
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+```
+
+#### 步骤 5：安装核心工具
+
+```bash
+# starship 提示符
+brew install starship
+
+# eza（ls 替代品）+ zoxide（cd 替代品）
+brew install eza zoxide
+
+# 其他常用工具
+brew install fzf ripgrep bat gh lazygit
+```
+
+#### 步骤 6：安装 zinit 插件管理器
+
+```bash
+# 方式 A：通过 Homebrew（推荐）
+brew install zinit
+
+# 方式 B：手动 git clone
+git clone --depth 1 https://github.com/zdharma-continuum/zinit.git ~/.zinit
+```
+
+#### 步骤 7：初始化 zoxide
+
+```bash
+# 生成 zoxide 初始化脚本到 dotfiles 目录
+mkdir -p ~/.dotfiles/zsh/plugins/zoxide
+zoxide init zsh > ~/.dotfiles/zsh/plugins/zoxide/init.zsh
+```
+
+#### 步骤 8：加载配置
+
+```bash
+# 重新加载配置
+source ~/.zshrc
+
+# 或重启终端
+exec zsh
+```
+
+### Zsh 配置文件加载顺序
+
+```
+.zshenv          ← 所有 shell 会话最先加载（PATH、Homebrew）
+  ↓
+.zshrc           ← 交互式 shell 加载
+  ↓
+core/00_env.zsh     ← 环境变量
+core/01_options.zsh ← Zsh 选项
+core/02_aliases.zsh ← 别名定义
+core/03_functions.zsh ← 自定义函数
+core/04_plugins.zsh ← zinit 插件加载
+core/05_starship.zsh ← Starship 提示符
+  ↓
+platform/linux.zsh  ← 平台特定配置
+  或
+platform/macos.zsh
+  ↓
+~/.zshrc.local      ← 你的本地自定义配置（不纳入仓库）
+```
+
+### 内置插件列表
+
+以下插件由 zinit 自动管理，首次启动时会自动下载：
+
+| 插件 | 说明 | 加载方式 |
+|------|------|---------|
+| `zsh-users/zsh-autosuggestions` | 历史命令补全建议（→ 接受） | 同步 |
+| `wfxr/forgit` | Git 交互式增强（g、ga、gd） | 同步 |
+| `zsh-users/zsh-history-substring-search` | 历史命令子串搜索（↑↓） | 同步 |
+| `agkozak/zsh-z` | 智能目录跳转 | 同步 |
+| `Aloxaf/fzf-tab` | Tab 补全模糊查找 | 懒加载 |
+| `zsh-users/zsh-syntax-highlighting` | 命令行语法高亮 | 懒加载 |
+
+### 常用命令
+
+```bash
+# 插件管理
+list_plugins         # 列出已加载插件
+update_plugins       # 更新所有插件
+zinit update         # 更新单个插件
+
+# 环境诊断
+check_env            # 检查 Zsh 环境配置
+check_dependencies   # 检查依赖工具状态
+
+# 性能分析
+ZSH_DEBUG_PLUGINS=1 zsh   # 显示插件加载日志
+~/.dotfiles/zsh/profile_performance.sh  # 启动性能测试
+
+# 临时禁用插件（排查问题）
+ZSH_DISABLE_PLUGINS=1 zsh
+```
+
+### 自定义配置
+
+在 `~/.zshrc.local` 中添加你的个人配置（不会被 git 跟踪）：
+
+```zsh
+# ~/.zshrc.local 示例
+
+# 个人别名
+alias myproject='cd ~/projects/my-project'
+
+# 环境变量
+export MY_API_KEY="your-key-here"
+
+# 项目特定的 PATH
+export PATH="$HOME/.cargo/bin:$PATH"
+```
+
+### 字体推荐
+
+为获得最佳体验（Starship 图标显示），建议安装 Nerd Font。安装脚本会自动检测并安装：
+
+```bash
+# 方式 1：运行安装脚本（自动检测+安装）
+cd ~/.dotfiles && ./zsh/install.sh
+
+# 方式 2：通过 Homebrew 安装（macOS）
+brew install --cask font-fira-code-nerd-font
+
+# 方式 3：手动安装（Linux）
+mkdir -p ~/.local/share/fonts
+cd ~/.local/share/fonts
+curl -fLO https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/FiraCode.zip
+unzip FiraCode.zip && rm FiraCode.zip
+fc-cache -fv
+```
+
+安装后请在终端设置中选择 Nerd Font 字体（如 "FiraCode Nerd Font"）。
+
+> 未安装 Nerd Font 时，Starship 会自动降级为无图标模式，不影响功能。
+> 运行 `check_env` 可查看字体检测状态和安装建议。
+
+### 故障排除
+
+```bash
+# 问题：zinit 插件加载失败
+# 解决：重新安装 zinit
+brew reinstall zinit
+
+# 问题：zoxide 未生效
+# 解决：重新生成 init 脚本
+zoxide init zsh > ~/.dotfiles/zsh/plugins/zoxide/init.zsh
+
+# 问题：starship 未显示
+# 解决：检查是否在 PATH 中
+command -v starship && echo "OK" || brew install starship
+
+# 问题：启动速度慢
+# 诊断：查看插件加载耗时
+ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
+```
+
+## �� 配置结构
 
 ```
 ~/.dotfiles/
@@ -142,8 +376,7 @@ export USE_MIRROR=tsinghua
 │   ├── .gitconfig        # Git 配置模板（别名/颜色/pager）
 │   └── .gitignore_global # 全局忽略规则
 ├── brew/                 # Homebrew 配置
-│   ├── Brewfile          # 主 Brewfile（按平台分发）
-│   ├── Brewfile.common   # 通用包（git/gh/fzf/ripgrep/bat/eza...）
+│   ├── Brewfile          # 通用包（git/gh/fzf/ripgrep/bat/eza...）
 │   ├── Brewfile.linux    # Linux 特定包
 │   ├── Brewfile.macos    # macOS 特定包
 │   └── install_brew.sh   # Brew 安装脚本
