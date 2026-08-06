@@ -5,10 +5,10 @@
 # ======================
 #
 # 在新机器上只需执行:
-#   curl -fsSL https://raw.githubusercontent.com/dclinee/dotfiles/main/bootstrap.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/dclinee/.dotfiles/main/bootstrap.sh | bash
 #
 # 或手动:
-#   git clone https://github.com/dclinee/dotfiles.git ~/.dotfiles
+#   git clone https://github.com/dclinee/.dotfiles.git ~/.dotfiles
 #   cd ~/.dotfiles && ./bootstrap.sh
 #
 # 支持参数:
@@ -131,11 +131,11 @@ clone_repo() {
   fi
 
   echo_step "克隆 Dotfiles 仓库..."
-  if git clone https://github.com/dclinee/dotfiles.git "${DOTFILES_DIR}" 2>>"${LOG_FILE}"; then
+  if git clone https://github.com/dclinee/.dotfiles.git "${DOTFILES_DIR}" 2>>"${LOG_FILE}"; then
     echo_success "仓库克隆完成"
   else
     echo_error "仓库克隆失败，请检查网络或手动克隆"
-    echo "  git clone https://github.com/dclinee/dotfiles.git ~/.dotfiles"
+    echo "  git clone https://github.com/dclinee/.dotfiles.git ~/.dotfiles"
     exit 1
   fi
 }

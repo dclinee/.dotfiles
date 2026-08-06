@@ -45,13 +45,13 @@
 
 ```bash
 # 直接远程执行（会自动克隆仓库到 ~/.dotfiles）
-curl -fsSL https://raw.githubusercontent.com/dclinee/dotfiles/main/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dclinee/.dotfiles/main/bootstrap.sh | bash
 ```
 
 或手动克隆后执行：
 
 ```bash
-git clone https://github.com/dclinee/dotfiles.git ~/.dotfiles
+git clone https://github.com/dclinee/.dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 ./bootstrap.sh
 ```
