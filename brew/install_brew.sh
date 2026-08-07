@@ -9,15 +9,33 @@ export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
 export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
 export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
 
+# 安全下载并执行脚本（替代 curl | bash）
+_download_and_run() {
+  local url="$1"
+  local tmp_file
+  tmp_file="$(mktemp)"
+  trap 'rm -f "${tmp_file}"' EXIT RETURN
+
+  echo "下载脚本: ${url}"
+  if ! curl -fsSL "${url}" -o "${tmp_file}"; then
+    echo "错误: 下载失败 ${url}"
+    return 1
+  fi
+
+  echo "执行下载的安装脚本..."
+  bash "${tmp_file}"
+  local rc=$?
+  rm -f "${tmp_file}"
+  return $rc
+}
+
 # 自动判断系统类型
 if [[ "$(uname)" == "Darwin" ]]; then
     echo "开始安装 Homebrew (macOS)..."
-    # macOS 安装命令
-    /bin/bash -c "$(curl -fsSL https://mirrors.ustc.edu.cn/misc/brew-install.sh)"
+    _download_and_run "https://mirrors.ustc.edu.cn/misc/brew-install.sh"
 elif [[ "$(uname)" == "Linux" ]]; then
     echo "开始安装 Homebrew (Linux)..."
-    # Linux 安装命令
-    /bin/bash -c "$(curl -fsSL https://mirrors.ustc.edu.cn/misc/brew-install.sh)"
+    _download_and_run "https://mirrors.ustc.edu.cn/misc/brew-install.sh"
 else
     echo "错误：不支持的操作系统"
     exit 1

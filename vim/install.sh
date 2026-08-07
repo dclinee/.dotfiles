@@ -24,10 +24,11 @@ echo_step()    { echo -e "${BOLD}${BLUE}ℹ️  ${1}${RESET}"; }
 echo_success() { echo -e "${GREEN}✅ ${1}${RESET}"; }
 echo_warning() { echo -e "${YELLOW}⚠️  ${1}${RESET}"; }
 echo_error()   { echo -e "${RED}❌ ${1}${RESET}"; }
+echo_separator() { echo -e "${BLUE}=============================================${RESET}"; }
 echo_title() {
-  echo -e "${BLUE}=============================================${RESET}"
+  echo_separator
   echo -e "${BOLD}${CYAN}${1}${RESET}"
-  echo -e "${BLUE}=============================================${RESET}"
+  echo_separator
 }
 
 # ======================
@@ -121,8 +122,6 @@ main() {
       echo_warning "请手动安装 Vim 后重试"
     fi
   fi
-
-  echo_separator() { echo -e "${BLUE}=============================================${RESET}"; }
 
   echo_separator
 

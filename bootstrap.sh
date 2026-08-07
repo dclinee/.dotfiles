@@ -50,12 +50,11 @@ CYAN="\033[36m"
 RESET="\033[0m"
 BOLD="\033[1m"
 
-SEPARATOR="${BLUE}=============================================${RESET}"
-echo_step()       { echo -e "${BOLD}${BLUE}ℹ️  ${1}${RESET}"; }
-echo_success()    { echo -e "${GREEN}✅ ${1}${RESET}"; }
-echo_warning()    { echo -e "${YELLOW}⚠️  ${1}${RESET}"; }
-echo_error()      { echo -e "${RED}❌ ${1}${RESET}"; }
-echo_separator()  { echo -e "${SEPARATOR}"; }
+echo_step()    { echo -e "${BOLD}${BLUE}ℹ️  ${1}${RESET}"; }
+echo_success() { echo -e "${GREEN}✅ ${1}${RESET}"; }
+echo_warning() { echo -e "${YELLOW}⚠️  ${1}${RESET}"; }
+echo_error()   { echo -e "${RED}❌ ${1}${RESET}"; }
+echo_separator() { echo -e "${BLUE}=============================================${RESET}"; }
 echo_title() {
   echo_separator
   echo -e "${BOLD}${CYAN}${1}${RESET}"

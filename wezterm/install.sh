@@ -104,8 +104,8 @@ create_wezterm_link() {
 
 # 主安装流程
 main() {
-  # 检查 Wezterm 安装
-  check_wezterm_install
+  # 检查 Wezterm 安装（即使未安装也继续创建配置链接）
+  check_wezterm_install || true
   
   # 创建配置链接
   create_wezterm_link
