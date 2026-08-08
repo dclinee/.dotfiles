@@ -1,0 +1,53 @@
+" ===================================
+" Vim 本地配置模板
+" ===================================
+" 复制此文件到 ~/.vimrc.local 进行个性化配置
+" 该文件在 .vimrc 末尾被加载，可覆盖仓库默认设置
+" 不会被 git 跟踪，适合放置：
+"   - 个人快捷键
+"   - 工作目录特定设置
+"   - 公司/项目特定的 coc 扩展
+"   - 自定义主题切换
+"
+" cp ~/.dotfiles/vim/vimrc.local.example ~/.vimrc.local
+" ===================================
+
+" 示例 1：切换配色方案（覆盖默认 Tokyo Night）
+" colorscheme gruvbox               " 切换到 Gruvbox
+" colorscheme tokyonight-storm     " Tokyo Night Storm 变体
+" colorscheme tokyonight-day       " Tokyo Night Day 变体（亮色）
+" colorscheme dracula              " Dracula 主题
+
+" 示例 2：切换 Tokyo Night 风格
+" let g:tokyonight_style = 'storm'  " 风暴风格（更暗）
+" let g:tokyonight_style = 'day'    " 日间风格（亮色）
+" let g:tokyonight_style = 'moon'   " 月光风格
+
+" 示例 3：禁用透明背景
+" let g:tokyonight_disable_background = 0
+" highlight Normal guibg=NONE ctermbg=NONE
+
+" 示例 4：禁用斜体注释
+" let g:tokyonight_enable_italic = 0
+" highlight Comment cterm=NONE gui=NONE
+
+" 示例 5：调整缩进为 2 空格
+" set shiftwidth=2
+" set tabstop=2
+" set softtabstop=2
+
+" 示例 6：个人快捷键
+" nnoremap <Leader>om :!open %:p<CR>  " macOS 用 open 打开当前文件
+" nnoremap <Leader>ox :!xdg-open %:p<CR>  " Linux 用 xdg-open 打开当前文件
+
+" 示例 7：追加 coc 扩展（保留默认扩展并添加新的）
+" let g:coc_global_extensions += ['coc-emoji', 'coc-tabnine']
+
+" 示例 8：项目特定的文件类型设置
+" autocmd FileType rust setlocal shiftwidth=4
+
+" 示例 9：禁用某些插件（如不需要多光标）
+" let g:loaded_vim_multiple_cursors = 1
+
+" 示例 10：自定义透明度
+" set winblend=15  " 浮窗透明度 0-100（越高越透明）
