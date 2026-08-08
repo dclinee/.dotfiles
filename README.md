@@ -112,7 +112,7 @@ export USE_MIRROR=tsinghua
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/dclinee/dotfiles.git ~/.dotfiles
+git clone https://github.com/dclinee/.dotfiles.git ~/.dotfiles
 
 # 2. 运行 Zsh 安装脚本（自动安装 Homebrew、zinit、starship、zoxide、eza）
 cd ~/.dotfiles && ./zsh/install.sh
@@ -150,7 +150,7 @@ chsh -s "$(command -v zsh)"
 #### 步骤 2：克隆 Dotfiles 仓库
 
 ```bash
-git clone https://github.com/dclinee/dotfiles.git ~/.dotfiles
+git clone https://github.com/dclinee/.dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 ```
 
@@ -534,7 +534,7 @@ MIT License
 ## 📞 联系方式
 
 - GitHub: [@dclinee](https://github.com/dclinee)
-- Email: dengchanglin8@outlook.com
+- Email: dengchanglin8@qq.com
 
 ---
 
