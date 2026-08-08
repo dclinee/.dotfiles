@@ -3,7 +3,7 @@
 # ======================
 # 统一命令入口，简化操作
 
-.PHONY: install update backup test check clean help zsh vim wezterm brew python tmux git
+.PHONY: install update backup test check clean help zsh vim wezterm brew python rust tmux git
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -31,7 +31,7 @@ help: ## 显示帮助信息
 	@echo "  make check        # 检查环境状态"
 	@echo "  make update       # 更新配置和插件"
 
-install: zsh vim wezterm brew python tmux git ## 一键安装所有配置（推荐）
+install: zsh vim wezterm brew python rust tmux git ## 一键安装所有配置（推荐）
 	@echo ""
 	@echo -e "$(GREEN)✅ 所有配置安装完成！$(RESET)"
 	@echo -e "$(YELLOW)请执行: source ~/.zshrc 或重启终端$(RESET)"
@@ -65,7 +65,22 @@ brew: ## 安装 Homebrew 包
 python: ## 配置 Python 环境
 	@echo -e "$(CYAN)→ 配置 Python 环境...$(RESET)"
 	@if [ -f python/requirements.txt ]; then \
-		pip3 install -r python/requirements.txt; \
+		pip_args="--user"; \
+		if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then \
+			pip_args="--user --break-system-packages"; \
+			echo -e "$(YELLOW)⚠️  检测到外部管理环境，使用 --break-system-packages$(RESET)"; \
+		fi; \
+		pip3 install $${pip_args} -r python/requirements.txt || \
+			echo -e "$(YELLOW)⚠️  部分 Python 依赖安装失败$(RESET)"; \
+	fi
+
+rust: ## 配置 Rust 环境
+	@echo -e "$(CYAN)→ 配置 Rust 环境...$(RESET)"
+	@if [ -f rust/install.sh ]; then \
+		bash rust/install.sh || \
+			echo -e "$(YELLOW)⚠️  Rust 安装出现警告，请查看日志$(RESET)"; \
+	else \
+		echo -e "$(YELLOW)⚠️  rust/install.sh 不存在$(RESET)"; \
 	fi
 
 tmux: ## 安装 Tmux 配置

@@ -31,6 +31,8 @@ _zoxide_lazy_init() {
 }
 
 # zoxide 目录跳转（懒加载包装）
+# 注意: 先移除可能存在的 alias 'z' 以避免与函数定义冲突
+unalias z 2>/dev/null || true
 z() {
   if ! command -v zoxide > /dev/null 2>&1; then
     echo "zoxide 未安装，请先安装: brew install zoxide"

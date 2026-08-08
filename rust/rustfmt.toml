@@ -1,0 +1,27 @@
+# ======================
+# rustfmt 配置
+# ======================
+# 链接到 ~/.rustfmt.toml 或项目根目录 .rustfmt.toml
+# 文档: https://rust-lang.github.io/rustfmt/
+
+# --- 缩进 ---
+edition = "2021"           # Rust edition（必须配置）
+max_width = 100            # 最大行宽（与 std 一致）
+hard_tabs = false          # 使用空格而非 tab
+tab_spaces = 4             # 缩进 4 空格
+
+# --- 导入排序 ---
+reorder_imports = true
+reorder_modules = true
+
+# --- 格式化风格 ---
+use_field_init_shorthand = true   # 使用字段初始化简写 { x, y }
+use_try_shorthand = true          # 使用 ? 代替 try!()
+fn_single_line = false            # 函数签名不压缩到一行
+match_block_trailing_comma = true # match 块末尾逗号
+trailing_comma = "Vertical"       # 垂直排列时保留末尾逗号
+
+# --- 注释 ---
+normalize_comments = true         # 规范化注释格式
+wrap_comments = true              # 包装长注释
+comment_width = 100               # 注释最大宽度

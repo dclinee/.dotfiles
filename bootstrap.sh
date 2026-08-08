@@ -18,6 +18,7 @@
 #   ./bootstrap.sh --wezterm  仅安装 WezTerm
 #   ./bootstrap.sh --brew     仅安装 Brew 包
 #   ./bootstrap.sh --python   仅配置 Python
+#   ./bootstrap.sh --rust     仅配置 Rust 环境
 #   ./bootstrap.sh --tmux     仅安装 Tmux
 #   ./bootstrap.sh --git      仅安装 Git 配置
 
@@ -36,6 +37,7 @@ INSTALL_VIM=false
 INSTALL_WEZTERM=false
 INSTALL_BREW=false
 INSTALL_PYTHON=false
+INSTALL_RUST=false
 INSTALL_TMUX=false
 INSTALL_GIT=false
 
@@ -78,6 +80,7 @@ parse_args() {
       --wezterm)  INSTALL_WEZTERM=true ;;
       --brew)     INSTALL_BREW=true ;;
       --python)   INSTALL_PYTHON=true ;;
+      --rust)     INSTALL_RUST=true ;;
       --tmux)     INSTALL_TMUX=true ;;
       --git)      INSTALL_GIT=true ;;
       -h|--help)
@@ -86,7 +89,7 @@ parse_args() {
         ;;
       *)
         echo_error "未知参数: $arg"
-        echo "使用: $0 [--all|--zsh|--vim|--wezterm|--brew|--python|--tmux|--git]"
+        echo "使用: $0 [--all|--zsh|--vim|--wezterm|--brew|--python|--rust|--tmux|--git]"
         exit 1
         ;;
     esac
@@ -269,14 +272,31 @@ install_python() {
     ln -sf "${DOTFILES_DIR}/python/pip.conf" "${HOME}/.pip/pip.conf"
   fi
 
-  # 安装依赖
+  # 安装依赖（处理外部管理环境错误）
   if [[ -f "${DOTFILES_DIR}/python/requirements.txt" ]]; then
-    pip3 install --user -r "${DOTFILES_DIR}/python/requirements.txt" 2>>"${LOG_FILE}" || {
+    echo_step "安装 Python 依赖..."
+    local pip_install_args=("--user")
+    # 检测是否为外部管理环境（Debian/Ubuntu 新版）
+    if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
+      pip_install_args+=("--break-system-packages")
+      echo_warning "检测到外部管理环境，使用 --break-system-packages 参数"
+    fi
+    pip3 install "${pip_install_args[@]}" -r "${DOTFILES_DIR}/python/requirements.txt" 2>>"${LOG_FILE}" || {
       echo_warning "部分 Python 依赖安装失败"
     }
   fi
 
   echo_success "Python 环境配置完成"
+}
+
+# ======================
+# 配置 Rust 环境
+# ======================
+install_rust() {
+  echo_step "配置 Rust 环境..."
+  bash "${DOTFILES_DIR}/rust/install.sh" 2>>"${LOG_FILE}" || {
+    echo_warning "Rust 安装出现错误，请查看日志: ${LOG_FILE}"
+  }
 }
 
 # ======================
@@ -518,6 +538,14 @@ main() {
       COMPLETED_STEPS+=("Python")
     else
       FAILED_STEPS+=("Python")
+    fi
+  fi
+
+  if $INSTALL_ALL || $INSTALL_RUST; then
+    if install_rust; then
+      COMPLETED_STEPS+=("Rust")
+    else
+      FAILED_STEPS+=("Rust")
     fi
   fi
 

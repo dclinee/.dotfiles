@@ -1,0 +1,38 @@
+# ======================
+# Cargo 配置（用户级）
+# ======================
+# 链接到 ~/.cargo/config.toml
+
+# --- 国内镜像源（加速 crate 下载） ---
+[source.crates-io]
+replace-with = "tuna"
+
+[source.tuna]
+registry = "sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/"
+
+# 备用镜像（ Uncomment 切换）
+# [source.ustc]
+# registry = "sparse+https://mirrors.ustc.edu.cn/crates.io-index/"
+
+# [source.sjtu]
+# registry = "sparse+https://mirrors.sjtug.sjtu.edu.cn/git/crates.io-index"
+
+# --- 构建 profile ---
+[profile.dev]
+opt-level = 0          # 开发时不优化，加快编译速度
+debug = true           # 保留调试信息
+incremental = true     # 增量编译
+
+[profile.release]
+opt-level = 3          # 发布时最大优化
+lto = "thin"           # 链接时优化（加速二进制体积和运行时）
+codegen-units = 1      # 单元编译（更好的优化，编译更慢）
+panic = "abort"        # panic 直接退出（减小二进制体积）
+
+[profile.release-debug]
+inherits = "release"
+debug = true           # 发布版本但保留调试信息
+
+# --- 网络配置 ---
+[net]
+git-fetch-with-cli = true  # 使用系统 git 拉取（更好的代理支持）

@@ -13,7 +13,7 @@ brew "lazygit"
 brew "python"
 brew "node"
 brew "go"
-brew "rust"
+# Rust 通过 rustup 安装（见 rust/install.sh），不在 Brewfile 中管理
 
 # --- 终端增强 ---
 brew "fzf"

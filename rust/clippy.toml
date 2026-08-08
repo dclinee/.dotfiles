@@ -1,0 +1,24 @@
+# ======================
+# Clippy 配置
+# ======================
+# 链接到 ~/.clippy.toml
+# 文档: https://rust-lang.github.io/rust-clippy/master/index.html
+
+# --- 类型复杂度 ---
+type-complexity-threshold = 250      # 允许的类型复杂度阈值
+cognitive-complexity-threshold = 25  # 认知复杂度阈值
+
+# --- 函数参数 ---
+too-many-arguments-threshold = 7     # 参数数量阈值
+too-many-lines-threshold = 200       # 函数最大行数
+
+# --- 命名约定 ---
+enum-variant-name-threshold = 1      # enum 变体名前缀检查严格度
+module-name-removal-threshold = 0    # 模块名移除检查
+
+# --- 文档 ---
+missing-docs-in-crate-items = false  # 不强制 crate 级文档
+
+# --- 常用 clippy 组 ---
+# 日常开发: cargo clippy -- -W clippy::pedantic
+# 严格模式: cargo clippy -- -W clippy::nursery

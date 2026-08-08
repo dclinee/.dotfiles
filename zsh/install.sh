@@ -308,13 +308,19 @@ install_python_config() {
     fi
   fi
 
-  # 安装 Python 依赖
+  # 安装 Python 依赖（处理外部管理环境错误）
   if [[ -f "${HOME}/.dotfiles/python/requirements.txt" ]]; then
     echo -e "${BOLD}${CYAN}${ARROW} 安装 Python 基础依赖...${RESET}"
-    if pip3 install --upgrade -r "${HOME}/.dotfiles/python/requirements.txt" > /dev/null 2>&1; then
+    local pip_install_args=("--user")
+    # 检测是否为外部管理环境（Debian/Ubuntu 新版）
+    if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
+      pip_install_args+=("--break-system-packages")
+      echo_warning "检测到外部管理环境，使用 --break-system-packages 参数"
+    fi
+    if pip3 install "${pip_install_args[@]}" --upgrade -r "${HOME}/.dotfiles/python/requirements.txt" > /dev/null 2>&1; then
       echo_success "Python 基础依赖安装完成"
     else
-      echo_warning "Python 基础依赖安装失败，请手动安装: pip3 install -r ~/.dotfiles/python/requirements.txt"
+      echo_warning "Python 基础依赖安装失败，请手动安装: pip3 install ${pip_install_args[*]} -r ~/.dotfiles/python/requirements.txt"
     fi
     echo "  按需安装其他依赖:"
     echo "    开发工具: pip3 install -r ~/.dotfiles/python/requirements-dev.txt"

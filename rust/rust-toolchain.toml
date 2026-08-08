@@ -1,0 +1,23 @@
+# ======================
+# Rust 项目级工具链配置模板
+# ======================
+# 用法: 将本文件复制到项目根目录，可覆盖全局默认工具链
+#   cp ~/.dotfiles/rust/rust-toolchain.toml <project-dir>/rust-toolchain.toml
+# 注意: 本文件不是全局配置，仅用于项目级覆盖
+# 全局默认工具链通过 rustup default 命令设置
+
+[toolchain]
+channel = "stable"          # stable / beta / nightly
+profile = "default"         # default / minimal / complete
+components = [
+    "rustfmt",              # 代码格式化
+    "clippy",               # 代码检查
+    "rust-src",             # 源码（IDE 跳转需要）
+]
+targets = []                # 交叉编译目标，按需添加，如 ["wasm32-unknown-unknown"]
+
+# 示例: nightly 项目
+# [toolchain]
+# channel = "nightly"
+# components = ["rustfmt", "clippy", "rust-src"]
+
