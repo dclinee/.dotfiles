@@ -95,7 +95,7 @@ validate_functionality() {
   
   # 复制配置到临时目录
   rsync -a --exclude='*.md' "${DOTFILES_DIR}/zsh" "${DOTFILES_DIR}/brew" "${DOTFILES_DIR}/vim" "${DOTFILES_DIR}/wezterm" "${temp_dir}/"
-  chmod -R +x "${temp_dir}/wezterm/install.sh" "${temp_dir}/wezterm/setup_link.sh" 2>/dev/null || true
+  chmod -R +x "${temp_dir}/wezterm/install.sh" 2>/dev/null || true
   chmod -R +x "${temp_dir}/zsh/install.sh" "${temp_dir}/brew/install.sh" 2>/dev/null || true
   
   # 验证Zsh配置 - 只检查语法错误，忽略非致命警告

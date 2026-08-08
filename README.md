@@ -381,15 +381,11 @@ ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 │   ├── Brewfile.macos    # macOS 特定包
 │   └── install_brew.sh   # Brew 安装脚本
 ├── python/               # Python 配置
-│   ├── __init__.py       # Python 模块入口
 │   ├── pythonrc.py       # Python 交互式配置
 │   ├── pip.conf          # Pip 配置
 │   ├── requirements.txt  # Python 依赖
-│   ├── pyproject.toml    # 现代打包配置（符合PEP 517/518标准）
-│   └── setup_env.py      # 环境设置脚本
+│   └── requirements-*.txt # 按需依赖（dev/data/web）
 ├── wezterm/              # WezTerm 终端配置
-├── bin/                  # 自定义脚本
-│   └── brew-sync         # Brew 同步脚本
 ├── test_install.sh       # 静态与动态测试脚本
 ├── validate.sh           # 配置验证脚本
 └── README.md             # 项目文档

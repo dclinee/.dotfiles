@@ -14,7 +14,7 @@
 # --- 用户信息（请在 .gitconfig.local 中覆盖）---
 [user]
     name = Dclinee
-    email = dengchanglin8@outlook.com
+    email = dengchanglin8@qq.com
 
 # --- 核心配置 ---
 [core]

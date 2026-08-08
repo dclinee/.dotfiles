@@ -92,10 +92,15 @@ update: ## 更新配置和插件
 	@echo -e "$(GREEN)✅ 更新完成！$(RESET)"
 
 backup: ## 备份当前配置
-	@echo -e "$(CYAN)→ 备份配置...$(RESET)"
-	@bash zsh/backup_config.sh
-	@bash brew/backup_restore.sh backup 2>/dev/null || true
-	@echo -e "$(GREEN)✅ 备份完成！$(RESET)"
+	@echo -e "$(CYAN)→ 备份配置到 ~/.dotfiles_backup...$(RESET)"
+	@backup_dir="$$HOME/.dotfiles_backup_$$(date +%Y%m%d_%H%M%S)"; \
+	mkdir -p "$$backup_dir"; \
+	[ -f "$$HOME/.zshrc" ] && cp "$$HOME/.zshrc" "$$backup_dir/" 2>/dev/null; \
+	[ -f "$$HOME/.vimrc" ] && cp "$$HOME/.vimrc" "$$backup_dir/" 2>/dev/null; \
+	[ -f "$$HOME/.tmux.conf" ] && cp "$$HOME/.tmux.conf" "$$backup_dir/" 2>/dev/null; \
+	[ -f "$$HOME/.gitconfig" ] && cp "$$HOME/.gitconfig" "$$backup_dir/" 2>/dev/null; \
+	command -v brew >/dev/null 2>&1 && brew bundle dump --force --file="$$backup_dir/Brewfile.backup" 2>/dev/null; \
+	echo -e "$(GREEN)✅ 备份完成：$$backup_dir$(RESET)"
 
 ##@ 诊断
 

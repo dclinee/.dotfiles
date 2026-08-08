@@ -586,12 +586,12 @@ test_all_bash_syntax() {
   log_info "测试: 所有 bash 脚本语法"
 
   local bash_files=(
+    "$DOTFILES_DIR/bootstrap.sh"
     "$DOTFILES_DIR/zsh/install.sh"
     "$DOTFILES_DIR/brew/install_brew.sh"
-    "$DOTFILES_DIR/brew/backup_restore.sh"
     "$DOTFILES_DIR/wezterm/install.sh"
-    "$DOTFILES_DIR/wezterm/setup_link.sh"
-    "$DOTFILES_DIR/zsh/backup_config.sh"
+    "$DOTFILES_DIR/vim/install.sh"
+    "$DOTFILES_DIR/validate.sh"
   )
 
   for file in "${bash_files[@]}"; do
