@@ -15,6 +15,7 @@
 #   ./bootstrap.sh --all      安装全部（默认）
 #   ./bootstrap.sh --zsh      仅安装 Zsh
 #   ./bootstrap.sh --vim      仅安装 Vim
+#   ./bootstrap.sh --emacs    仅安装 Emacs
 #   ./bootstrap.sh --wezterm  仅安装 WezTerm
 #   ./bootstrap.sh --brew     仅安装 Brew 包
 #   ./bootstrap.sh --python   仅配置 Python
@@ -34,6 +35,7 @@ LOG_FILE="/tmp/dotfiles_bootstrap_$(date +%Y%m%d_%H%M%S).log"
 INSTALL_ALL=true
 INSTALL_ZSH=false
 INSTALL_VIM=false
+INSTALL_EMACS=false
 INSTALL_WEZTERM=false
 INSTALL_BREW=false
 INSTALL_PYTHON=false
@@ -77,6 +79,7 @@ parse_args() {
       --all)      INSTALL_ALL=true ;;
       --zsh)      INSTALL_ZSH=true ;;
       --vim)      INSTALL_VIM=true ;;
+      --emacs)    INSTALL_EMACS=true ;;
       --wezterm)  INSTALL_WEZTERM=true ;;
       --brew)     INSTALL_BREW=true ;;
       --python)   INSTALL_PYTHON=true ;;
@@ -89,7 +92,7 @@ parse_args() {
         ;;
       *)
         echo_error "未知参数: $arg"
-        echo "使用: $0 [--all|--zsh|--vim|--wezterm|--brew|--python|--rust|--tmux|--git]"
+        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git]"
         exit 1
         ;;
     esac
@@ -205,6 +208,16 @@ install_vim() {
   mkdir -p "${HOME}/.cache/vim/undo" "${HOME}/.cache/vim/backup" "${HOME}/.cache/vim/swap"
 
   echo_success "Vim 配置安装完成"
+}
+
+# ======================
+# 安装 Emacs 配置
+# ======================
+install_emacs() {
+  echo_step "安装 Emacs 配置..."
+  bash "${DOTFILES_DIR}/emacs/install.sh" 2>>"${LOG_FILE}" || {
+    echo_warning "Emacs 安装出现错误，请查看日志: ${LOG_FILE}"
+  }
 }
 
 # ======================
@@ -427,6 +440,13 @@ final_check() {
     all_good=false
   fi
 
+  # 检查 Emacs
+  if [[ -L "${HOME}/.config/emacs/init.el" ]] || [[ -L "${HOME}/.emacs.d/init.el" ]]; then
+    echo_success "Emacs: init.el 已链接"
+  else
+    echo_warning "Emacs: init.el 未链接（可能未选择安装）"
+  fi
+
   # 检查 Git
   if [[ -L "${HOME}/.gitconfig" ]]; then
     echo_success "Git: .gitconfig 已链接"
@@ -514,6 +534,14 @@ main() {
       COMPLETED_STEPS+=("Vim")
     else
       FAILED_STEPS+=("Vim")
+    fi
+  fi
+
+  if $INSTALL_ALL || $INSTALL_EMACS; then
+    if install_emacs; then
+      COMPLETED_STEPS+=("Emacs")
+    else
+      FAILED_STEPS+=("Emacs")
     fi
   fi
 

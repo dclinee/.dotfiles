@@ -3,7 +3,7 @@
 # ======================
 # 统一命令入口，简化操作
 
-.PHONY: install update backup test check clean help zsh vim wezterm brew python rust tmux git
+.PHONY: install update backup test check clean help zsh vim emacs wezterm brew python rust tmux git
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -31,7 +31,7 @@ help: ## 显示帮助信息
 	@echo "  make check        # 检查环境状态"
 	@echo "  make update       # 更新配置和插件"
 
-install: zsh vim wezterm brew python rust tmux git ## 一键安装所有配置（推荐）
+install: zsh vim emacs wezterm brew python rust tmux git ## 一键安装所有配置（推荐）
 	@echo ""
 	@echo -e "$(GREEN)✅ 所有配置安装完成！$(RESET)"
 	@echo -e "$(YELLOW)请执行: source ~/.zshrc 或重启终端$(RESET)"
@@ -45,6 +45,15 @@ zsh: ## 安装 Zsh 配置
 vim: ## 安装 Vim 配置
 	@echo -e "$(CYAN)→ 安装 Vim 配置...$(RESET)"
 	@bash vim/install.sh
+
+emacs: ## 安装 Emacs 配置
+	@echo -e "$(CYAN)→ 安装 Emacs 配置...$(RESET)"
+	@if [ -f emacs/install.sh ]; then \
+		bash emacs/install.sh || \
+			echo -e "$(YELLOW)⚠️  Emacs 安装出现警告，请查看日志$(RESET)"; \
+	else \
+		echo -e "$(YELLOW)⚠️  emacs/install.sh 不存在$(RESET)"; \
+	fi
 
 wezterm: ## 安装 WezTerm 配置
 	@echo -e "$(CYAN)→ 安装 WezTerm 配置...$(RESET)"
