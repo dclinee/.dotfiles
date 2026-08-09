@@ -90,13 +90,10 @@ make help       # 查看所有可用命令
 
 ### 使用国内镜像加速
 
-```bash
-# 使用清华镜像源
-export USE_MIRROR=tsinghua
-./zsh/install.sh
-```
+安装脚本已内置国内镜像降级策略（GitHub → ghfast.top → mirror.ghproxy.com），
+无需额外配置。如遇 GitHub 下载缓慢，脚本会自动切换镜像源。
 
-## � Zsh 部署详解
+## 🎯 Zsh 部署详解
 
 本章节详细介绍如何在新机器上从零部署 Zsh 环境，适用于只想部署 Zsh 而不需要其他组件的开发者。
 
@@ -521,16 +518,16 @@ ZSH_DEBUG=1 zsh
 
 ## 📝 许可证
 
-MIT License
+本项目基于 [MIT License](LICENSE) 开源。
 
 ## 🤝 贡献
 
-欢迎提交 Issue 和 Pull Request 来改进这个项目！
+欢迎提交 Issue 和 Pull Request 来改进这个项目！请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 了解贡献流程。
 
 ## 📞 联系方式
 
-- GitHub: [@dclinee](https://github.com/dclinee)
-- Email: dengchanglin8@qq.com
+- GitHub Issues: [提交问题](https://github.com/dclinee/.dotfiles/issues)
+- GitHub Discussions: [参与讨论](https://github.com/dclinee/.dotfiles/discussions)
 
 ---
 

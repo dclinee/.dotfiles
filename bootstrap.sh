@@ -11,6 +11,9 @@
 #   git clone https://github.com/dclinee/.dotfiles.git ~/.dotfiles
 #   cd ~/.dotfiles && ./bootstrap.sh
 #
+# Fork 用户可用自己的仓库:
+#   DOTFILES_REPO_URL=https://github.com/<user>/.dotfiles.git ./bootstrap.sh
+#
 # 支持参数:
 #   ./bootstrap.sh --all      安装全部（默认）
 #   ./bootstrap.sh --zsh      仅安装 Zsh
@@ -143,12 +146,15 @@ clone_repo() {
     return 0
   fi
 
+  # 支持环境变量覆盖仓库地址（方便 fork 用户使用自己的仓库）
+  local repo_url="${DOTFILES_REPO_URL:-https://github.com/dclinee/.dotfiles.git}"
+
   echo_step "克隆 Dotfiles 仓库..."
-  if git clone https://github.com/dclinee/.dotfiles.git "${DOTFILES_DIR}" 2>>"${LOG_FILE}"; then
+  if git clone "${repo_url}" "${DOTFILES_DIR}" 2>>"${LOG_FILE}"; then
     echo_success "仓库克隆完成"
   else
     echo_error "仓库克隆失败，请检查网络或手动克隆"
-    echo "  git clone https://github.com/dclinee/.dotfiles.git ~/.dotfiles"
+    echo "  git clone ${repo_url} ~/.dotfiles"
     exit 1
   fi
 }

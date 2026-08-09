@@ -37,30 +37,18 @@ retry_with_backoff() {
   local max_attempts=3
   local delay=2
   local attempt=0
-  
+
   until "$@"; do
     attempt=$((attempt + 1))
     if [ "$attempt" -gt "$max_attempts" ]; then
       return 1
     fi
-    
+
     log WARN "尝试 $attempt/$max_attempts 失败，${delay}秒后重试..."
     sleep "$delay"
     delay=$((delay * 2))
   done
-  
-  return 0
-}
 
-# 检查sudo权限
-check_sudo() {
-  if ! sudo -n true 2>/dev/null; then
-    log ERROR "需要sudo权限，请确保已配置免密sudo"
-    log INFO "可以通过以下方式配置："
-    log INFO "  sudo visudo"
-    log INFO "  添加：$(whoami) ALL=(ALL) NOPASSWD: ALL"
-    return 1
-  fi
   return 0
 }
 
@@ -77,14 +65,15 @@ init_platform() {
 # 模拟安装流程
 simulate_install() {
   log SIM "模拟安装流程："
-  
-  # Brew安装模拟
-  if [ -f "${DOTFILES_DIR}/brew/install.sh" ]; then
+
+  # Brew 安装模拟（实际文件名为 install_brew.sh）
+  local brew_script="${DOTFILES_DIR}/brew/install_brew.sh"
+  if [ -f "${brew_script}" ]; then
     log SIM "[Brew] 将执行："
-    grep 'brew bundle' "${DOTFILES_DIR}/brew/install.sh" || true
+    grep 'brew bundle\|brew install' "${brew_script}" || true
   fi
-  
-  # Zsh安装模拟
+
+  # Zsh 安装模拟
   log SIM "[Zsh] 将配置："
   find "${DOTFILES_DIR}/zsh" -name '*.zsh' -exec grep '^source\|^export' {} \; | sort | uniq | head -20
 }
@@ -92,11 +81,19 @@ simulate_install() {
 # 功能验证
 validate_functionality() {
   log INFO "验证功能..."
-  
-  # 复制配置到临时目录
-  rsync -a --exclude='*.md' "${DOTFILES_DIR}/zsh" "${DOTFILES_DIR}/brew" "${DOTFILES_DIR}/vim" "${DOTFILES_DIR}/wezterm" "${temp_dir}/"
+
+  # 复制配置到临时目录（用 cp 替代 rsync，减少外部依赖）
+  # 排除 .md 文档和 .git 目录，只验证可执行配置
+  local dir
+  for dir in zsh brew vim wezterm; do
+    if [[ -d "${DOTFILES_DIR}/${dir}" ]]; then
+      cp -r "${DOTFILES_DIR}/${dir}" "${temp_dir}/" 2>/dev/null || true
+      # 移除文档和非配置文件
+      find "${temp_dir}/${dir}" -name '*.md' -delete 2>/dev/null || true
+    fi
+  done
   chmod -R +x "${temp_dir}/wezterm/install.sh" 2>/dev/null || true
-  chmod -R +x "${temp_dir}/zsh/install.sh" "${temp_dir}/brew/install.sh" 2>/dev/null || true
+  chmod -R +x "${temp_dir}/zsh/install.sh" "${temp_dir}/brew/install_brew.sh" 2>/dev/null || true
   
   # 验证Zsh配置 - 只检查语法错误，忽略非致命警告
   log INFO "验证Zsh配置..."
