@@ -173,32 +173,6 @@ wezterm.on('random-color-scheme', function(window, pane)
   wezterm.log_info('Switched to color scheme: ' .. overrides.color_scheme)
 end)
 
--- 检查命令是否存在的辅助函数（等价于 shell 的 command -v）
-local function command_exists(cmd)
-  local handle = io.popen('command -v ' .. cmd .. ' 2>/dev/null')
-  if not handle then return false end
-  local result = handle:read('*l')
-  handle:close()
-  return result ~= nil and result ~= ''
-end
-
--- 自动启动工作区配置（仅在 htop 已安装时才创建监控窗格）
-wezterm.on('gui-startup', function(cmd)
-  local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
-
-  -- 仅在无 cmd 参数（即 GUI 直接启动，非 SSH/复用）时创建默认布局
-  if not cmd then
-    -- 垂直分割
-    local right_pane = pane:split { direction = 'Right', size = 0.5 }
-
-    -- 水平分割（仅当 htop 可用时，避免 pane 启动后报错）
-    if command_exists('htop') then
-      local bottom_pane = pane:split { direction = 'Down', size = 0.5 }
-      bottom_pane:send_text 'htop\n'
-    end
-  end
-end)
-
 -- 显示配置信息
 wezterm.on('window-config-reloaded', function(window, pane)
   wezterm.log_info('WezTerm configuration reloaded successfully')
