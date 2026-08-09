@@ -8,6 +8,8 @@ set -eo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEST_DIR=""
+# 保存原始 PATH，避免后续测试环境的 mock 命令污染 command -v 查找
+ORIGINAL_PATH="${PATH:-}"
 PASS=0
 FAIL=0
 TOTAL=0
@@ -266,9 +268,10 @@ MOCK_EOF
 
   # === 其他通用 mock ===
   # 文件操作 + 文本处理命令透传真实命令（用绝对路径避免递归调用 mock 自身）
+  # 关键：用 ORIGINAL_PATH 查找真实命令，避免上一次测试的 mock bin 污染查找结果
   local real_cmd
   for cmd in mkdir ln rm cat cp mv touch chmod chown grep sed awk find wc; do
-    real_cmd=$(command -v "$cmd" 2>/dev/null || echo "/bin/$cmd")
+    real_cmd=$(PATH="$ORIGINAL_PATH" command -v "$cmd" 2>/dev/null || echo "/bin/$cmd")
     cat > "$TEST_DIR/bin/$cmd" << MOCK_EOF
 #!/usr/bin/env bash
 exec "$real_cmd" "\$@"
@@ -307,8 +310,13 @@ MOCK_EOF
 
 cleanup_test_env() {
   if [[ -n "$TEST_DIR" ]] && [[ -d "$TEST_DIR" ]]; then
-    rm -rf "$TEST_DIR"
+    # 用 ORIGINAL_PATH 查找真实 rm，避免调用刚被删除的 mock rm
+    local real_rm
+    real_rm=$(PATH="$ORIGINAL_PATH" command -v rm 2>/dev/null || echo "/bin/rm")
+    "$real_rm" -rf "$TEST_DIR"
   fi
+  # 恢复 PATH，避免污染后续测试
+  export PATH="$ORIGINAL_PATH"
 }
 
 # ======================

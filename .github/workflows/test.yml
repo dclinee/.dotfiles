@@ -1,0 +1,61 @@
+# ======================
+# Dotfiles CI
+# ======================
+# 在 macOS 和 Linux 双平台运行 test_install.sh 静态测试
+# 保证 PR 合并前配置语法和结构正确
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  static-test:
+    name: Static tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup zsh (Linux only)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh
+
+      - name: Run static tests
+        shell: bash
+        run: |
+          bash test_install.sh static
+
+      - name: Show test summary
+        if: always()
+        shell: bash
+        run: |
+          echo "=== 测试完成 ==="
+          echo "退出码: $?"
+
+  validate-syntax:
+    name: Syntax validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh vim neovim
+
+      - name: Run validate.sh
+        shell: bash
+        run: |
+          bash validate.sh

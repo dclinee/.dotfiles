@@ -1,7 +1,8 @@
 # ======================
-# macOS 专属生态
+# macOS 专属生态（应用 + 服务）
 # ======================
-# 通用包请在主 Brewfile 中维护，本文件仅包含 macOS 特定的包
+# 通用包请在主 Brewfile 中维护
+# 字体已拆分到 Brewfile.fonts，首次安装耗时较长可跳过
 
 # Mac App Store
 brew "mas"
@@ -11,9 +12,6 @@ cask "iterm2"
 cask "visual-studio-code"
 cask "google-chrome"
 cask "alfred"
-
-# 字体
-cask "font-fira-code-nerd-font"
 
 # 服务（按需启动）
 brew "postgresql", restart_service: true

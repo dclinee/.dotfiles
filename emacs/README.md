@@ -3,6 +3,19 @@
 
 # A reasonable Emacs config
 
+> **Fork origin**: This Emacs configuration is a fork of
+> [purcell/emacs.d](https://github.com/purcell/emacs.d), continuously
+> used and tweaked by the upstream author since 2000. This fork
+> integrates it into a dotfiles monorepo and adds local
+> customizations. To sync with upstream changes, add the original
+> repository as a remote:
+>
+> ```bash
+> git remote add upstream https://github.com/purcell/emacs.d.git
+> git fetch upstream
+> git merge upstream/master
+> ```
+
 This is my emacs configuration tree, continually used and tweaked
 since 2000, and it may be a good starting point for other Emacs
 users, especially web developers. These days it's

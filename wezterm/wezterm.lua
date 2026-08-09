@@ -6,9 +6,9 @@
    支持: macOS, Linux, Windows 
  ]] 
 
-local wezterm = require 'wezterm' 
-local act = wezterm.action 
-local config = wezterm.config_builder() or {} 
+local wezterm = require 'wezterm'
+local act = wezterm.action
+local config = wezterm.config_builder()
 
 -- 平台检测函数 
 local function is_macos() 

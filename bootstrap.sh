@@ -22,6 +22,8 @@
 #   ./bootstrap.sh --rust     仅配置 Rust 环境
 #   ./bootstrap.sh --tmux     仅安装 Tmux
 #   ./bootstrap.sh --git      仅安装 Git 配置
+#   ./bootstrap.sh --editorconfig  仅安装 EditorConfig
+#   ./bootstrap.sh --skip-fonts    跳过字体安装（下载慢时使用）
 
 set -euo pipefail
 
@@ -42,6 +44,8 @@ INSTALL_PYTHON=false
 INSTALL_RUST=false
 INSTALL_TMUX=false
 INSTALL_GIT=false
+INSTALL_EDITORCONFIG=false
+SKIP_FONTS=false
 
 # ======================
 # 颜色与输出
@@ -86,13 +90,15 @@ parse_args() {
       --rust)     INSTALL_RUST=true ;;
       --tmux)     INSTALL_TMUX=true ;;
       --git)      INSTALL_GIT=true ;;
+      --editorconfig) INSTALL_EDITORCONFIG=true ;;
+      --skip-fonts)   SKIP_FONTS=true ;;
       -h|--help)
-        head -20 "$0" | tail -15
+        head -30 "$0" | tail -25
         exit 0
         ;;
       *)
         echo_error "未知参数: $arg"
-        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git]"
+        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--editorconfig|--skip-fonts]"
         exit 1
         ;;
     esac
@@ -175,8 +181,17 @@ install_zsh() {
     echo_warning "Zsh 安装脚本出现错误，请查看日志: ${LOG_FILE}"
   }
 
-  # 询问是否设为默认 shell
-  if [[ "$(getent passwd $USER | cut -d: -f7)" != "$(command -v zsh)" ]]; then
+  # 询问是否设为默认 shell（跨平台：Linux 用 getent，macOS 用 dscl）
+  _current_login_shell() {
+    if command -v getent > /dev/null 2>&1; then
+      getent passwd "$USER" 2>/dev/null | cut -d: -f7
+    else
+      # macOS/BSD: 通过 dscl 读取用户记录
+      dscl . -read "/Users/${USER}" UserShell 2>/dev/null | awk '{print $2}'
+    fi
+  }
+
+  if [[ "$(_current_login_shell)" != "$(command -v zsh)" ]]; then
     echo_warning "当前默认 shell 不是 zsh"
     echo "  设置默认 shell: chsh -s $(command -v zsh)"
   fi
@@ -244,9 +259,9 @@ install_brew() {
     }
   fi
 
-  # 1. 执行通用 Brewfile
+  # 1. 执行通用 Brewfile（约 30 秒 - 2 分钟）
   if [[ -f "${DOTFILES_DIR}/brew/Brewfile" ]]; then
-    echo_step "执行 brew bundle（通用包）..."
+    echo_step "执行 brew bundle（通用包，约 30 秒 - 2 分钟）..."
     brew bundle --file="${DOTFILES_DIR}/brew/Brewfile" 2>>"${LOG_FILE}" || {
       echo_warning "部分通用包安装失败，请查看日志: ${LOG_FILE}"
     }
@@ -254,15 +269,52 @@ install_brew() {
 
   # 2. 执行平台特定 Brewfile
   local platform_brewfile=""
+  local platform_fontfile=""
   case "$(uname -s)" in
     Linux)  platform_brewfile="${DOTFILES_DIR}/brew/Brewfile.linux" ;;
-    Darwin) platform_brewfile="${DOTFILES_DIR}/brew/Brewfile.macos" ;;
+    Darwin)
+      platform_brewfile="${DOTFILES_DIR}/brew/Brewfile.macos"
+      platform_fontfile="${DOTFILES_DIR}/brew/Brewfile.fonts"
+      ;;
   esac
+
+  # 2a. 平台应用包（GUI 应用 + App Store + 服务，约 1 - 5 分钟）
   if [[ -n "${platform_brewfile}" ]] && [[ -f "${platform_brewfile}" ]]; then
-    echo_step "执行 brew bundle（平台包）..."
+    echo_step "执行 brew bundle（平台包，约 1 - 5 分钟）..."
     brew bundle --file="${platform_brewfile}" 2>>"${LOG_FILE}" || {
       echo_warning "部分平台包安装失败，请查看日志: ${LOG_FILE}"
     }
+  fi
+
+  # 2b. 字体安装（慢步骤，约 2 - 15 分钟，可能需要更长）
+  if [[ "${SKIP_FONTS}" != "true" ]] && [[ -n "${platform_fontfile}" ]] && [[ -f "${platform_fontfile}" ]]; then
+    echo_step "安装 Nerd Font 字体（可能需要 2 - 15 分钟，首次下载较大）..."
+    echo "  如遇下载缓慢，可按 Ctrl+C 终止后用 --skip-fonts 跳过"
+    echo "  或单独安装: brew install --cask font-fira-code-nerd-font"
+
+    # 字体下载超时保护：若 120 秒内无进度变化则跳过
+    local font_timeout=120
+    local font_start_time
+    font_start_time=$(date +%s)
+
+    if timeout "${font_timeout}" brew bundle --file="${platform_fontfile}" 2>>"${LOG_FILE}"; then
+      echo_success "字体安装完成"
+    else
+      local font_elapsed
+      font_elapsed=$(($(date +%s) - font_start_time))
+      if [[ $font_elapsed -ge $font_timeout ]]; then
+        echo_warning "字体下载超时（${font_elapsed} 秒），已跳过"
+        echo "  网络较慢时可用其他方式安装:"
+        echo "    1. 手动下载: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.0/FiraCode.tar.xz"
+        echo "    2. 解压缩后放到 ~/Library/Fonts/"
+        echo "    3. 或: brew install --cask font-fira-code-nerd-font（网络良好时重试）"
+      else
+        echo_warning "字体安装失败（耗时 ${font_elapsed} 秒），请查看日志: ${LOG_FILE}"
+      fi
+    fi
+  elif [[ "${SKIP_FONTS}" == "true" ]]; then
+    echo_step "已跳过字体安装（--skip-fonts）"
+    echo "  后续安装: brew install --cask font-fira-code-nerd-font"
   fi
 
   echo_success "Homebrew 包安装完成"
@@ -285,19 +337,43 @@ install_python() {
     ln -sf "${DOTFILES_DIR}/python/pip.conf" "${HOME}/.pip/pip.conf"
   fi
 
-  # 安装依赖（处理外部管理环境错误）
+  # 安装必装依赖（PEP 668 兼容：优先 pipx，否则 --user；失败不吞）
   if [[ -f "${DOTFILES_DIR}/python/requirements.txt" ]]; then
-    echo_step "安装 Python 依赖..."
-    local pip_install_args=("--user")
-    # 检测是否为外部管理环境（Debian/Ubuntu 新版）
+    echo_step "安装 Python 必装依赖..."
+    # 检测是否为外部管理环境（Debian/Ubuntu 23+）
     if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
-      pip_install_args+=("--break-system-packages")
-      echo_warning "检测到外部管理环境，使用 --break-system-packages 参数"
+      echo_warning "检测到 PEP 668 外部管理环境"
+      if command -v pipx > /dev/null 2>&1; then
+        echo_step "使用 pipx 安装必装依赖..."
+        if ! pipx install --include-deps -r "${DOTFILES_DIR}/python/requirements.txt" 2>>"${LOG_FILE}"; then
+          echo_error "Python 必装依赖安装失败，请查看日志: ${LOG_FILE}"
+          echo "  备选方案: python3 -m venv ~/.venv && source ~/.venv/bin/activate && pip install -r python/requirements.txt"
+          return 1
+        fi
+      else
+        echo_warning "未找到 pipx，跳过自动安装"
+        echo "  建议安装 pipx:  brew install pipx  或  apt install pipx"
+        echo "  或在虚拟环境中安装:  python3 -m venv ~/.venv && pip install -r python/requirements.txt"
+      fi
+    else
+      # 非外部管理环境，直接 --user 安装
+      if ! pip3 install --user -r "${DOTFILES_DIR}/python/requirements.txt" 2>>"${LOG_FILE}"; then
+        echo_error "Python 必装依赖安装失败，请查看日志: ${LOG_FILE}"
+        return 1
+      fi
     fi
-    pip3 install "${pip_install_args[@]}" -r "${DOTFILES_DIR}/python/requirements.txt" 2>>"${LOG_FILE}" || {
-      echo_warning "部分 Python 依赖安装失败"
-    }
   fi
+
+  # 提示可选依赖（不自动安装，避免失败噪音）
+  local optional_files=("requirements-dev.txt" "requirements-data.txt" "requirements-web.txt")
+  local opt_file
+  for opt_file in "${optional_files[@]}"; do
+    if [[ -f "${DOTFILES_DIR}/python/${opt_file}" ]]; then
+      echo_step "可选依赖（不自动安装）: ${opt_file}"
+      echo "  按需安装: pip3 install --user -r python/${opt_file}"
+      break  # 只提示一次
+    fi
+  done
 
   echo_success "Python 环境配置完成"
 }
@@ -384,11 +460,11 @@ install_git() {
   if [[ ! -f "${local_config}" ]]; then
     cat > "${local_config}" << 'GITLOCAL_EOF'
 # Git 个人配置（不提交到仓库）
-# 请修改以下信息为你自己的
+# 请修改以下信息为你自己的（替换 YOUR_NAME / YOUR_EMAIL）
 
 [user]
-    name = dclinee
-    email = dengchanglin8@qq.com
+    name = YOUR_NAME
+    email = YOUR_EMAIL
 
 # 可在此添加其他个人配置，如：
 # [commit]
@@ -593,11 +669,13 @@ main() {
     fi
   fi
 
-  # EditorConfig 对所有开发者通用，总是安装
-  if install_editorconfig; then
-    COMPLETED_STEPS+=("EditorConfig")
-  else
-    FAILED_STEPS+=("EditorConfig")
+  # EditorConfig: 默认随 --all 安装；也可单独 --editorconfig
+  if $INSTALL_ALL || $INSTALL_EDITORCONFIG; then
+    if install_editorconfig; then
+      COMPLETED_STEPS+=("EditorConfig")
+    else
+      FAILED_STEPS+=("EditorConfig")
+    fi
   fi
 
   # 最终验证

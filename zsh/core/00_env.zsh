@@ -35,9 +35,9 @@ for _editor in nvim vim vi nano emacs; do
 done
 unset _editor
 
-# 语言设置
-export LANG='en_US.UTF-8'
-export LC_ALL='en_US.UTF-8'
+# 语言设置：LANG 兜底为 en_US.UTF-8；LC_ALL 仅在用户未设时赋值（避免覆盖用户偏好）
+: "${LANG:=en_US.UTF-8}"; export LANG
+: "${LC_ALL:=en_US.UTF-8}"; export LC_ALL
 
 # 历史记录优化
 export HISTSIZE=100000

@@ -48,6 +48,7 @@ _download_and_run() {
   shift
   local tmp_file
   tmp_file="$(mktemp)"
+  # trap 已保证临时文件被清理，函数体内不再手动 rm
   trap 'rm -f "${tmp_file}"' EXIT RETURN
 
   echo_step "下载脚本: ${url}"
@@ -58,9 +59,6 @@ _download_and_run() {
 
   printf "${BOLD}${CYAN}${ARROW} 执行脚本（参数: %s）...${RESET}\n" "$*"
   bash "${tmp_file}" "$@" 2>>"${LOG_FILE}"
-  local rc=$?
-  rm -f "${tmp_file}"
-  return $rc
 }
 
 # ======================

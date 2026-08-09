@@ -13,6 +13,21 @@ ZSH_HOME="${ZSH_HOME:-${HOME}/.dotfiles/zsh}"
 FALLBACK_CONFIG="${ZSH_HOME}/starship_fallback.toml"
 MAIN_CONFIG="${ZSH_HOME}/starship.toml"
 
+# 跨平台获取文件 mtime（epoch 秒）
+# GNU stat 用 -c %Y，BSD stat（macOS 自带）用 -f %m
+_dotfiles_get_mtime() {
+  local file="$1"
+  # 通过尝试 GNU 语法探测实现，结果在全局变量中缓存（仅探测一次）
+  if [[ -z "${_dotfiles_stat_flag:-}" ]]; then
+    if stat -c %Y / > /dev/null 2>&1; then
+      typeset -g _dotfiles_stat_flag='-c %Y'   # GNU
+    else
+      typeset -g _dotfiles_stat_flag='-f %m'   # BSD/macOS
+    fi
+  fi
+  stat ${_dotfiles_stat_flag} "$file" 2>/dev/null || echo 0
+}
+
 # 检测 Nerd Font (带智能缓存 + mtime 校验)
 _has_nerd_font() {
   local cache_file="${HOME}/.cache/zsh/nerd_font_cache"
@@ -22,8 +37,8 @@ _has_nerd_font() {
   if [[ -f "$cache_file" ]]; then
     # 检查字体目录 mtime 是否变化（字体安装/删除后会更新 mtime）
     local cache_mtime font_mtime
-    cache_mtime=$(stat -c %Y "$cache_file" 2>/dev/null || echo 0)
-    font_mtime=$(stat -c %Y "$font_dir" 2>/dev/null || echo 0)
+    cache_mtime=$(_dotfiles_get_mtime "$cache_file")
+    font_mtime=$(_dotfiles_get_mtime "$font_dir")
 
     if [[ "$font_mtime" -le "$cache_mtime" ]]; then
       # 字体目录未变化，使用缓存结果
