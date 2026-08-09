@@ -152,3 +152,5 @@
 # --- include local 覆盖 ---
 [include]
     path = ~/.gitconfig.local
+[safe]
+	directory = *
