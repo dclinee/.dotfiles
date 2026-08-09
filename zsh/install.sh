@@ -311,28 +311,103 @@ install_python_config() {
     printf "${BOLD}${CYAN}${ARROW} 安装 Python 基础依赖...${RESET}\n"
     local req_file="${HOME}/.dotfiles/python/requirements.txt"
 
-    if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
-      # PEP 668 外部管理环境：优先 pipx，不强行 --break-system-packages
-      echo_warning "检测到 PEP 668 外部管理环境"
+    # 工具：如未安装 pipx 则尝试用 brew/apt 一键安装（跨平台），失败返回 false
+    _ensure_pipx() {
       if command -v pipx > /dev/null 2>&1; then
-        printf "${BOLD}${CYAN}${ARROW} 使用 pipx 安装必装依赖...${RESET}\n"
-        if pipx install --include-deps -r "${req_file}" > /dev/null 2>&1; then
-          echo_success "Python 基础依赖通过 pipx 安装完成"
-        else
-          echo_warning "pipx 安装失败，请手动执行: pipx install --include-deps -r ${req_file}"
-        fi
+        return 0
+      fi
+      printf "${BOLD}${CYAN}${ARROW} 自动安装 pipx...${RESET}\n"
+      if command -v brew > /dev/null 2>&1; then
+        brew install pipx > /dev/null 2>&1 || return 1
+      elif command -v apt > /dev/null 2>&1; then
+        sudo apt update -qq > /dev/null 2>&1 || true
+        sudo apt install -y -qq pipx > /dev/null 2>&1 || return 1
+      elif command -v dnf > /dev/null 2>&1; then
+        sudo dnf install -y pipx > /dev/null 2>&1 || return 1
+      elif command -v pacman > /dev/null 2>&1; then
+        sudo pacman -S --noconfirm python-pipx > /dev/null 2>&1 || return 1
       else
-        echo_warning "未检测到 pipx，请安装后重试: brew install pipx  或  apt install pipx"
-        echo "  必装依赖清单: ${req_file}"
+        # 无包管理器：用 pip 本身 bootstrap（仅在非 PEP 668 环境可行）
+        pip3 install --user pipx > /dev/null 2>&1 || return 1
+      fi
+      # pipx ensurepath 确保命令入 PATH（输出静默，下次 shell 生效）
+      pipx ensurepath > /dev/null 2>&1 || true
+      # 保证当前脚本内也能找到 pipx
+      if [[ -d "${HOME}/.local/bin" ]]; then
+        export PATH="${HOME}/.local/bin:${PATH}"
+      fi
+      command -v pipx > /dev/null 2>&1
+    }
+
+    # 工具：在共享虚拟环境中安装（终极兜底：~/Library/Caches 或 ~/.cache）
+    _install_in_venv() {
+      local venv_dir
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        venv_dir="${HOME}/Library/Caches/dotfiles-py-venv"
+      else
+        venv_dir="${HOME}/.cache/dotfiles-py-venv"
+      fi
+      printf "${BOLD}${CYAN}${ARROW} 创建独立虚拟环境安装: %s${RESET}\n" "${venv_dir}"
+      python3 -m venv "${venv_dir}" 2>>"${LOG_FILE}" || return 1
+      "${venv_dir}/bin/pip" install --upgrade pip > /dev/null 2>&1 || true
+      if "${venv_dir}/bin/pip" install -r "${req_file}" 2>>"${LOG_FILE}"; then
+        # 把该 venv bin 入到 PATH（通过写入到 ~/.local/share/dotfiles-py-path 让 zsh 启动时读取）
+        local marker="${HOME}/.local/share/dotfiles-py-path"
+        mkdir -p "$(dirname "${marker}")"
+        printf '%s\n' "${venv_dir}/bin" > "${marker}"
+        return 0
+      fi
+      return 1
+    }
+
+    local installed=false
+    local externally_managed=false
+    if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
+      externally_managed=true
+    fi
+
+    if $externally_managed; then
+      echo_warning "检测到 PEP 668 外部管理环境，不使用 --user"
+      if _ensure_pipx; then
+        printf "${BOLD}${CYAN}${ARROW} 使用 pipx 安装必装依赖...${RESET}\n"
+        if pipx install --include-deps -r "${req_file}" 2>>"${LOG_FILE}"; then
+          echo_success "Python 基础依赖通过 pipx 安装完成"
+          installed=true
+        fi
       fi
     else
-      # 非 PEP 668 环境：--user 直接装
-      if pip3 install --user --upgrade -r "${req_file}" > /dev/null 2>&1; then
+      # 先尝试 --user
+      if pip3 install --user --upgrade -r "${req_file}" 2>>"${LOG_FILE}"; then
         echo_success "Python 基础依赖安装完成"
+        installed=true
       else
-        echo_warning "Python 基础依赖安装失败，请手动安装: pip3 install --user -r ${req_file}"
+        echo_warning "pip3 --user 安装失败，切换到 pipx"
+        if _ensure_pipx; then
+          if pipx install --include-deps -r "${req_file}" 2>>"${LOG_FILE}"; then
+            echo_success "Python 基础依赖通过 pipx 安装完成"
+            installed=true
+          fi
+        fi
       fi
     fi
+
+    # pipx 也失败时，落到 venv 兜底（不再报错，给用户明确路径）
+    if ! $installed; then
+      if _install_in_venv; then
+        echo_success "Python 基础依赖已安装到独立虚拟环境"
+        echo "  该环境已写入: ~/.local/share/dotfiles-py-path，启动新 zsh 会自动入 PATH"
+        echo "  或当前会话临时生效: export PATH=\"\$(cat ~/.local/share/dotfiles-py-path):\$PATH\""
+        installed=true
+      fi
+    fi
+
+    if ! $installed; then
+      echo_warning "自动安装失败，请手动选择以下方式之一:"
+      echo "    1. 安装 pipx:  brew install pipx  |  sudo apt install pipx"
+      echo "       然后: pipx install --include-deps -r ${req_file}"
+      echo "    2. 虚拟环境: python3 -m venv ~/.venv-dotfiles && source ~/.venv-dotfiles/bin/activate && pip install -r ${req_file}"
+    fi
+
     echo "  按需安装其他依赖（不自动安装）:"
     echo "    开发工具: pip3 install -r ~/.dotfiles/python/requirements-dev.txt"
     echo "    数据处理: pip3 install -r ~/.dotfiles/python/requirements-data.txt"
@@ -409,8 +484,21 @@ install_nerd_font() {
   local font_dir="${HOME}/.local/share/fonts"
   local font_name="FiraCode"
   local nerd_version="3.3.0"
-  local tmp_zip
-  tmp_zip="$(mktemp /tmp/nerd-font-XXXXXX.zip)"
+
+  # 临时文件创建要点：
+  # 1. mktemp 模板末尾必须全是 X，否则 macOS mktemp 会把非 X 部分当固定文件名，
+  #    第 2 次调用会因文件已存在而 mkstemp failed。
+  # 2. 先得到唯一目录/文件，再自行追加 .zip 后缀。
+  # 3. 提前清理 /tmp 下历史残留（上次失败未 cleanup 的同名模板），避免冲突。
+  local tmp_root
+  tmp_root="$(mktemp -d /tmp/nerd-font-XXXXXX)"
+  local tmp_zip="${tmp_root}/${font_name}.zip"
+  # 显式 trap：函数退出时（无论成功失败）清理整个临时目录
+  trap 'rm -rf "${tmp_root}"' RETURN EXIT
+
+  # 清理之前运行残留的同类临时文件（防御式）
+  find /tmp -maxdepth 1 -type f -name 'nerd-font-*.zip' -mtime +0 -delete 2>/dev/null || true
+  find /tmp -maxdepth 1 -type d -name 'nerd-font-*'   -mtime +0 -delete 2>/dev/null || true
 
   # 镜像源列表（GitHub 官方优先，国内镜像降级）
   local mirrors=(
@@ -433,7 +521,6 @@ install_nerd_font() {
   if ! $downloaded; then
     echo_warning "Nerd Font 所有镜像源下载失败，Starship 将使用降级模式（无图标）"
     echo "  手动安装: https://www.nerdfonts.com/font-downloads"
-    rm -f "${tmp_zip}"
     return 1
   fi
 
@@ -444,13 +531,11 @@ install_nerd_font() {
       echo_success "Nerd Font 已安装到 ${font_dir}"
     else
       echo_warning "Nerd Font 解压失败"
-      rm -f "${tmp_zip}"
       return 1
     fi
   else
     echo_warning "未安装 unzip，无法解压字体包"
     echo "  安装 unzip: sudo apt install unzip"
-    rm -f "${tmp_zip}"
     return 1
   fi
 
@@ -459,9 +544,6 @@ install_nerd_font() {
     fc-cache -fv "${font_dir}" > /dev/null 2>&1
     echo_success "字体缓存已刷新"
   fi
-
-  # 清理下载的临时文件
-  rm -f "${tmp_zip}"
 
   # 清除 Nerd Font 检测缓存（让下次启动重新检测）
   rm -f "${HOME}/.cache/zsh/nerd_font_cache" 2>/dev/null

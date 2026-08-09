@@ -92,6 +92,22 @@ export VIRTUALENVWRAPPER_PYTHON="$(command -v python3)"
 # 确保 Python 相关目录存在
 mkdir -p "${HOME}/.virtualenvs" "${HOME}/.cache/pip" 2>/dev/null
 
+# Dotfiles 专用 venv（由 bootstrap.sh / zsh/install.sh 创建时写入 marker）
+# 把该 venv bin 追加到 PATH，避免污染其他项目
+_py_venv_marker="${HOME}/.local/share/dotfiles-py-path"
+if [[ -f "${_py_venv_marker}" ]]; then
+  _py_venv_bin="$(head -n 1 "${_py_venv_marker}" 2>/dev/null || true)"
+  if [[ -n "${_py_venv_bin}" ]] && [[ -d "${_py_venv_bin}" ]]; then
+    # 仅当未入 PATH 时才追加，避免重复
+    case ":${PATH}:" in
+      *":${_py_venv_bin}:"*) ;;
+      *) export PATH="${PATH}:${_py_venv_bin}" ;;
+    esac
+  fi
+  unset _py_venv_bin
+fi
+unset _py_venv_marker
+
 # 虚拟环境自动激活 (仅交互式 shell)
 if [[ -o interactive ]] && [[ -d ".venv" ]]; then
   source .venv/bin/activate 2>/dev/null || true

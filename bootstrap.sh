@@ -337,30 +337,95 @@ install_python() {
     ln -sf "${DOTFILES_DIR}/python/pip.conf" "${HOME}/.pip/pip.conf"
   fi
 
-  # 安装必装依赖（PEP 668 兼容：优先 pipx，否则 --user；失败不吞）
+  # 安装必装依赖（PEP 668 兼容：--user → pipx → venv 三级回退）
   if [[ -f "${DOTFILES_DIR}/python/requirements.txt" ]]; then
     echo_step "安装 Python 必装依赖..."
-    # 检测是否为外部管理环境（Debian/Ubuntu 23+）
-    if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
-      echo_warning "检测到 PEP 668 外部管理环境"
-      if command -v pipx > /dev/null 2>&1; then
-        echo_step "使用 pipx 安装必装依赖..."
-        if ! pipx install --include-deps -r "${DOTFILES_DIR}/python/requirements.txt" 2>>"${LOG_FILE}"; then
-          echo_error "Python 必装依赖安装失败，请查看日志: ${LOG_FILE}"
-          echo "  备选方案: python3 -m venv ~/.venv && source ~/.venv/bin/activate && pip install -r python/requirements.txt"
-          return 1
-        fi
+    local req_file="${DOTFILES_DIR}/python/requirements.txt"
+
+    # 工具：自动安装 pipx
+    _ensure_pipx() {
+      if command -v pipx > /dev/null 2>&1; then return 0; fi
+      echo_step "自动安装 pipx..."
+      if command -v brew > /dev/null 2>&1; then
+        brew install pipx > /dev/null 2>&1 || return 1
+      elif command -v apt > /dev/null 2>&1; then
+        sudo apt update -qq > /dev/null 2>&1 || true
+        sudo apt install -y -qq pipx > /dev/null 2>&1 || return 1
+      elif command -v dnf > /dev/null 2>&1; then
+        sudo dnf install -y pipx > /dev/null 2>&1 || return 1
+      elif command -v pacman > /dev/null 2>&1; then
+        sudo pacman -S --noconfirm python-pipx > /dev/null 2>&1 || return 1
       else
-        echo_warning "未找到 pipx，跳过自动安装"
-        echo "  建议安装 pipx:  brew install pipx  或  apt install pipx"
-        echo "  或在虚拟环境中安装:  python3 -m venv ~/.venv && pip install -r python/requirements.txt"
+        pip3 install --user pipx > /dev/null 2>&1 || return 1
+      fi
+      pipx ensurepath > /dev/null 2>&1 || true
+      if [[ -d "${HOME}/.local/bin" ]]; then
+        export PATH="${HOME}/.local/bin:${PATH}"
+      fi
+      command -v pipx > /dev/null 2>&1
+    }
+
+    # 工具：venv 兜底安装
+    _install_in_venv() {
+      local venv_dir
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        venv_dir="${HOME}/Library/Caches/dotfiles-py-venv"
+      else
+        venv_dir="${HOME}/.cache/dotfiles-py-venv"
+      fi
+      echo_step "创建独立虚拟环境: ${venv_dir}"
+      python3 -m venv "${venv_dir}" 2>>"${LOG_FILE}" || return 1
+      "${venv_dir}/bin/pip" install --upgrade pip > /dev/null 2>&1 || true
+      if "${venv_dir}/bin/pip" install -r "${req_file}" 2>>"${LOG_FILE}"; then
+        local marker="${HOME}/.local/share/dotfiles-py-path"
+        mkdir -p "$(dirname "${marker}")"
+        printf '%s\n' "${venv_dir}/bin" > "${marker}"
+        return 0
+      fi
+      return 1
+    }
+
+    local installed=false
+    local externally_managed=false
+    if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
+      externally_managed=true
+    fi
+
+    if $externally_managed; then
+      echo_warning "检测到 PEP 668 外部管理环境，跳过 --user 方案"
+      if _ensure_pipx; then
+        echo_step "使用 pipx 安装必装依赖..."
+        if pipx install --include-deps -r "${req_file}" 2>>"${LOG_FILE}"; then
+          installed=true
+        fi
       fi
     else
-      # 非外部管理环境，直接 --user 安装
-      if ! pip3 install --user -r "${DOTFILES_DIR}/python/requirements.txt" 2>>"${LOG_FILE}"; then
-        echo_error "Python 必装依赖安装失败，请查看日志: ${LOG_FILE}"
-        return 1
+      if pip3 install --user -r "${req_file}" 2>>"${LOG_FILE}"; then
+        installed=true
+      else
+        echo_warning "pip3 --user 失败，尝试 pipx"
+        if _ensure_pipx; then
+          if pipx install --include-deps -r "${req_file}" 2>>"${LOG_FILE}"; then
+            installed=true
+          fi
+        fi
       fi
+    fi
+
+    if ! $installed; then
+      if _install_in_venv; then
+        echo_success "Python 基础依赖已安装到独立虚拟环境"
+        echo "  新开 zsh 会自动加载该 venv bin；当前会话执行:"
+        echo "    export PATH=\"\$(cat ~/.local/share/dotfiles-py-path):\$PATH\""
+        installed=true
+      fi
+    fi
+
+    if ! $installed; then
+      echo_error "Python 必装依赖安装失败，请查看日志: ${LOG_FILE}"
+      echo "  备选 1: brew install pipx && pipx install --include-deps -r ${req_file}"
+      echo "  备选 2: python3 -m venv ~/.venv-dotfiles && source ~/.venv-dotfiles/bin/activate && pip install -r ${req_file}"
+      return 1
     fi
   fi
 
