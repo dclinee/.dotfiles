@@ -478,8 +478,12 @@ GITLOCAL_EOF
     echo_success ".gitconfig.local 已存在"
   fi
 
-  # 验证用户信息是否已配置
-  if ! git config user.name >/dev/null 2>&1 || [[ "$(git config user.name)" == "Your Name" ]]; then
+  # 验证用户信息是否已配置（匹配所有占位符变体）
+  local current_name
+  current_name=$(git config user.name 2>/dev/null || echo "")
+  if [[ -z "${current_name}" ]] || \
+     [[ "${current_name}" == "YOUR_NAME" ]] || \
+     [[ "${current_name}" == "Your Name" ]]; then
     echo_warning "Git 用户信息未配置，请编辑 ~/.gitconfig.local"
   fi
 }

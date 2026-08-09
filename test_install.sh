@@ -381,7 +381,11 @@ test_brewfile_fix() {
   assert_file_not_contains "主 Brewfile 无 cask 指令" \
     "$DOTFILES_DIR/brew/Brewfile" "^cask"
 
-  assert_file_contains "Brewfile.macos 包含字体 cask" \
+  # 字体已分离到独立 Brewfile.fonts（支持 --skip-fonts 快速跳过）
+  assert_file_contains "Brewfile.fonts 包含字体 cask" \
+    "$DOTFILES_DIR/brew/Brewfile.fonts" "font-fira-code"
+
+  assert_file_not_contains "Brewfile.macos 不再含字体（已拆分）" \
     "$DOTFILES_DIR/brew/Brewfile.macos" "font-fira-code"
 }
 
@@ -389,12 +393,12 @@ test_env_zsh_fixes() {
   log_info "测试: 00_env.zsh 修复"
   local env_file="$DOTFILES_DIR/zsh/core/00_env.zsh"
 
-  # PYTHONPATH glob 已展开
-  assert_file_not_contains "PYTHONPATH 无 python3.* 字面量" \
-    "$env_file" 'python3\.\*'
+  # PYTHONPATH 已移除（避免污染其他 Python 项目）
+  assert_file_not_contains "PYTHONPATH 不再污染全局" \
+    "$env_file" 'export PYTHONPATH'
 
-  assert_file_contains "PYTHONPATH 使用 for 循环" \
-    "$env_file" "for dir in.*python"
+  assert_file_contains "PYTHONPATH 移除有注释说明" \
+    "$env_file" "已移除对 PYTHONPATH"
 
   # HISTORY_IGNORE_ALL
   assert_file_contains "HISTORY_IGNORE_ALL 正确变量名" \

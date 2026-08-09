@@ -9,6 +9,9 @@
 # ----------------------
 if (( $+commands[eza] )); then
   alias ls='eza --group-directories-first --icons'
+elif [[ "$(uname)" == "Darwin" ]]; then
+  # macOS BSD ls 不支持 --color=auto / --group-directories-first，用 -G 启用颜色
+  alias ls='ls -G'
 else
   alias ls='ls --color=auto --group-directories-first'
 fi
@@ -140,7 +143,7 @@ if command -v ss > /dev/null 2>&1; then
 fi
 # alias ss='ss -tuln'  # 已移除: 避免覆盖系统 ss 命令
 alias wget='wget -c'         # 断点续传
-alias curl='curl -L'         # 自动跟随重定向
+alias curlL='curl -L'        # 跟随重定向（不覆盖默认 curl，避免破坏 API 调用）
 
 # ----------------------
 # 9. 压缩与解压
@@ -156,8 +159,9 @@ alias txz='tar -cJvf'
 # 10. 其他实用别名
 # ----------------------
 alias nano='nano -w'         # 禁用自动换行
-alias which='which -a'       # 显示所有匹配结果
-alias path='echo -e ${PATH//:/\n}'  # 分行显示 PATH
+# 注: 已移除 alias which='which -a'，因为 zsh 中 which 是 builtin，alias 会失效或行为异常
+# 如需显示所有匹配，请用 whence -p 或 type -a
+alias path='printf "%s\n" ${PATH//:/ }'  # 分行显示 PATH（用 printf 替代 echo -e）
 alias 1024='echo $((1024*$1))'  # 快速计算字节大小
 if command -v md5sum > /dev/null 2>&1; then
   alias md5='md5sum'
@@ -165,7 +169,8 @@ fi
 if command -v sha256sum > /dev/null 2>&1; then
   alias sha256='sha256sum'
 fi
-alias sum='sum -s'
+# 注: 已移除 alias sum='sum -s'，覆盖了系统 sum 命令
+# 如需 checksum，请用 md5/sha256 alias 或直接调用原命令
 alias b='bc -l'              # 启动计算器
 
 # ----------------------

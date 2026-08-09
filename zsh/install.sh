@@ -306,21 +306,34 @@ install_python_config() {
     fi
   fi
 
-  # 安装 Python 依赖（处理外部管理环境错误）
+  # 安装 Python 依赖（与 bootstrap.sh install_python 同步：PEP 668 兼容，pipx 优先）
   if [[ -f "${HOME}/.dotfiles/python/requirements.txt" ]]; then
     printf "${BOLD}${CYAN}${ARROW} 安装 Python 基础依赖...${RESET}\n"
-    local pip_install_args=("--user")
-    # 检测是否为外部管理环境（Debian/Ubuntu 新版）
+    local req_file="${HOME}/.dotfiles/python/requirements.txt"
+
     if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
-      pip_install_args+=("--break-system-packages")
-      echo_warning "检测到外部管理环境，使用 --break-system-packages 参数"
-    fi
-    if pip3 install "${pip_install_args[@]}" --upgrade -r "${HOME}/.dotfiles/python/requirements.txt" > /dev/null 2>&1; then
-      echo_success "Python 基础依赖安装完成"
+      # PEP 668 外部管理环境：优先 pipx，不强行 --break-system-packages
+      echo_warning "检测到 PEP 668 外部管理环境"
+      if command -v pipx > /dev/null 2>&1; then
+        printf "${BOLD}${CYAN}${ARROW} 使用 pipx 安装必装依赖...${RESET}\n"
+        if pipx install --include-deps -r "${req_file}" > /dev/null 2>&1; then
+          echo_success "Python 基础依赖通过 pipx 安装完成"
+        else
+          echo_warning "pipx 安装失败，请手动执行: pipx install --include-deps -r ${req_file}"
+        fi
+      else
+        echo_warning "未检测到 pipx，请安装后重试: brew install pipx  或  apt install pipx"
+        echo "  必装依赖清单: ${req_file}"
+      fi
     else
-      echo_warning "Python 基础依赖安装失败，请手动安装: pip3 install ${pip_install_args[*]} -r ~/.dotfiles/python/requirements.txt"
+      # 非 PEP 668 环境：--user 直接装
+      if pip3 install --user --upgrade -r "${req_file}" > /dev/null 2>&1; then
+        echo_success "Python 基础依赖安装完成"
+      else
+        echo_warning "Python 基础依赖安装失败，请手动安装: pip3 install --user -r ${req_file}"
+      fi
     fi
-    echo "  按需安装其他依赖:"
+    echo "  按需安装其他依赖（不自动安装）:"
     echo "    开发工具: pip3 install -r ~/.dotfiles/python/requirements-dev.txt"
     echo "    数据处理: pip3 install -r ~/.dotfiles/python/requirements-data.txt"
     echo "    Web 开发: pip3 install -r ~/.dotfiles/python/requirements-web.txt"

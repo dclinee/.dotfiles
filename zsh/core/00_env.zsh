@@ -77,8 +77,9 @@ local _py_site_packages=""
 for dir in ${HOME}/.local/lib/python*/site-packages(N); do
   [[ -d "$dir" ]] && _py_site_packages="${_py_site_packages}:${dir}"
 done
-unset PYTHONPATH
-export PYTHONPATH="${_py_site_packages}:${HOME}/.dotfiles/python"
+# 注：已移除对 PYTHONPATH 全局赋值（原: _py_site_packages + ~/.dotfiles/python）
+# 把 ~/.dotfiles/python 加入 PYTHONPATH 会干扰其他 Python 项目（如假设有同名模块会被错误导入）
+# 项目需要的包应通过 pip/pipx/venv 安装，而非污染全局 PYTHONPATH
 
 # Python 配置文件
 export PYTHONSTARTUP="${HOME}/.dotfiles/python/pythonrc.py"

@@ -4,17 +4,21 @@
 #
 # 使用方法:
 #   1. 安装时自动创建符号链接: ln -sf ~/.dotfiles/git/.gitconfig ~/.gitconfig
-#   2. 个人信息请在 ~/.gitconfig.local 中覆盖（不会提交到仓库）
+#   2. 个人信息请在 ~/.gitconfig.local 中配置（不会提交到仓库）
 #
 # 在 ~/.gitconfig.local 中添加:
 #   [user]
 #       name = Your Name
 #       email = your@email.com
 
-# --- 用户信息（请在 .gitconfig.local 中覆盖）---
+# --- 用户信息 ---
+# 个人 name/email 不在仓库中硬编码，请在 ~/.gitconfig.local 配置
+# bootstrap.sh 安装时会自动创建 .gitconfig.local 模板
 [user]
-    name = Dclinee
-    email = dengchanglin8@qq.com
+    # 以下占位符不会被 git 读取（被 .gitconfig.local 覆盖）
+    # 仅用于提示用户去 .gitconfig.local 中配置
+    name = YOUR_NAME
+    email = YOUR_EMAIL
 
 # --- 核心配置 ---
 [core]
@@ -128,8 +132,14 @@
     edit = !git diff --name-only --diff-filter=U | xargs -r ${EDITOR:-vim}
 
 # --- 凭证 ---
+# 不使用明文 store（~/.git-credentials 明文存储密码/token）
+# macOS 用 Keychain（osxkeychain），Linux 用 libsecret 或内存缓存
 [credential]
-    helper = store
+    helper = osxkeychain
+    # Linux 用户请改用以下配置（需安装 git-credential-libsecret）:
+    # helper = /usr/share/doc/git/contrib/credential/libsecret/git-credential-libsecret
+    # 或保守方案：内存缓存 1 小时
+    # helper = cache --timeout=3600
 
 # --- rerere ---
 [rerere]

@@ -76,9 +76,9 @@ _has_nerd_font() {
     [[ -d "${prefix}/share/fonts" ]] && find "${prefix}/share/fonts" -iname "*Nerd*" -print -quit 2>/dev/null | grep -q . && found=0
   fi
 
-  # 写入缓存
+  # 写入缓存（记录检测日期 + 结果，便于调试和过期判断）
   mkdir -p "${HOME}/.cache/zsh" 2>/dev/null
-  echo "$today" > "$cache_file"
+  echo "$(date +%Y-%m-%d)" > "$cache_file"
   [[ $found -eq 0 ]] && echo "yes" >> "$cache_file" || echo "no" >> "$cache_file"
 
   return $found

@@ -8,8 +8,8 @@
 # 目录导航
 # ----------------------
 
-# 创建目录并进入
-mkcd() { mkdir -p "$@" && cd "${@: -1}" || return; }
+# 创建目录并进入（用 $_ 取最后一个参数，兼容 bash < 4.3 和 zsh）
+mkcd() { mkdir -p "$@" && cd "$_" || return; }
 
 # 返回到上一个目录
 back() {
@@ -331,9 +331,53 @@ color_test() {
   done
 }
 
-# 快速计算 (安全版: 参数传递防止代码注入)
+# 快速计算 (安全版: 用 ast.parse + 白名单节点遍历，支持算术运算但禁止调用/属性访问)
 calc() {
-  python3 -c "import sys; print(eval(sys.argv[1]))" "$*"
+  python3 -c "
+import sys, ast, operator
+
+# 允许的 AST 节点类型（仅算术运算 + 字面量）
+ALLOWED_NODES = (
+    ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num, ast.Constant,
+    ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow,
+    ast.USub, ast.UAdd,
+)
+# 允许的二元运算符
+ALLOWED_OPS = {
+    ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+    ast.Div: operator.truediv, ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod, ast.Pow: operator.pow,
+}
+
+def safe_eval(node):
+    if isinstance(node, ast.Expression):
+        return safe_eval(node.body)
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.Num):  # Python < 3.8
+        return node.n
+    if isinstance(node, ast.BinOp):
+        op = ALLOWED_OPS.get(type(node.op))
+        if op is None:
+            raise ValueError(f'不允许的运算符: {type(node.op).__name__}')
+        return op(safe_eval(node.left), safe_eval(node.right))
+    if isinstance(node, ast.UnaryOp):
+        operand = safe_eval(node.operand)
+        if isinstance(node.op, ast.USub): return -operand
+        if isinstance(node.op, ast.UAdd): return +operand
+        raise ValueError(f'不允许的一元运算符: {type(node.op).__name__}')
+    raise ValueError(f'不允许的表达式: {type(node).__name__}')
+
+try:
+    tree = ast.parse(sys.argv[1], mode='eval')
+    for node in ast.walk(tree):
+        if not isinstance(node, ALLOWED_NODES):
+            raise ValueError(f'不允许的语法: {type(node).__name__}')
+    print(safe_eval(tree))
+except (ValueError, SyntaxError) as e:
+    print(f'calc: {e}', file=sys.stderr)
+    sys.exit(1)
+" "$*"
 }
 
 # 显示天气信息

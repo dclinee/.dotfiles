@@ -1,9 +1,10 @@
---[[ 
-   WezTerm 跨平台配置文件 
-   作者: Dclinee 
-   版本: 1.0.0 
-   日期: 2025-12-10 
-   支持: macOS, Linux, Windows 
+--[[
+   WezTerm 跨平台配置文件
+   作者: Dclinee
+   版本: 1.1.0
+   日期: 2026-08-09
+   支持: macOS, Linux, Windows
+   变更: 修复 home_dir API、merge_config 数组合并、gui-startup htop 检测
  ]] 
 
 local wezterm = require 'wezterm'
@@ -35,16 +36,39 @@ local function file_exists(name)
 end 
 
 -- 获取配置目录路径
-local wezterm_dir = wezterm.home_dir .. '/.dotfiles/wezterm'
+-- 优先用 wezterm.home_dir（API），失败时回退到 $HOME 环境变量
+local home_dir = wezterm.home_dir or os.getenv('HOME')
+if not home_dir then
+  wezterm.log_error('无法确定 HOME 目录，WezTerm 模块化配置将不可用')
+  return {}
+end
+local wezterm_dir = home_dir .. '/.dotfiles/wezterm'
+
+-- 判断表是否为数组型（连续整数索引）
+local function is_array(t)
+  local count = 0
+  for _ in pairs(t) do count = count + 1 end
+  return count > 0 and t[1] ~= nil
+end
 
 -- 合并配置表的辅助函数
+-- - 数组型表（keys / mouse_bindings）：用 insert 追加，避免互相覆盖
+-- - 字典型表（colors / window_background）：按键合并
 local function merge_config(config_table, file_path)
   if not file_exists(file_path) then return end
   local user_config = dofile(file_path)
   for k, v in pairs(user_config) do
     if type(v) == 'table' and type(config_table[k]) == 'table' then
-      for sub_k, sub_v in pairs(v) do
-        config_table[k][sub_k] = sub_v
+      if is_array(v) then
+        -- 数组型：追加合并
+        for _, item in ipairs(v) do
+          table.insert(config_table[k], item)
+        end
+      else
+        -- 字典型：按键合并
+        for sub_k, sub_v in pairs(v) do
+          config_table[k][sub_k] = sub_v
+        end
       end
     else
       config_table[k] = v
@@ -149,20 +173,29 @@ wezterm.on('random-color-scheme', function(window, pane)
   wezterm.log_info('Switched to color scheme: ' .. overrides.color_scheme)
 end)
 
--- 自动启动工作区配置
+-- 检查命令是否存在的辅助函数（等价于 shell 的 command -v）
+local function command_exists(cmd)
+  local handle = io.popen('command -v ' .. cmd .. ' 2>/dev/null')
+  if not handle then return false end
+  local result = handle:read('*l')
+  handle:close()
+  return result ~= nil and result ~= ''
+end
+
+-- 自动启动工作区配置（仅在 htop 已安装时才创建监控窗格）
 wezterm.on('gui-startup', function(cmd)
   local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
-  
-  -- 创建默认工作区布局
+
+  -- 仅在无 cmd 参数（即 GUI 直接启动，非 SSH/复用）时创建默认布局
   if not cmd then
     -- 垂直分割
     local right_pane = pane:split { direction = 'Right', size = 0.5 }
-    
-    -- 水平分割
-    local bottom_pane = pane:split { direction = 'Down', size = 0.5 }
-    
-    -- 在底部窗格运行 htop
-    bottom_pane:send_text 'htop\n'
+
+    -- 水平分割（仅当 htop 可用时，避免 pane 启动后报错）
+    if command_exists('htop') then
+      local bottom_pane = pane:split { direction = 'Down', size = 0.5 }
+      bottom_pane:send_text 'htop\n'
+    end
   end
 end)
 
@@ -183,7 +216,8 @@ config.unix_domains = {
   },
 }
 
-config.default_gui_startup_args = { 'connect', 'unix' }
+-- 注：默认不强制 connect unix，避免无 domain daemon 时启动失败
+-- 需要复用时手动执行: wezterm connect unix
 
 -- SSH 域配置 (通过环境变量 WEZTERM_SSH_SERVER 配置)
 local ssh_server = os.getenv('WEZTERM_SSH_SERVER')
