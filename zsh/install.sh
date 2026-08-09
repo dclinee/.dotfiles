@@ -440,118 +440,6 @@ init_zoxide() {
 }
 
 # ======================
-# Nerd Font 检测与安装
-# ======================
-# 检测 Nerd Font 是否已安装
-_has_nerd_font_install() {
-  # 方法1: fc-list
-  if command -v fc-list > /dev/null 2>&1; then
-    fc-list : family 2>/dev/null | grep -qi "Nerd" && return 0
-  fi
-
-  # 方法2: 检查常见字体目录
-  local dir
-  for dir in \
-    "${HOME}/.local/share/fonts" \
-    "${HOME}/.fonts" \
-    "/usr/local/share/fonts" \
-    "/usr/share/fonts" \
-    "/usr/share/fonts/truetype" \
-    "/usr/share/fonts/opentype"; do
-    [[ -d "${dir}" ]] && find "${dir}" -iname "*Nerd*" -print -quit 2>/dev/null | grep -q . && return 0
-  done
-
-  # 方法3: brew 字体
-  if command -v brew > /dev/null 2>&1; then
-    local prefix="${HOMEBREW_PREFIX:-/home/linuxbrew/.linuxbrew}"
-    [[ -d "${prefix}/share/fonts" ]] && find "${prefix}/share/fonts" -iname "*Nerd*" -print -quit 2>/dev/null | grep -q . && return 0
-  fi
-
-  return 1
-}
-
-# 安装 Nerd Font (Fira Code Nerd Font，含国内镜像降级)
-install_nerd_font() {
-  echo_step "检查 Nerd Font..."
-
-  if _has_nerd_font_install; then
-    echo_success "Nerd Font 已安装"
-    return 0
-  fi
-
-  printf "${BOLD}${CYAN}${ARROW} 安装 Fira Code Nerd Font...${RESET}\n"
-
-  local font_dir="${HOME}/.local/share/fonts"
-  local font_name="FiraCode"
-  local nerd_version="3.3.0"
-
-  # 临时文件创建要点：
-  # 1. mktemp 模板末尾必须全是 X，否则 macOS mktemp 会把非 X 部分当固定文件名，
-  #    第 2 次调用会因文件已存在而 mkstemp failed。
-  # 2. 先得到唯一目录/文件，再自行追加 .zip 后缀。
-  # 3. 提前清理 /tmp 下历史残留（上次失败未 cleanup 的同名模板），避免冲突。
-  local tmp_root
-  tmp_root="$(mktemp -d /tmp/nerd-font-XXXXXX)"
-  local tmp_zip="${tmp_root}/${font_name}.zip"
-  # 显式 trap：函数退出时（无论成功失败）清理整个临时目录
-  trap 'rm -rf "${tmp_root}"' RETURN EXIT
-
-  # 清理之前运行残留的同类临时文件（防御式）
-  find /tmp -maxdepth 1 -type f -name 'nerd-font-*.zip' -mtime +0 -delete 2>/dev/null || true
-  find /tmp -maxdepth 1 -type d -name 'nerd-font-*'   -mtime +0 -delete 2>/dev/null || true
-
-  # 镜像源列表（GitHub 官方优先，国内镜像降级）
-  local mirrors=(
-    "https://github.com/ryanoasis/nerd-fonts/releases/download/v${nerd_version}/${font_name}.zip"
-    "https://ghfast.top/https://github.com/ryanoasis/nerd-fonts/releases/download/v${nerd_version}/${font_name}.zip"
-    "https://mirror.ghproxy.com/https://github.com/ryanoasis/nerd-fonts/releases/download/v${nerd_version}/${font_name}.zip"
-  )
-
-  # 下载（依次尝试镜像源）
-  local downloaded=false
-  for url in "${mirrors[@]}"; do
-    printf "${BOLD}${CYAN}${ARROW} 尝试下载: %s${RESET}\n" "${url}"
-    if curl -fsSL --connect-timeout 15 --max-time 60 "${url}" -o "${tmp_zip}" 2>>"${LOG_FILE}"; then
-      downloaded=true
-      break
-    fi
-    echo_warning "此源下载失败，尝试下一个..."
-  done
-
-  if ! $downloaded; then
-    echo_warning "Nerd Font 所有镜像源下载失败，Starship 将使用降级模式（无图标）"
-    echo "  手动安装: https://www.nerdfonts.com/font-downloads"
-    return 1
-  fi
-
-  # 解压到字体目录
-  mkdir -p "${font_dir}"
-  if command -v unzip > /dev/null 2>&1; then
-    if unzip -o -q "${tmp_zip}" -d "${font_dir}" 2>>"${LOG_FILE}"; then
-      echo_success "Nerd Font 已安装到 ${font_dir}"
-    else
-      echo_warning "Nerd Font 解压失败"
-      return 1
-    fi
-  else
-    echo_warning "未安装 unzip，无法解压字体包"
-    echo "  安装 unzip: sudo apt install unzip"
-    return 1
-  fi
-
-  # 刷新字体缓存
-  if command -v fc-cache > /dev/null 2>&1; then
-    fc-cache -fv "${font_dir}" > /dev/null 2>&1
-    echo_success "字体缓存已刷新"
-  fi
-
-  # 清除 Nerd Font 检测缓存（让下次启动重新检测）
-  rm -f "${HOME}/.cache/zsh/nerd_font_cache" 2>/dev/null
-
-  echo_warning "请重启终端或在终端设置中选择 Nerd Font 字体"
-}
-
-# ======================
 # 主安装流程
 # ======================
 main() {
@@ -610,11 +498,6 @@ main() {
 
   # 初始化 zoxide
   init_zoxide
-
-  echo_separator
-
-  # 安装 Nerd Font（用于 Starship 图标显示）
-  install_nerd_font
 
   echo_title "安装完成"
   printf "${GREEN}${CHECK} ${BOLD}所有配置安装完成！${RESET}\n"

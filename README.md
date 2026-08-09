@@ -285,16 +285,13 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 ### 字体推荐
 
-为获得最佳体验（Starship 图标显示），建议安装 Nerd Font。安装脚本会自动检测并安装：
+为获得最佳体验（Starship 图标显示），建议安装 Nerd Font：
 
 ```bash
-# 方式 1：运行安装脚本（自动检测+安装）
-cd ~/.dotfiles && ./zsh/install.sh
-
-# 方式 2：通过 Homebrew 安装（macOS）
+# 方式 1：通过 Homebrew 安装（macOS）
 brew install --cask font-fira-code-nerd-font
 
-# 方式 3：手动安装（Linux）
+# 方式 2：手动安装（Linux）
 mkdir -p ~/.local/share/fonts
 cd ~/.local/share/fonts
 curl -fLO https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/FiraCode.zip

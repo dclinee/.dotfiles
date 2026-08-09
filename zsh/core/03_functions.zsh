@@ -447,7 +447,7 @@ check_env() {
   elif [[ -n "${STARSHIP_CONFIG:-}" ]] && [[ "$(basename "${STARSHIP_CONFIG}")" == "starship_fallback.toml" ]]; then
     echo "⚠️  Nerd Font: 未检测 (使用降级符号)"
     echo "   安装方式:"
-    echo "     cd ~/.dotfiles && ./zsh/install.sh  # 自动安装"
+    echo "     brew install --cask font-fira-code-nerd-font  # macOS"
     echo "     或手动: https://www.nerdfonts.com/font-downloads"
     echo "   安装后请在终端设置中选择 Nerd Font 字体"
   else

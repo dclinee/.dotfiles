@@ -26,7 +26,6 @@
 #   ./bootstrap.sh --tmux     仅安装 Tmux
 #   ./bootstrap.sh --git      仅安装 Git 配置
 #   ./bootstrap.sh --editorconfig  仅安装 EditorConfig
-#   ./bootstrap.sh --skip-fonts    跳过字体安装（下载慢时使用）
 
 set -euo pipefail
 
@@ -48,7 +47,6 @@ INSTALL_RUST=false
 INSTALL_TMUX=false
 INSTALL_GIT=false
 INSTALL_EDITORCONFIG=false
-SKIP_FONTS=false
 
 # ======================
 # 颜色与输出
@@ -94,14 +92,13 @@ parse_args() {
       --tmux)     INSTALL_TMUX=true ;;
       --git)      INSTALL_GIT=true ;;
       --editorconfig) INSTALL_EDITORCONFIG=true ;;
-      --skip-fonts)   SKIP_FONTS=true ;;
       -h|--help)
         head -30 "$0" | tail -25
         exit 0
         ;;
       *)
         echo_error "未知参数: $arg"
-        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--editorconfig|--skip-fonts]"
+        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--editorconfig]"
         exit 1
         ;;
     esac
@@ -275,13 +272,9 @@ install_brew() {
 
   # 2. 执行平台特定 Brewfile
   local platform_brewfile=""
-  local platform_fontfile=""
   case "$(uname -s)" in
     Linux)  platform_brewfile="${DOTFILES_DIR}/brew/Brewfile.linux" ;;
-    Darwin)
-      platform_brewfile="${DOTFILES_DIR}/brew/Brewfile.macos"
-      platform_fontfile="${DOTFILES_DIR}/brew/Brewfile.fonts"
-      ;;
+    Darwin) platform_brewfile="${DOTFILES_DIR}/brew/Brewfile.macos" ;;
   esac
 
   # 2a. 平台应用包（GUI 应用 + App Store + 服务，约 1 - 5 分钟）
@@ -290,37 +283,6 @@ install_brew() {
     brew bundle --file="${platform_brewfile}" 2>>"${LOG_FILE}" || {
       echo_warning "部分平台包安装失败，请查看日志: ${LOG_FILE}"
     }
-  fi
-
-  # 2b. 字体安装（慢步骤，约 2 - 15 分钟，可能需要更长）
-  if [[ "${SKIP_FONTS}" != "true" ]] && [[ -n "${platform_fontfile}" ]] && [[ -f "${platform_fontfile}" ]]; then
-    echo_step "安装 Nerd Font 字体（可能需要 2 - 15 分钟，首次下载较大）..."
-    echo "  如遇下载缓慢，可按 Ctrl+C 终止后用 --skip-fonts 跳过"
-    echo "  或单独安装: brew install --cask font-fira-code-nerd-font"
-
-    # 字体下载超时保护：若 120 秒内无进度变化则跳过
-    local font_timeout=120
-    local font_start_time
-    font_start_time=$(date +%s)
-
-    if timeout "${font_timeout}" brew bundle --file="${platform_fontfile}" 2>>"${LOG_FILE}"; then
-      echo_success "字体安装完成"
-    else
-      local font_elapsed
-      font_elapsed=$(($(date +%s) - font_start_time))
-      if [[ $font_elapsed -ge $font_timeout ]]; then
-        echo_warning "字体下载超时（${font_elapsed} 秒），已跳过"
-        echo "  网络较慢时可用其他方式安装:"
-        echo "    1. 手动下载: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.0/FiraCode.tar.xz"
-        echo "    2. 解压缩后放到 ~/Library/Fonts/"
-        echo "    3. 或: brew install --cask font-fira-code-nerd-font（网络良好时重试）"
-      else
-        echo_warning "字体安装失败（耗时 ${font_elapsed} 秒），请查看日志: ${LOG_FILE}"
-      fi
-    fi
-  elif [[ "${SKIP_FONTS}" == "true" ]]; then
-    echo_step "已跳过字体安装（--skip-fonts）"
-    echo "  后续安装: brew install --cask font-fira-code-nerd-font"
   fi
 
   echo_success "Homebrew 包安装完成"

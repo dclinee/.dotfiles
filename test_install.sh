@@ -380,13 +380,6 @@ test_brewfile_fix() {
 
   assert_file_not_contains "主 Brewfile 无 cask 指令" \
     "$DOTFILES_DIR/brew/Brewfile" "^cask"
-
-  # 字体已分离到独立 Brewfile.fonts（支持 --skip-fonts 快速跳过）
-  assert_file_contains "Brewfile.fonts 包含字体 cask" \
-    "$DOTFILES_DIR/brew/Brewfile.fonts" "font-fira-code"
-
-  assert_file_not_contains "Brewfile.macos 不再含字体（已拆分）" \
-    "$DOTFILES_DIR/brew/Brewfile.macos" "font-fira-code"
 }
 
 test_env_zsh_fixes() {

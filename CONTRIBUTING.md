@@ -63,7 +63,7 @@ bash test_install.sh all
 示例：
 
 ```text
-fix: Nerd Font mktemp race on repeat runs
+fix: Nerd Font detection cache mtime check on macOS
 
 feat: add pipx fallback for PEP 668 environments
 

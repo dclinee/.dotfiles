@@ -30,17 +30,12 @@ help: ## 显示帮助信息
 	@printf "$(CYAN)示例:$(RESET)\n"
 	@printf "  make install      # 一键安装所有配置\n"
 	@printf "  make check        # 检查环境状态\n"
-	@printf "  make skip-fonts   # 安装时跳过字体下载（网络慢时）\n"
 	@printf "  make update       # 更新配置和插件\n"
 
 install: zsh vim emacs wezterm brew python rust tmux git editorconfig ## 一键安装所有配置（推荐）
 	@printf "\n"
 	@printf "$(GREEN)✅ 所有配置安装完成！$(RESET)\n"
 	@printf "$(YELLOW)请执行: source ~/.zshrc 或重启终端$(RESET)\n"
-
-skip-fonts: ## 一键安装（跳过字体下载，适合网络慢时）
-	@printf "$(CYAN)→ 跳过字体安装，执行 bootstrap.sh --all --skip-fonts...$(RESET)\n"
-	@bash bootstrap.sh --all --skip-fonts
 
 ##@ 安装
 
@@ -65,7 +60,7 @@ wezterm: ## 安装 WezTerm 配置
 	@printf "$(CYAN)→ 安装 WezTerm 配置...$(RESET)\n"
 	@bash wezterm/install.sh
 
-brew: ## 安装 Homebrew 包（字体下载可能较慢，可用 make skip-fonts 跳过）
+brew: ## 安装 Homebrew 包
 	@printf "$(CYAN)→ 安装 Homebrew 包...$(RESET)\n"
 	@bash bootstrap.sh --brew
 

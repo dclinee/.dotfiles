@@ -1,9 +1,0 @@
-# ======================
-# Nerd Font（跨平台字体，首次下载约 5MB）
-# ======================
-# 独立拆分因为字体下载通常最慢（GitHub CDN 在国内可能需 10+ 分钟）
-# 可通过 bootstrap.sh --skip-fonts 跳过
-
-# Fira Code Nerd Font（等宽编程字体 + 图标）
-# 被 starship 提示符使用
-cask "font-fira-code-nerd-font"
