@@ -27,14 +27,14 @@ CYAN="\033[36m"
 RESET="\033[0m"
 BOLD="\033[1m"
 
-echo_step()    { echo -e "${BOLD}${BLUE}ℹ️  ${1}${RESET}"; }
-echo_success() { echo -e "${GREEN}✅ ${1}${RESET}"; }
-echo_warning() { echo -e "${YELLOW}⚠️  ${1}${RESET}"; }
-echo_error()   { echo -e "${RED}❌ ${1}${RESET}"; }
-echo_separator() { echo -e "${BLUE}=============================================${RESET}"; }
+echo_step()      { printf "${BOLD}${BLUE}ℹ️  %s${RESET}\n"  "${1}"; }
+echo_success()   { printf "${GREEN}✅ %s${RESET}\n"         "${1}"; }
+echo_warning()   { printf "${YELLOW}⚠️  %s${RESET}\n"       "${1}"; }
+echo_error()     { printf "${RED}❌ %s${RESET}\n"           "${1}"; }
+echo_separator() { printf "${BLUE}=============================================${RESET}\n"; }
 echo_title() {
   echo_separator
-  echo -e "${BOLD}${CYAN}${1}${RESET}"
+  printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
   echo_separator
 }
 
@@ -218,9 +218,9 @@ main() {
   install_vim_plug
 
   echo_separator
-  echo -e "${GREEN}✅ ${BOLD}Vim 配置安装完成！${RESET}"
-  echo -e "${YELLOW}首次打开 Vim 将自动安装插件${RESET}"
-  echo -e "${YELLOW}或手动执行: vim +PlugInstall +qa${RESET}"
+  printf "${GREEN}✅ ${BOLD}Vim 配置安装完成！${RESET}\n"
+  printf "${YELLOW}首次打开 Vim 将自动安装插件${RESET}\n"
+  printf "${YELLOW}或手动执行: vim +PlugInstall +qa${RESET}\n"
 }
 
 main

@@ -32,14 +32,14 @@ else
   ARROW="➡️"
   SEPARATOR="${BLUE}=============================================${RESET}"
 
-  echo_step() { echo -e "${BOLD}${BLUE}${INFO} ${1}${RESET}"; }
-  echo_success() { echo -e "${GREEN}${CHECK} ${1}${RESET}"; }
-  echo_warning() { echo -e "${YELLOW}${WARN} ${1}${RESET}"; }
-  echo_error() { echo -e "${RED}${ERROR} ${1}${RESET}"; }
-  echo_separator() { echo -e "${SEPARATOR}"; }
+  echo_step() { printf "${BOLD}${BLUE}${INFO} %s${RESET}\n" "${1}"; }
+  echo_success() { printf "${GREEN}${CHECK} %s${RESET}\n" "${1}"; }
+  echo_warning() { printf "${YELLOW}${WARN} %s${RESET}\n" "${1}"; }
+  echo_error() { printf "${RED}${ERROR} %s${RESET}\n" "${1}"; }
+  echo_separator() { printf '%b\n' "${SEPARATOR}"; }
   echo_title() {
     echo_separator
-    echo -e "${BOLD}${CYAN}${1}${RESET}"
+    printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
     echo_separator
   }
 fi
@@ -111,10 +111,10 @@ main() {
   create_wezterm_link
   
   echo_title "安装完成"
-  echo -e "${GREEN}${CHECK} ${BOLD}Wezterm 配置安装完成！${RESET}"
-  echo -e "${BOLD}${YELLOW}${ARROW} 配置文件位置:${RESET} ${WEZTERM_DIR}/wezterm.lua"
-  echo -e "${BOLD}${YELLOW}${ARROW} 链接位置:${RESET} ${HOME}/.wezterm.lua"
-  echo -e "${BOLD}${YELLOW}${ARROW} 启动 Wezterm:${RESET} wezterm"
+  printf "${GREEN}${CHECK} ${BOLD}Wezterm 配置安装完成！${RESET}\n"
+  printf "${BOLD}${YELLOW}${ARROW} 配置文件位置:${RESET} %s/wezterm.lua\n" "${WEZTERM_DIR}"
+  printf "${BOLD}${YELLOW}${ARROW} 链接位置:${RESET} %s/.wezterm.lua\n" "${HOME}"
+  printf "${BOLD}${YELLOW}${ARROW} 启动 Wezterm:${RESET} wezterm\n"
   echo_separator
 }
 

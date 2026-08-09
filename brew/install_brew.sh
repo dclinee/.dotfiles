@@ -57,7 +57,7 @@ fi
 
 brew update
 
-echo -e "\n✅ Homebrew 安装完成！"
+printf '\n✅ Homebrew 安装完成！\n'
 echo "已配置以下镜像源："
 echo "  brew.git:       $HOMEBREW_BREW_GIT_REMOTE"
 echo "  homebrew-core:  $HOMEBREW_CORE_GIT_REMOTE"

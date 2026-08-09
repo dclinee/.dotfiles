@@ -54,14 +54,14 @@ CYAN="\033[36m"
 RESET="\033[0m"
 BOLD="\033[1m"
 
-echo_step()    { echo -e "${BOLD}${BLUE}ℹ️  ${1}${RESET}"; }
-echo_success() { echo -e "${GREEN}✅ ${1}${RESET}"; }
-echo_warning() { echo -e "${YELLOW}⚠️  ${1}${RESET}"; }
-echo_error()   { echo -e "${RED}❌ ${1}${RESET}"; }
-echo_separator() { echo -e "${BLUE}=============================================${RESET}"; }
+echo_step()      { printf "${BOLD}${BLUE}ℹ️  %s${RESET}\n"  "${1}"; }
+echo_success()   { printf "${GREEN}✅ %s${RESET}\n"         "${1}"; }
+echo_warning()   { printf "${YELLOW}⚠️  %s${RESET}\n"       "${1}"; }
+echo_error()     { printf "${RED}❌ %s${RESET}\n"           "${1}"; }
+echo_separator() { printf "${BLUE}=============================================${RESET}\n"; }
 echo_title() {
   echo_separator
-  echo -e "${BOLD}${CYAN}${1}${RESET}"
+  printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
   echo_separator
 }
 
@@ -481,9 +481,9 @@ final_check() {
   echo ""
   if $all_good; then
     echo_title "安装完成！"
-    echo -e "${GREEN}✅ 所有配置安装成功！${RESET}"
+    printf "${GREEN}✅ 所有配置安装成功！${RESET}\n"
     echo ""
-    echo -e "${BOLD}下一步:${RESET}"
+    printf "${BOLD}下一步:${RESET}\n"
     echo "  1. 设置默认 shell:  chsh -s \$(which zsh)"
     echo "  2. 配置 Git 用户:   编辑 ~/.gitconfig.local"
     echo "  3. 重启终端或执行:  source ~/.zshrc"
@@ -605,12 +605,12 @@ main() {
 
   # 安装汇总报告
   echo_separator
-  echo -e "${BOLD}${CYAN}安装汇总${RESET}"
+  printf "${BOLD}${CYAN}安装汇总${RESET}\n"
   echo_separator
-  echo -e "${GREEN}✅ 已完成 (${#COMPLETED_STEPS[@]}): ${COMPLETED_STEPS[*]:-无}${RESET}"
+  printf "${GREEN}✅ 已完成 (%s): %s${RESET}\n" "${#COMPLETED_STEPS[@]}" "${COMPLETED_STEPS[*]:-无}"
   if [[ ${#FAILED_STEPS[@]} -gt 0 ]]; then
-    echo -e "${RED}❌ 失败 (${#FAILED_STEPS[@]}): ${FAILED_STEPS[*]}${RESET}"
-    echo -e "${YELLOW}失败步骤不影响其他组件，可稍后重试: cd ~/.dotfiles && ./bootstrap.sh --<组件>${RESET}"
+    printf "${RED}❌ 失败 (%s): %s${RESET}\n" "${#FAILED_STEPS[@]}" "${FAILED_STEPS[*]}"
+    printf "${YELLOW}失败步骤不影响其他组件，可稍后重试: cd ~/.dotfiles && ./bootstrap.sh --<组件>${RESET}\n"
   fi
   echo_separator
 }

@@ -26,14 +26,14 @@ else
   CYAN="\033[36m"; WHITE="\033[37m"; RESET="\033[0m"; BOLD="\033[1m"
   CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"
   SEPARATOR="${BLUE}=============================================${RESET}"
-  echo_step()    { echo -e "${BOLD}${BLUE}${INFO} ${1}${RESET}"; }
-  echo_success() { echo -e "${GREEN}${CHECK} ${1}${RESET}"; }
-  echo_warning() { echo -e "${YELLOW}${WARN} ${1}${RESET}"; }
-  echo_error()   { echo -e "${RED}${ERROR} ${1}${RESET}"; }
-  echo_separator() { echo -e "${SEPARATOR}"; }
+  echo_step()      { printf "${BOLD}${BLUE}${INFO} %s${RESET}\n"  "${1}"; }
+  echo_success()   { printf "${GREEN}${CHECK} %s${RESET}\n"        "${1}"; }
+  echo_warning()   { printf "${YELLOW}${WARN} %s${RESET}\n"        "${1}"; }
+  echo_error()     { printf "${RED}${ERROR} %s${RESET}\n"          "${1}"; }
+  echo_separator() { printf '%b\n' "${SEPARATOR}"; }
   echo_title() {
     echo_separator
-    echo -e "${BOLD}${CYAN}${1}${RESET}"
+    printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
     echo_separator
   }
 fi
@@ -56,7 +56,7 @@ _download_and_run() {
     return 1
   fi
 
-  echo -e "${BOLD}${CYAN}${ARROW} 执行脚本（参数: $*）...${RESET}"
+  printf "${BOLD}${CYAN}${ARROW} 执行脚本（参数: %s）...${RESET}\n" "$*"
   bash "${tmp_file}" "$@" 2>>"${LOG_FILE}"
   local rc=$?
   rm -f "${tmp_file}"
@@ -178,7 +178,7 @@ install_plugins() {
   fi
 
   if command -v brew > /dev/null 2>&1; then
-    echo -e "${BOLD}${CYAN}${ARROW} 通过 brew 安装 zinit...${RESET}"
+    printf "${BOLD}${CYAN}${ARROW} 通过 brew 安装 zinit...${RESET}\n"
     if brew install zinit > /dev/null 2>&1; then
       echo_success "zinit 安装完成"
     else
@@ -192,7 +192,7 @@ install_plugins() {
 
 # 手动安装 zinit（当 brew 不可用时，含国内镜像降级）
 _install_zinit_manual() {
-  echo -e "${BOLD}${CYAN}${ARROW} 手动安装 zinit...${RESET}"
+  printf "${BOLD}${CYAN}${ARROW} 手动安装 zinit...${RESET}\n"
   local zinit_dir="${HOME}/.zinit"
 
   if [[ -d "${zinit_dir}" ]] && [[ -n "$(ls -A "${zinit_dir}" 2>/dev/null)" ]]; then
@@ -209,7 +209,7 @@ _install_zinit_manual() {
 
   local cloned=false
   for url in "${mirrors[@]}"; do
-    echo -e "${BOLD}${CYAN}${ARROW} 尝试: ${url}${RESET}"
+    printf "${BOLD}${CYAN}${ARROW} 尝试: %s${RESET}\n" "${url}"
     if git clone --depth 1 "${url}" "${zinit_dir}" 2>>"${LOG_FILE}"; then
       cloned=true
       break
@@ -240,7 +240,7 @@ install_essential_tools() {
 
   # 安装 starship 主题
   if ! command -v starship > /dev/null; then
-    echo -e "${BOLD}${CYAN}${ARROW} 安装 starship 主题...${RESET}"
+    printf "${BOLD}${CYAN}${ARROW} 安装 starship 主题...${RESET}\n"
     if _download_and_run "https://starship.rs/install.sh" -y > /dev/null 2>&1; then
       echo_success "starship 安装完成"
     else
@@ -252,7 +252,7 @@ install_essential_tools() {
 
   # 安装 eza 和 zoxide
   if ! command -v eza > /dev/null || ! command -v zoxide > /dev/null; then
-    echo -e "${BOLD}${CYAN}${ARROW} 安装 eza 和 zoxide...${RESET}"
+    printf "${BOLD}${CYAN}${ARROW} 安装 eza 和 zoxide...${RESET}\n"
     if command -v brew > /dev/null; then
       if brew install eza zoxide > /dev/null 2>&1; then
         echo_success "eza 和 zoxide 安装完成"
@@ -300,7 +300,7 @@ install_python_config() {
 
   # 安装 pip
   if ! command -v pip3 > /dev/null; then
-    echo -e "${BOLD}${CYAN}${ARROW} 安装 pip...${RESET}"
+    printf "${BOLD}${CYAN}${ARROW} 安装 pip...${RESET}\n"
     if python3 -m ensurepip --upgrade > /dev/null 2>&1; then
       echo_success "pip 安装完成"
     else
@@ -310,7 +310,7 @@ install_python_config() {
 
   # 安装 Python 依赖（处理外部管理环境错误）
   if [[ -f "${HOME}/.dotfiles/python/requirements.txt" ]]; then
-    echo -e "${BOLD}${CYAN}${ARROW} 安装 Python 基础依赖...${RESET}"
+    printf "${BOLD}${CYAN}${ARROW} 安装 Python 基础依赖...${RESET}\n"
     local pip_install_args=("--user")
     # 检测是否为外部管理环境（Debian/Ubuntu 新版）
     if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
@@ -393,7 +393,7 @@ install_nerd_font() {
     return 0
   fi
 
-  echo -e "${BOLD}${CYAN}${ARROW} 安装 Fira Code Nerd Font...${RESET}"
+  printf "${BOLD}${CYAN}${ARROW} 安装 Fira Code Nerd Font...${RESET}\n"
 
   local font_dir="${HOME}/.local/share/fonts"
   local font_name="FiraCode"
@@ -411,7 +411,7 @@ install_nerd_font() {
   # 下载（依次尝试镜像源）
   local downloaded=false
   for url in "${mirrors[@]}"; do
-    echo -e "${BOLD}${CYAN}${ARROW} 尝试下载: ${url}${RESET}"
+    printf "${BOLD}${CYAN}${ARROW} 尝试下载: %s${RESET}\n" "${url}"
     if curl -fsSL --connect-timeout 15 --max-time 60 "${url}" -o "${tmp_zip}" 2>>"${LOG_FILE}"; then
       downloaded=true
       break
@@ -524,10 +524,10 @@ main() {
   install_nerd_font
 
   echo_title "安装完成"
-  echo -e "${GREEN}${CHECK} ${BOLD}所有配置安装完成！${RESET}"
-  echo -e "${BOLD}${YELLOW}${ARROW} 请执行以下命令生效：${RESET}"
-  echo -e "${BOLD}${WHITE}source ~/.zshrc${RESET}"
-  echo -e "${BOLD}${YELLOW}${ARROW} 或重启终端${RESET}"
+  printf "${GREEN}${CHECK} ${BOLD}所有配置安装完成！${RESET}\n"
+  printf "${BOLD}${YELLOW}${ARROW} 请执行以下命令生效：${RESET}\n"
+  printf "${BOLD}${WHITE}source ~/.zshrc${RESET}\n"
+  printf "${BOLD}${YELLOW}${ARROW} 或重启终端${RESET}\n"
   echo_separator
 }
 

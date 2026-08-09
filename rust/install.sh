@@ -29,14 +29,14 @@ else
   CYAN="\033[36m"; WHITE="\033[37m"; RESET="\033[0m"; BOLD="\033[1m"
   CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"
   SEPARATOR="${BLUE}=============================================${RESET}"
-  echo_step()    { echo -e "${BOLD}${BLUE}${INFO} ${1}${RESET}"; }
-  echo_success() { echo -e "${GREEN}${CHECK} ${1}${RESET}"; }
-  echo_warning() { echo -e "${YELLOW}${WARN} ${1}${RESET}"; }
-  echo_error()   { echo -e "${RED}${ERROR} ${1}${RESET}"; }
-  echo_separator() { echo -e "${SEPARATOR}"; }
+  echo_step()      { printf "${BOLD}${BLUE}${INFO} %s${RESET}\n"  "${1}"; }
+  echo_success()   { printf "${GREEN}${CHECK} %s${RESET}\n"        "${1}"; }
+  echo_warning()   { printf "${YELLOW}${WARN} %s${RESET}\n"        "${1}"; }
+  echo_error()     { printf "${RED}${ERROR} %s${RESET}\n"          "${1}"; }
+  echo_separator() { printf '%b\n' "${SEPARATOR}"; }
   echo_title() {
     echo_separator
-    echo -e "${BOLD}${CYAN}${1}${RESET}"
+    printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
     echo_separator
   }
 fi
@@ -216,7 +216,7 @@ install_cargo_tools() {
   )
 
   for tool in "${tools[@]}"; do
-    echo -e "${BOLD}${CYAN}${ARROW} 安装 ${tool}...${RESET}"
+    printf "${BOLD}${CYAN}${ARROW} 安装 %s...${RESET}\n" "${tool}"
     if cargo install "${tool}" > /dev/null 2>&1; then
       echo_success "${tool} 安装完成"
     else
@@ -324,14 +324,14 @@ main() {
   setup_env
 
   echo_title "Rust 环境安装完成"
-  echo -e "${GREEN}${CHECK} ${BOLD}Rust 开发环境配置完成！${RESET}"
+  printf "${GREEN}${CHECK} ${BOLD}Rust 开发环境配置完成！${RESET}\n"
   echo ""
-  echo -e "${BOLD}验证:${RESET}"
+  printf "${BOLD}验证:${RESET}\n"
   echo "  rustc --version"
   echo "  cargo --version"
   echo "  rustup --version"
   echo ""
-  echo -e "${BOLD}常用命令:${RESET}"
+  printf "${BOLD}常用命令:${RESET}\n"
   echo "  cargo new my-project    # 创建新项目"
   echo "  cargo build              # 编译"
   echo "  cargo run                # 运行"

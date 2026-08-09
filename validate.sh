@@ -29,7 +29,7 @@ log() {
     *) color="$RESET" ;;
   esac
   
-  echo -e "${color}[${level}] ${message}${RESET}"
+  printf "${color}[%s] %s${RESET}\n" "${level}" "${message}"
 }
 
 # 带指数退避的重试函数

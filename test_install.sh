@@ -26,10 +26,10 @@ BOLD='\033[1m'
 # 测试框架
 # ======================
 
-log_info()  { echo -e "${BLUE}[INFO]${RESET} $*"; }
-log_ok()    { echo -e "${GREEN}[OK]${RESET} $*"; }
-log_warn()  { echo -e "${YELLOW}[WARN]${RESET} $*"; }
-log_err()   { echo -e "${RED}[FAIL]${RESET} $*"; }
+log_info()  { printf "${BLUE}[INFO]${RESET} %s\n" "$*"; }
+log_ok()    { printf "${GREEN}[OK]${RESET} %s\n" "$*"; }
+log_warn()  { printf "${YELLOW}[WARN]${RESET} %s\n" "$*"; }
+log_err()   { printf "${RED}[FAIL]${RESET} %s\n" "$*"; }
 
 assert_pass() {
   PASS=$((PASS + 1))
@@ -741,10 +741,10 @@ test_install_simulated() {
 run_all_tests() {
   local mode="${1:-all}"
 
-  echo -e "${BOLD}${CYAN}============================================${RESET}"
-  echo -e "${BOLD}${CYAN}  Dotfiles 安装脚本测试器${RESET}"
-  echo -e "${BOLD}${CYAN}  模式: $mode${RESET}"
-  echo -e "${BOLD}${CYAN}============================================${RESET}"
+  printf "${BOLD}${CYAN}============================================${RESET}\n"
+  printf "${BOLD}${CYAN}  Dotfiles 安装脚本测试器${RESET}\n"
+  printf "${BOLD}${CYAN}  模式: %s${RESET}\n" "$mode"
+  printf "${BOLD}${CYAN}============================================${RESET}\n"
   echo
 
   # === 静态分析测试 ===
@@ -790,34 +790,34 @@ run_all_tests() {
 
   # === 报告 ===
   echo
-  echo -e "${BOLD}${CYAN}============================================${RESET}"
-  echo -e "${BOLD}${CYAN}  测试报告${RESET}"
-  echo -e "${BOLD}${CYAN}============================================${RESET}"
+  printf "${BOLD}${CYAN}============================================${RESET}\n"
+  printf "${BOLD}${CYAN}  测试报告${RESET}\n"
+  printf "${BOLD}${CYAN}============================================${RESET}\n"
   echo
 
-  echo -e "  总计: ${BOLD}$TOTAL${RESET}"
-  echo -e "  ${GREEN}通过: $PASS${RESET}"
-  echo -e "  ${RED}失败: $FAIL${RESET}"
+  printf "  总计: ${BOLD}%s${RESET}\n" "$TOTAL"
+  printf "  ${GREEN}通过: %s${RESET}\n" "$PASS"
+  printf "  ${RED}失败: %s${RESET}\n" "$FAIL"
 
   local rate=0
   if [[ $TOTAL -gt 0 ]]; then
     rate=$((PASS * 100 / TOTAL))
   fi
-  echo -e "  通过率: ${rate}%"
+  printf "  通过率: %s%%\n" "$rate"
 
   if [[ $FAIL -gt 0 ]]; then
     echo
-    echo -e "${RED}失败用例:${RESET}"
+    printf "${RED}失败用例:${RESET}\n"
     for t in "${FAILED_TESTS[@]}"; do
-      echo -e "  ${RED}• $t${RESET}"
+      printf "  ${RED}• %s${RESET}\n" "$t"
     done
   fi
 
   echo
   if [[ $FAIL -eq 0 ]]; then
-    echo -e "${GREEN}${BOLD}🎉 所有测试通过！${RESET}"
+    printf "${GREEN}${BOLD}🎉 所有测试通过！${RESET}\n"
   else
-    echo -e "${RED}${BOLD}❌ 有 $FAIL 个测试失败${RESET}"
+    printf "${RED}${BOLD}❌ 有 %s 个测试失败${RESET}\n" "$FAIL"
   fi
 
   return $FAIL

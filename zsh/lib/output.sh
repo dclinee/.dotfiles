@@ -38,27 +38,27 @@ fi
 
 # 输出美化函数
 echo_step() {
-  echo -e "${BOLD}${BLUE}${INFO} ${1}${RESET}"
+  printf "${BOLD}${BLUE}${INFO} %s${RESET}\n" "${1}"
 }
 
 echo_success() {
-  echo -e "${GREEN}${CHECK} ${1}${RESET}"
+  printf "${GREEN}${CHECK} %s${RESET}\n" "${1}"
 }
 
 echo_warning() {
-  echo -e "${YELLOW}${WARN} ${1}${RESET}"
+  printf "${YELLOW}${WARN} %s${RESET}\n" "${1}"
 }
 
 echo_error() {
-  echo -e "${RED}${ERROR} ${1}${RESET}"
+  printf "${RED}${ERROR} %s${RESET}\n" "${1}"
 }
 
 echo_separator() {
-  echo -e "${SEPARATOR}"
+  printf '%b\n' "${SEPARATOR}"
 }
 
 echo_title() {
   echo_separator
-  echo -e "${BOLD}${CYAN}${1}${RESET}"
+  printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
   echo_separator
 }

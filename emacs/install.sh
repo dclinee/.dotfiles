@@ -27,14 +27,14 @@ else
   CYAN="\033[36m"; RESET="\033[0m"; BOLD="\033[1m"
   CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"
   SEPARATOR="${BLUE}=============================================${RESET}"
-  echo_step()    { echo -e "${BOLD}${BLUE}${INFO} ${1}${RESET}"; }
-  echo_success() { echo -e "${GREEN}${CHECK} ${1}${RESET}"; }
-  echo_warning() { echo -e "${YELLOW}${WARN} ${1}${RESET}"; }
-  echo_error()   { echo -e "${RED}${ERROR} ${1}${RESET}"; }
-  echo_separator() { echo -e "${SEPARATOR}"; }
+  echo_step()      { printf "${BOLD}${BLUE}${INFO} %s${RESET}\n"  "${1}"; }
+  echo_success()   { printf "${GREEN}${CHECK} %s${RESET}\n"       "${1}"; }
+  echo_warning()   { printf "${YELLOW}${WARN} %s${RESET}\n"       "${1}"; }
+  echo_error()     { printf "${RED}${ERROR} %s${RESET}\n"         "${1}"; }
+  echo_separator() { printf '%b\n' "${SEPARATOR}"; }
   echo_title() {
     echo_separator
-    echo -e "${BOLD}${CYAN}${1}${RESET}"
+    printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
     echo_separator
   }
 fi
@@ -234,17 +234,17 @@ main() {
   bootstrap_packages
 
   echo_title "Emacs 配置安装完成"
-  echo -e "${GREEN}${CHECK} ${BOLD}Emacs 配置完成！${RESET}"
+  printf "${GREEN}${CHECK} ${BOLD}Emacs 配置完成！${RESET}\n"
   echo ""
-  echo -e "${BOLD}验证:${RESET}"
+  printf "${BOLD}验证:${RESET}\n"
   echo "  emacs --version"
   echo "  emacs &"
   echo ""
-  echo -e "${BOLD}首次启动:${RESET}"
+  printf "${BOLD}首次启动:${RESET}\n"
   echo "  Emacs 会自动安装配置中声明的所有包"
   echo "  可能需要几分钟，请耐心等待"
   echo ""
-  echo -e "${BOLD}配置文件位置:${RESET}"
+  printf "${BOLD}配置文件位置:${RESET}\n"
   echo "  ~/.config/emacs/init.el          # 主入口"
   echo "  ~/.config/emacs/early-init.el    # 早期初始化"
   echo "  ~/.config/emacs/lisp/            # 模块化配置（init-*.el）"
