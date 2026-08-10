@@ -27,6 +27,22 @@
 if [[ -z "${__COMMON_SH_LOADED:-}" ]]; then
 __COMMON_SH_LOADED=1
 
+# 自动推导 DOTFILES_ROOT（调用方可能只设置了 DOTFILES_DIR，或什么都没设置）
+# 防御 set -u: 所有访问均走 :- 兜底
+if [[ -z "${DOTFILES_ROOT:-}" ]]; then
+  if [[ -n "${DOTFILES_DIR:-}" ]] && [[ -d "${DOTFILES_DIR}/lib" ]]; then
+    DOTFILES_ROOT="${DOTFILES_DIR}"
+  elif [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+    # 根据 lib/common.sh 的位置向上一级
+    _cs_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+    if [[ -n "${_cs_dir:-}" ]] && [[ -d "${_cs_dir}/.." ]]; then
+      DOTFILES_ROOT="$(cd "${_cs_dir}/.." 2>/dev/null && pwd)"
+    fi
+  fi
+  # 最终兜底
+  DOTFILES_ROOT="${DOTFILES_ROOT:-${HOME}/.dotfiles}"
+fi
+
 # ======================
 # 1. 自动加载依赖库（含 fallback，保证任何时候输出函数都可用）
 # ======================
@@ -35,7 +51,7 @@ _common_load_libs() {
   if [[ -n "${__OUTPUT_SH_LOADED:-}" ]]; then
     return 0
   fi
-  local _output_lib="${DOTFILES_ROOT}/lib/output.sh"
+  local _output_lib="${DOTFILES_ROOT:-${HOME}/.dotfiles}/lib/output.sh"
   if [[ -f "${_output_lib}" ]]; then
     # shellcheck source=/dev/null
     source "${_output_lib}"
@@ -51,6 +67,9 @@ _common_load_libs() {
     CYAN="\033[36m"; RESET="\033[0m"; BOLD="\033[1m"
   fi
   CHECK="✓"; INFO="➜"; WARN="⚠"; ERROR="✗"; SKIP="⊘"
+  # 兼容保留：ARROW/WHITE（旧脚本引用，避免 set -u 崩溃）
+  ARROW="${INFO}"
+  WHITE=$([[ -z "${NO_COLOR:-}" && -t 1 ]] && printf '\033[37m' || printf '')
   SEPARATOR="${BLUE}============================================${RESET}"
   echo_step()      { printf "${BOLD}${BLUE}${INFO}  %s${RESET}\n"  "${1}"; }
   echo_success()   { printf "${GREEN}${CHECK} %s${RESET}\n"        "${1}"; }
@@ -71,7 +90,7 @@ _common_load_symlink() {
   if [[ -n "${__SYMLINK_SH_LOADED:-}" ]]; then
     return 0
   fi
-  local _symlink_lib="${DOTFILES_ROOT}/lib/symlink.sh"
+  local _symlink_lib="${DOTFILES_ROOT:-${HOME}/.dotfiles}/lib/symlink.sh"
   if [[ -f "${_symlink_lib}" ]]; then
     # shellcheck source=/dev/null
     source "${_symlink_lib}"

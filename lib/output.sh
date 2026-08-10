@@ -35,6 +35,13 @@ if [[ -z "${__OUTPUT_SH_LOADED:-}" ]]; then
   WARN="⚠"
   ERROR="✗"
   SKIP="⊘"
+  # 兼容保留：ARROW/WHITE（旧 install.sh 脚本引用，避免 set -u 崩溃）
+  ARROW="${INFO}"
+  if [[ -z "${NO_COLOR:-}" ]] && [[ -t 1 ]]; then
+    WHITE="\033[37m"
+  else
+    WHITE=""
+  fi
 
   # 分隔线
   SEPARATOR="${BLUE}============================================${RESET}"
