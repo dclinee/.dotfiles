@@ -32,6 +32,8 @@ brew "wget"
 brew "curl"
 brew "unzip"
 brew "gzip"
+brew "cloc"
+brew "tldr"
 
 # --- 容器 ---
 brew "docker"
