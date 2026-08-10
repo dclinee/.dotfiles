@@ -1,0 +1,7 @@
+# Python 字节码
+*.pyc
+__pycache__/
+
+# 测试覆盖率
+.coverage
+coverage/

@@ -1,0 +1,20 @@
+# Zsh 字节码缓存
+*.zwc
+
+# 补全缓存
+.zcompdump*
+
+# Zsh 运行时缓存
+.cache/zsh/
+.zsh_history
+
+# Zinit 插件目录（由 zinit 管理）
+.zinit/
+.local/share/zinit/
+
+# Starship 缓存
+.starship/
+
+# 性能分析输出
+profile_*.txt
+zprof_*.txt

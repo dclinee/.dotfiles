@@ -1,0 +1,2 @@
+# Brew bundle 锁文件（每台机器独立）
+Brewfile.lock.json

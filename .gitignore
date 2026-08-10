@@ -2,7 +2,7 @@
 *.log
 logs/
 
-# IDE配置
+# IDE 配置
 .idea/
 .vscode/
 *.swp
@@ -29,54 +29,20 @@ node_modules/
 tmp/
 temp/
 
-# Zsh 相关文件
-*.zwc
-.zcompdump*
-.cache/zsh/
-.zsh_history
-
-# Zinit 插件管理器
-.zinit/
-.local/share/zinit/
-
-# Starship 相关
-.starship/
-
-# 本地配置文件
-*.local
-*.local.zsh
-
-# 测试相关
-.coverage
-coverage/
-*.pyc
-__pycache__/
-
 # 权限相关
 *.pem
 *.key
 *.crt
 
-# 安装脚本生成的文件
+# 备份文件
 *.bak
 *.orig
 
-# 其他临时文件
-*~
-._*
-
-# 本地 Git 个人配置（不纳入仓库）
+# 本地配置文件（不纳入仓库）
+*.local
+*.local.zsh
 .gitconfig.local
 
-# Brew bundle 锁文件（每台机器独立）
-Brewfile.lock.json
-
-# Tmux 插件目录（由 TPM 管理）
-.tmux/plugins/
-
-# Vim 插件目录（由 vim-plug 管理）
-.vim/plugged/
-
-# 性能分析输出
-profile_*.txt
-zprof_*.txt
+# 通用临时文件
+*~
+._*
