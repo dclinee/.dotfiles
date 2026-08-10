@@ -6,7 +6,7 @@ protected_branches="main master develop"
 
 while read local_ref local_sha remote_ref remote_sha; do
   remote_branch="${remote_ref#refs/heads/}"
-  
+
   for protected in $protected_branches; do
     if [[ "$remote_branch" == "$protected" ]]; then
       echo "❌ 禁止直接推送到 $remote_branch 分支"
