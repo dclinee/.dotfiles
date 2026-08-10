@@ -59,12 +59,12 @@ make rust-uninstall  # 卸载配置
 ### install.sh
 
 部署主入口，执行以下操作：
-1. 安装 rustup（Rust 工具链管理器）
-2. 安装 stable 工具链及组件（rustfmt、clippy、rust-src）
-3. 链接 Cargo 配置（镜像源、编译参数）
+1. 检测 Rust 安装方式（rustup 优先，Homebrew 兼容支持）
+2. rustup 模式：安装 stable 工具链及组件（rustfmt、clippy、rust-src）
+3. 链接 Cargo 配置（镜像源、编译参数、sparse 协议）
 4. 链接 rustfmt / clippy 配置
 5. 从 `tools.list` 安装 cargo 扩展工具
-6. 配置环境变量（~/.cargo/env）
+6. 配置环境变量（条件性加载 `~/.cargo/env`）
 
 ### uninstall.sh
 
@@ -78,7 +78,8 @@ make rust-uninstall  # 卸载配置
 
 环境体检，检查以下项目：
 - 核心工具版本（rustup / rustc / cargo）
-- 工具链与组件状态
+- 安装方式检测（rustup / Homebrew 均支持）
+- 工具链与组件状态（仅 rustup 模式）
 - 镜像源配置
 - 配置文件软链正确性
 - cargo 工具安装状态
@@ -114,8 +115,14 @@ make rust-uninstall  # 卸载配置
 # 格式: 包名|版本
 #   版本留空 = 安装最新稳定版
 #   版本指定 = cargo install --version <ver>
-cargo-watch|
-cargo-audit|0.18.3
+#   以 # 开头的行为注释，自动跳过
+#
+# 工具分类:
+#   文件监控: cargo-watch
+#   过期检查: cargo-outdated
+#   安全审计: cargo-audit
+#   代码展开: cargo-expand
+#   预编译: cargo-binstall
 ```
 
 ## 配置文件说明

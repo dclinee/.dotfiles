@@ -72,12 +72,12 @@ make python-pin        # 固化版本
 ### install.sh
 
 部署主入口，执行以下操作：
-1. 安装 uv（高性能 Python 包管理器）
-2. 链接 uv 配置（镜像源、缓存）
+1. 安装 uv（高性能 Python 包管理器，优先 pipx/brew，回退 curl 安装）
+2. 链接 uv 配置（镜像源、缓存、并发下载）
 3. 链接 pip 配置（向后兼容）
 4. 链接 pythonrc.py（交互增强）
 5. 链接 pyproject.toml（代码质量工具配置）
-6. 创建虚拟环境 `~/.venv-dotfiles` 并安装基础依赖
+6. 创建虚拟环境 `~/.venv-dotfiles`（回退链：普通创建 → --clear → --force → python3 -m venv）
 7. 从 `tools.list` 安装 CLI 工具（uv tool install）
 
 ### uninstall.sh
@@ -130,9 +130,16 @@ make python-pin        # 固化版本
 # 格式: 包名|版本
 #   版本留空 = 安装最新稳定版
 #   版本指定 = uv tool install --version <ver>
-black|
-ruff|
-mypy|
+#   以 # 开头的行为注释，自动跳过
+#
+# 工具分类:
+#   代码格式化: black
+#   Linter: ruff
+#   类型检查: mypy
+#   增强 REPL: ipython
+#   HTTP 客户端: httpie
+#   Git hook: pre-commit
+#   文档工具: mdformat
 ```
 
 ## 配置文件说明
