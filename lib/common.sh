@@ -43,13 +43,18 @@ _common_load_libs() {
   fi
 
   # Fallback: 内联最小化 output 函数（当 lib 缺失时不崩）
-  RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; BLUE="\033[34m"
-  CYAN="\033[36m"; RESET="\033[0m"; BOLD="\033[1m"
-  CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"; SKIP="⏭️"
+  # 注意：此处图标与 lib/output.sh 保持同步（Oh My Zsh 风格）
+  if [[ -n "${NO_COLOR:-}" ]] || [[ ! -t 1 ]]; then
+    RED="" GREEN="" YELLOW="" BLUE="" CYAN="" RESET="" BOLD=""
+  else
+    RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; BLUE="\033[34m"
+    CYAN="\033[36m"; RESET="\033[0m"; BOLD="\033[1m"
+  fi
+  CHECK="✓"; INFO="➜"; WARN="⚠"; ERROR="✗"; SKIP="⊘"
   SEPARATOR="${BLUE}============================================${RESET}"
-  echo_step()      { printf "${BOLD}${BLUE}${INFO} %s${RESET}\n"  "${1}"; }
+  echo_step()      { printf "${BOLD}${BLUE}${INFO}  %s${RESET}\n"  "${1}"; }
   echo_success()   { printf "${GREEN}${CHECK} %s${RESET}\n"        "${1}"; }
-  echo_warning()   { printf "${YELLOW}${WARN} %s${RESET}\n"        "${1}"; }
+  echo_warning()   { printf "${YELLOW}${WARN}  %s${RESET}\n"        "${1}"; }
   echo_error()     { printf "${RED}${ERROR} %s${RESET}\n"          "${1}"; }
   echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"          "${1}"; }
   echo_detail()    { printf "${BLUE}  %s${RESET}\n"                "${1}"; }
@@ -74,10 +79,18 @@ _common_load_symlink() {
   fi
 
   # Fallback: 内联 safe_symlink 最小化实现
+  # 注意：此处与 lib/symlink.sh 保持同步（含 _resolve_link 跨平台兼容）
+  _resolve_link() {
+    local target="$1"
+    if readlink -f "$target" 2>/dev/null; then
+      return 0
+    fi
+    python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$target" 2>/dev/null || echo "$target"
+  }
   safe_symlink() {
     local src="$1" dst="$2"
     [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
-    if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
+    if [[ -L "$dst" ]] && [[ "$(_resolve_link "$dst")" == "$(_resolve_link "$src")" ]]; then
       echo_skip "链接已存在: $dst"; return 0
     fi
     if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
@@ -116,8 +129,8 @@ get_version() {
   has_cmd "$cmd" || return 1
   # 优先 --version，失败则 version
   local out
-  out=$("$cmd" --version 2>&1 | head -1) || out=$("$cmd" version 2>&1 | head -1)
-  echo "$out" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1
+  out=$("$cmd" --version 2>&1 | head -1 || true) || out=$("$cmd" version 2>&1 | head -1 || true)
+  echo "$out" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true
 }
 
 # ======================
@@ -183,6 +196,8 @@ check_fail() { echo_error   "$1"; FAIL=$((FAIL + 1)); }
 check_skip() { echo_skip "$1"; SKIP=$((SKIP + 1)); }
 
 # 打印体检汇总并退出（FAIL > 0 时 exit 1）
+# 注意: 默认行为是 exit 1（在 set -euo pipefail 下会终止整个脚本）
+#       传 --no-exit 可仅打印不退出（用于不想中断的调用场景）
 # 用法: check_summary [--no-exit]
 check_summary() {
   local _no_exit=false
@@ -219,13 +234,16 @@ check_summary() {
 #   remove_symlinks "${configs[@]}"    # uninstall.sh 用：删除软链
 
 # 跨平台 resolve symlink（macOS BSD readlink 不支持 -f）
-_resolve_link() {
-  local target="$1"
-  if readlink -f "$target" 2>/dev/null; then
-    return 0
-  fi
-  python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$target" 2>/dev/null || echo "$target"
-}
+# 注意: 若 lib/symlink.sh 或 fallback 已定义则跳过（避免重复定义）
+if ! command -v _resolve_link > /dev/null 2>&1; then
+  _resolve_link() {
+    local target="$1"
+    if readlink -f "$target" 2>/dev/null; then
+      return 0
+    fi
+    python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$target" 2>/dev/null || echo "$target"
+  }
+fi
 
 # 批量检查软链状态（check.sh 专用）
 # 对每个 "dst|src"：

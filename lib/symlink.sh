@@ -56,6 +56,10 @@ safe_symlink() {
 
   # 3. 现有文件/错误链接 → 备份
   if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
+    # 显式检查目录（ln -sf 对目录目标行为不正确）
+    if [[ -d "$dst" ]] && [[ ! -L "$dst" ]]; then
+      echo_warning "目标是目录（非软链），将整体备份: $dst"
+    fi
     local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
     if mv "$dst" "$backup" 2>/dev/null; then
       echo_warning "已备份: $dst → $backup"
