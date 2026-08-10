@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
+
+      - name: Bash syntax check
+        run: |
+          find . -name "*.sh" -not -path "./.git/*" | while read f; do
+            bash -n "$f" || exit 1
+          done
+
+      - name: Zsh syntax check
+        run: |
+          find . -name "*.zsh" -not -path "./.git/*" -o -name ".zshrc" -o -name ".zshenv" | while read f; do
+            zsh -n "$f" || exit 1
+          done
+
+      - name: Makefile syntax check
+        run: make -n help
+
+  static-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
+
+      - name: Run validate.sh
+        run: ./validate.sh
+
+      - name: Run static tests
+        run: ./test_install.sh static
