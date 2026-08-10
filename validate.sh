@@ -19,7 +19,7 @@ log() {
   local level="$1"
   local message="$2"
   local color
-  
+
   case "$level" in
     INFO) color="$BLUE" ;;
     WARN) color="$YELLOW" ;;
@@ -28,7 +28,7 @@ log() {
     SIM) color="$CYAN" ;;
     *) color="$RESET" ;;
   esac
-  
+
   printf "${color}[%s] %s${RESET}\n" "${level}" "${message}"
 }
 
@@ -66,8 +66,8 @@ init_platform() {
 simulate_install() {
   log SIM "模拟安装流程："
 
-  # Brew 安装模拟（实际文件名为 install_brew.sh）
-  local brew_script="${DOTFILES_DIR}/brew/install_brew.sh"
+  # Brew 安装模拟（实际文件名为 install.sh）
+  local brew_script="${DOTFILES_DIR}/brew/install.sh"
   if [ -f "${brew_script}" ]; then
     log SIM "[Brew] 将执行："
     grep 'brew bundle\|brew install' "${brew_script}" || true
@@ -93,18 +93,18 @@ validate_functionality() {
     fi
   done
   chmod -R +x "${temp_dir}/wezterm/install.sh" 2>/dev/null || true
-  chmod -R +x "${temp_dir}/zsh/install.sh" "${temp_dir}/brew/install_brew.sh" 2>/dev/null || true
-  
+  chmod -R +x "${temp_dir}/zsh/install.sh" "${temp_dir}/brew/install.sh" 2>/dev/null || true
+
   # 验证Zsh配置 - 只检查语法错误，忽略非致命警告
   log INFO "验证Zsh配置..."
-  
+
   # 检查所有zsh配置文件
   local zsh_files=(
     "${temp_dir}/zsh/.zshrc"
     "${temp_dir}/zsh/core"/*.zsh
     "${temp_dir}/zsh/platform"/*.zsh
   )
-  
+
   local all_valid=true
   for file in "${zsh_files[@]}"; do
     if [[ -f "${file}" ]]; then
@@ -114,28 +114,28 @@ validate_functionality() {
       fi
     fi
   done
-  
+
   if $all_valid; then
     log SUCCESS "Zsh配置语法检查通过"
   else
     log ERROR "Zsh配置语法检查失败"
     return 1
   fi
-  
+
   # 验证Vim配置 - 跳过语法检查以避免交互式编辑器
   log INFO "跳过Vim配置语法检查..."
   log SUCCESS "Vim配置验证跳过"
-  
+
   # 验证Wezterm配置 - 只检查语法错误
   log INFO "验证Wezterm配置..."
-  
+
   # 检查所有wezterm配置文件
   local wezterm_files=(
     "${temp_dir}/wezterm/wezterm.lua"
     "${temp_dir}/wezterm/core"/*.lua
     "${temp_dir}/wezterm/platform"/*.lua
   )
-  
+
   local all_valid_wezterm=true
   for file in "${wezterm_files[@]}"; do
     if [[ -f "${file}" ]]; then
@@ -150,14 +150,14 @@ validate_functionality() {
       fi
     fi
   done
-  
+
   if $all_valid_wezterm; then
     log SUCCESS "Wezterm配置验证通过"
   else
     log ERROR "Wezterm配置验证失败"
     return 1
   fi
-  
+
   log SUCCESS "功能验证通过！"
   return 0
 }
@@ -166,16 +166,16 @@ validate_functionality() {
 main() {
   log INFO "初始化测试环境..."
   init_platform
-  
+
   # 检查命令行参数
   if [[ "$1" == "--dry-run" || "$1" == "--simulate" ]]; then
     simulate_install
     exit 0
   fi
-  
+
   # 验证功能
   validate_functionality
-  
+
   log SUCCESS "全量测试通过！"
   exit 0
 }

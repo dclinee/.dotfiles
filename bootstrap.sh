@@ -274,7 +274,7 @@ install_brew() {
 
   if ! command -v brew > /dev/null 2>&1; then
     echo_warning "Homebrew 未安装，尝试安装..."
-    bash "${DOTFILES_DIR}/brew/install_brew.sh" 2>>"${LOG_FILE}" || {
+    bash "${DOTFILES_DIR}/brew/install.sh" 2>>"${LOG_FILE}" || {
       echo_warning "Homebrew 安装失败，跳过 brew bundle"
       return 0
     }
