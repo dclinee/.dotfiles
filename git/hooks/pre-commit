@@ -14,17 +14,19 @@ if [[ -z "$files" ]]; then
 fi
 
 # 检查尾随空格
-if echo "$files" | xargs grep -l '[[:space:]]$' 2>/dev/null | grep -q .; then
+trailing_files=$(echo "$files" | xargs grep -l '[[:space:]]$' 2>/dev/null || true)
+if [[ -n "$trailing_files" ]]; then
   echo "❌ 以下文件包含尾随空格:"
-  echo "$files" | xargs grep -l '[[:space:]]$' 2>/dev/null
+  echo "$trailing_files"
   echo "请运行: sed -i 's/[[:space:]]*$//' <file>"
   exit 1
 fi
 
 # 检查行尾（Windows 行尾转义）
-if echo "$files" | xargs grep -l $'\r' 2>/dev/null | grep -q .; then
+crlf_files=$(echo "$files" | xargs grep -l $'\r' 2>/dev/null || true)
+if [[ -n "$crlf_files" ]]; then
   echo "❌ 以下文件包含 CRLF 行尾:"
-  echo "$files" | xargs grep -l $'\r' 2>/dev/null
+  echo "$crlf_files"
   echo "请运行: dos2unix <file> 或修改 .gitattributes"
   exit 1
 fi

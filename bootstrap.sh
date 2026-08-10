@@ -61,11 +61,11 @@ BOLD="\033[1m"
 ARROW="➡️"
 SKIP="⏭️"
 
-echo_step()      { printf "${BOLD}${BLUE}ℹ️  %s${RESET}\n"  "${1}"; }
-echo_success()   { printf "${GREEN}✅ %s${RESET}\n"         "${1}"; }
-echo_warning()   { printf "${YELLOW}⚠️  %s${RESET}\n"       "${1}"; }
-echo_error()     { printf "${RED}❌ %s${RESET}\n"           "${1}"; }
-echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"     "${1}"; }
+echo_step()      { printf "${BOLD}${BLUE}➜  %s${RESET}\n"  "${1}"; }
+echo_success()   { printf "${GREEN}✓ %s${RESET}\n"         "${1}"; }
+echo_warning()   { printf "${YELLOW}⚠  %s${RESET}\n"       "${1}"; }
+echo_error()     { printf "${RED}✗ %s${RESET}\n"           "${1}"; }
+echo_skip()      { printf "${CYAN}⊘ %s${RESET}\n"          "${1}"; }
 echo_detail()    { printf "${BLUE}  %s${RESET}\n"           "${1}"; }
 echo_separator() { printf "${BLUE}=============================================${RESET}\n"; }
 echo_title() {
@@ -214,12 +214,14 @@ install_zsh() {
 
   # 询问是否设为默认 shell（跨平台：Linux 用 getent，macOS 用 dscl）
   _current_login_shell() {
+    local shell_path=""
     if command -v getent > /dev/null 2>&1; then
-      getent passwd "$USER" 2>/dev/null | cut -d: -f7
+      shell_path=$(getent passwd "$USER" 2>/dev/null | cut -d: -f7 2>/dev/null) || true
     else
       # macOS/BSD: 通过 dscl 读取用户记录
-      dscl . -read "/Users/${USER}" UserShell 2>/dev/null | awk '{print $2}'
+      shell_path=$(dscl . -read "/Users/${USER}" UserShell 2>/dev/null | awk '{print $2}') || true
     fi
+    echo "$shell_path"
   }
 
   if [[ "$(_current_login_shell)" != "$(command -v zsh)" ]]; then

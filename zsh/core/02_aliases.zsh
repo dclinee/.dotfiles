@@ -96,10 +96,12 @@ alias gstp='git stash pop'
 # ----------------------
 # 6. 开发相关
 # ----------------------
-# Python
-alias python='python3'
-alias py='python3'
-alias pip='pip3'
+# Python（仅在非虚拟环境中设置别名，避免绕过 venv 的 python/pip）
+if [[ -z "${VIRTUAL_ENV:-}" ]]; then
+  alias python='python3'
+  alias py='python3'
+  alias pip='pip3'
+fi
 alias venv='python -m venv venv'
 alias venva='source venv/bin/activate'  # 激活虚拟环境
 

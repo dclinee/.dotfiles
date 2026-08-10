@@ -81,7 +81,9 @@ export PIP_CONFIG_FILE="${HOME}/.dotfiles/python/pip.conf"
 
 # Python 虚拟环境
 export WORKON_HOME="${HOME}/.virtualenvs"
-export VIRTUALENVWRAPPER_PYTHON="$(command -v python3)"
+if command -v python3 > /dev/null 2>&1; then
+  export VIRTUALENVWRAPPER_PYTHON="$(command -v python3)"
+fi
 
 # 确保 Python 相关目录存在
 mkdir -p "${HOME}/.virtualenvs" "${HOME}/.cache/pip" 2>/dev/null
@@ -102,7 +104,28 @@ if [[ -f "${_py_venv_marker}" ]]; then
 fi
 unset _py_venv_marker
 
-# 虚拟环境自动激活 (仅交互式 shell)
-if [[ -o interactive ]] && [[ -d ".venv" ]]; then
-  source .venv/bin/activate 2>/dev/null || true
+# 虚拟环境自动激活/停用 (仅交互式 shell)
+# 进入含 .venv 的目录时自动激活，离开时自动停用
+_venv_autoswitch() {
+  if [[ -d ".venv" ]] && [[ -f ".venv/bin/activate" ]]; then
+    # 已激活同一目录的 venv 则跳过
+    if [[ -n "${VIRTUAL_ENV:-}" ]] && [[ "${VIRTUAL_ENV:A}" == "${PWD:A}/.venv" ]]; then
+      return
+    fi
+    # 如已激活其他 venv，先停用
+    if [[ -n "${VIRTUAL_ENV:-}" ]] && typeset -f deactivate > /dev/null 2>&1; then
+      deactivate 2>/dev/null || true
+    fi
+    source .venv/bin/activate 2>/dev/null || true
+  elif [[ -n "${VIRTUAL_ENV:-}" ]] && typeset -f deactivate > /dev/null 2>&1; then
+    # 离开 venv 目录时自动停用
+    deactivate 2>/dev/null || true
+  fi
+}
+
+if [[ -o interactive ]]; then
+  # 启动时检查当前目录
+  _venv_autoswitch
+  # cd 时自动切换
+  chpwd_functions=(${chpwd_functions[@]} _venv_autoswitch)
 fi

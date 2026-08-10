@@ -498,9 +498,6 @@ test_cross_platform_compat() {
 test_install_error_handling() {
   log_info "测试: install.sh 错误处理"
 
-  assert_file_contains "brew shellenv 有 || true 保护" \
-    "$DOTFILES_DIR/zsh/install.sh" "brew shellenv.*|| true"
-
   assert_file_contains "starship 安装使用安全下载" \
     "$DOTFILES_DIR/zsh/install.sh" "_download_and_run.*starship"
 
@@ -510,11 +507,9 @@ test_install_error_handling() {
   assert_file_contains "apt install 有 if 判断" \
     "$DOTFILES_DIR/zsh/install.sh" "if sudo apt install"
 
-  assert_file_contains "ensurepip 有 if 判断" \
-    "$DOTFILES_DIR/zsh/install.sh" "if python3 -m ensurepip"
-
-  assert_file_contains "pip install 有 if 判断" \
-    "$DOTFILES_DIR/zsh/install.sh" "if pip3 install"
+  # brew shellenv 和 pip 安装逻辑已移至 bootstrap.sh
+  assert_file_contains "bootstrap.sh brew bundle 有 || 保护" \
+    "$DOTFILES_DIR/bootstrap.sh" "brew bundle.*||"
 }
 
 test_install_brew_fixes() {

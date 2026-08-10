@@ -16,6 +16,16 @@
 if [[ -z "${__SYMLINK_SH_LOADED:-}" ]]; then
   __SYMLINK_SH_LOADED=1
 
+# 跨平台 resolve symlink（macOS BSD readlink 不支持 -f）
+_resolve_link() {
+  local target="$1"
+  # macOS 13.0+ 支持 readlink -f，旧版用 Python 兜底
+  if readlink -f "$target" 2>/dev/null; then
+    return 0
+  fi
+  python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$target" 2>/dev/null || echo "$target"
+}
+
 # safe_symlink <source> <target>
 #
 # 统一处理符号链接创建：
@@ -38,7 +48,7 @@ safe_symlink() {
   fi
 
   # 2. 已是正确链接 → 跳过
-  if [[ -L "$dst" ]] && [[ "$(readlink -f "$dst" 2>/dev/null)" == "$(readlink -f "$src" 2>/dev/null)" ]]; then
+  if [[ -L "$dst" ]] && [[ "$(_resolve_link "$dst")" == "$(_resolve_link "$src")" ]]; then
     echo_skip "链接已存在: $dst"
     return 0
   fi

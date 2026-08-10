@@ -91,14 +91,16 @@ extract() {
 # 创建压缩包
 compress() {
   if [ -n "$1" ]; then
-    case "$2" in
-      tar.gz|tgz)   tar cvzf "$1.tar.gz" "${@:3}" ;;
-      tar.bz2|tbz2) tar cvjf "$1.tar.bz2" "${@:3}" ;;
-      tar.xz|txz)   tar cvJf "$1.tar.xz" "${@:3}" ;;
-      zip)          zip -r "$1.zip" "${@:3}" ;;
-      rar)          rar a "$1.rar" "${@:3}" ;;
-      7z)           7z a "$1.7z" "${@:3}" ;;
-      *)            echo "不支持的格式: $2" ;;
+    local _archive="$1" _format="$2"
+    shift 2
+    case "$_format" in
+      tar.gz|tgz)   tar cvzf "$_archive.tar.gz" "$@" ;;
+      tar.bz2|tbz2) tar cvjf "$_archive.tar.bz2" "$@" ;;
+      tar.xz|txz)   tar cvJf "$_archive.tar.xz" "$@" ;;
+      zip)          zip -r "$_archive.zip" "$@" ;;
+      rar)          rar a "$_archive.rar" "$@" ;;
+      7z)           7z a "$_archive.7z" "$@" ;;
+      *)            echo "不支持的格式: $_format" ;;
     esac
   else
     echo "用法: compress <名称> <格式> <文件/目录...>"
@@ -212,9 +214,14 @@ git-init() {
   git commit -m "Initial commit"
 }
 
-# 快速提交
+# 快速提交（仅暂存已跟踪文件的修改，不添加新文件/敏感文件）
 git-commit() {
-  git add .
+  git commit -m "${1:-Update}"
+}
+
+# 快速暂存并提交已跟踪文件
+git-commit-tracked() {
+  git add -u
   git commit -m "${1:-Update}"
 }
 

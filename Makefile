@@ -32,7 +32,7 @@ help: ## 显示帮助信息
 	@printf "  make check        # 检查环境状态\n"
 	@printf "  make update       # 更新配置和插件\n"
 
-install: zsh vim emacs wezterm brew python rust tmux git editorconfig ## 一键安装所有配置（推荐）
+install: editorconfig git brew zsh vim emacs wezterm python rust tmux ## 一键安装所有配置（推荐）
 	@printf "\n"
 	@printf "$(GREEN)✅ 所有配置安装完成！$(RESET)\n"
 	@printf "$(YELLOW)请执行: source ~/.zshrc 或重启终端$(RESET)\n"
@@ -180,12 +180,12 @@ editorconfig: ## 安装 EditorConfig
 
 update: ## 更新配置和插件
 	@printf "$(CYAN)→ 更新 Dotfiles...$(RESET)\n"
-	@git pull
+	@git pull || { printf "$(RED)✗ git pull 失败，请检查网络或手动解决冲突$(RESET)\n"; exit 1; }
 	@printf "$(CYAN)→ 更新 Zinit 插件...$(RESET)\n"
-	@zsh -ic 'zinit update' 2>/dev/null || true
+	@zsh -ic 'zinit update' 2>/dev/null || printf "$(YELLOW)⚠  Zinit 更新失败，请手动执行: zinit update$(RESET)\n"
 	@printf "$(CYAN)→ 更新 Homebrew...$(RESET)\n"
-	@brew update && brew upgrade 2>/dev/null || true
-	@printf "$(GREEN)✅ 更新完成！$(RESET)\n"
+	@brew update && brew upgrade 2>/dev/null || printf "$(YELLOW)⚠  Homebrew 更新失败，请手动执行: brew update && brew upgrade$(RESET)\n"
+	@printf "$(GREEN)✓ 更新完成！$(RESET)\n"
 
 backup: ## 备份当前配置
 	@printf "$(CYAN)→ 备份配置到 ~/.dotfiles_backup...$(RESET)\n"

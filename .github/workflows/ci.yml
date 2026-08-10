@@ -11,12 +11,20 @@ on:
 
 jobs:
   syntax-check:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Zsh
-        run: sudo apt-get update && sudo apt-get install -y zsh
+        run: |
+          if [[ "$(uname -s)" == "Darwin" ]]; then
+            brew install zsh
+          else
+            sudo apt-get update && sudo apt-get install -y zsh
+          fi
 
       - name: Bash syntax check
         run: |

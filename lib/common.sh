@@ -150,8 +150,11 @@ read_tools_list() {
   [[ -f "$list_file" ]] || return 1
   while IFS='|' read -r name version || [[ -n "$name" ]]; do
     [[ -z "$name" || "$name" == \#* ]] && continue
-    name="$(echo "$name" | xargs)"
-    version="$(echo "${version:-}" | xargs)"
+    # 修剪首尾空白（使用参数扩展，避免 xargs 处理特殊字符）
+    name="${name#"${name%%[![:space:]]*}"}"
+    name="${name%"${name##*[![:space:]]}"}"
+    version="${version#"${version%%[![:space:]]*}"}"
+    version="${version%"${version##*[![:space:]]}"}"
     [[ -n "$name" ]] && echo "$name $version"
   done < "$list_file"
 }
@@ -214,6 +217,15 @@ check_summary() {
 #   check_symlinks "${configs[@]}"     # check.sh 用：验证软链是否正确
 #   remove_symlinks "${configs[@]}"    # uninstall.sh 用：删除软链
 
+# 跨平台 resolve symlink（macOS BSD readlink 不支持 -f）
+_resolve_link() {
+  local target="$1"
+  if readlink -f "$target" 2>/dev/null; then
+    return 0
+  fi
+  python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$target" 2>/dev/null || echo "$target"
+}
+
 # 批量检查软链状态（check.sh 专用）
 # 对每个 "dst|src"：
 #   - 正确链接 → check_ok
@@ -231,8 +243,8 @@ check_symlinks() {
     fi
 
     if [[ -L "$dst" ]]; then
-      target="$(readlink -f "$dst" 2>/dev/null)"
-      if [[ -n "$src" ]] && [[ "$target" == "$(readlink -f "$src" 2>/dev/null)" ]]; then
+      target="$(_resolve_link "$dst")"
+      if [[ -n "$src" ]] && [[ "$target" == "$(_resolve_link "$src")" ]]; then
         check_ok "软链正确: $(basename "$dst")"
       elif [[ -n "$src" ]]; then
         check_warn "软链指向不同: $(basename "$dst") → ${target}"

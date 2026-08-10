@@ -17,6 +17,15 @@ if [[ ${#commit_msg} -gt 72 ]]; then
   exit 1
 fi
 
+# 检查 Conventional Commits 格式（提示性，不阻止提交）
+# 格式: type(scope): description
+if ! echo "$commit_msg" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert|hotfix)(\(.+\))?!?: .+'; then
+  echo "⚠️  建议使用 Conventional Commits 格式: type(scope): description"
+  echo "   常用类型: feat fix docs style refactor perf test chore ci build revert"
+  echo "   示例: feat(zsh): 添加 pyenv 懒加载支持"
+  echo "   当前: $commit_msg"
+fi
+
 # 检查是否包含破坏性变更标记
 if echo "$commit_msg" | grep -qE '^[a-z]+(\([^)]+\))?!:'; then
   echo "⚠️  检测到破坏性变更标记，请注意版本号升级"

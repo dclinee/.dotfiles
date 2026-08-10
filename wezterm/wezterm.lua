@@ -30,11 +30,20 @@ local function is_windows() return (wezterm.target_triple or ''):find('windows')
 -- 模块加载器
 -- ======================
 
--- 判断表是否为数组型（连续整数索引）
+-- 判断表是否为数组型（连续整数索引从 1 开始）
 local function is_array(t)
   local count = 0
-  for _ in pairs(t) do count = count + 1 end
-  return count > 0 and t[1] ~= nil
+  local max_idx = 0
+  for k, _ in pairs(t) do
+    count = count + 1
+    if type(k) == 'number' and k == math.floor(k) and k >= 1 then
+      if k > max_idx then max_idx = k end
+    else
+      return false  -- 非整数键，不是数组
+    end
+  end
+  -- 空表视为非数组，否则要求 count == max_idx（无空洞）
+  return count > 0 and count == max_idx
 end
 
 -- 合并配置表: 数组型追加，字典型按键合并
