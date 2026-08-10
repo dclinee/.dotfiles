@@ -14,7 +14,7 @@
 
 # 颜色定义
 if [[ -z "${__OUTPUT_SH_LOADED:-}" ]]; then
-  export __OUTPUT_SH_LOADED=1
+  __OUTPUT_SH_LOADED=1
 
   RED="\033[31m"
   GREEN="\033[32m"

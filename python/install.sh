@@ -290,13 +290,16 @@ install_python_deps() {
   if has_uv; then
     echo_step "使用 uv 创建虚拟环境: ${venv_dir}"
 
+    # 策略链: 已存在检查 → --clear 替换 → 普通创建 → --force 清理损坏 → python3 -m venv
     local venv_created=false
 
-    # 策略链: 普通创建 → --clear 替换有效 venv → --force 清理损坏目录 → python3 -m venv
-    if uv venv "${venv_dir}" 2>>"${LOG_FILE}"; then
+    if [[ -f "${venv_dir}/pyvenv.cfg" ]]; then
+      echo_detail "虚拟环境已存在且有效，跳过创建"
       venv_created=true
-    elif [[ -f "${venv_dir}/pyvenv.cfg" ]] && uv venv --clear "${venv_dir}" 2>>"${LOG_FILE}"; then
+    elif uv venv --clear "${venv_dir}" 2>>"${LOG_FILE}"; then
       echo_warning "旧 venv 已存在，使用 --clear 重建"
+      venv_created=true
+    elif uv venv "${venv_dir}" 2>>"${LOG_FILE}"; then
       venv_created=true
     elif uv venv --force "${venv_dir}" 2>>"${LOG_FILE}"; then
       echo_warning "检测到损坏的旧 venv，已使用 --force 清理重建"
