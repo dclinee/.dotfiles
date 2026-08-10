@@ -36,10 +36,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# 执行或预览
+# 执行或预览（复用 is_dry_run）
 run_cmd() {
-  if $DRY_RUN; then
-    echo "  [dry-run] $*"
+  if is_dry_run; then
+    echo_detail "[dry-run] $*"
   else
     eval "$@" 2>/dev/null || true
   fi
@@ -79,8 +79,8 @@ clean_uv_cache() {
     local size
     size="$(du -sh "$uv_cache" 2>/dev/null | awk '{print $1}')"
     echo_detail "uv 缓存大小: ${size}"
-    if $DRY_RUN; then
-      echo "  [dry-run] uv cache clean"
+    if is_dry_run; then
+      echo_detail "[dry-run] uv cache clean"
     else
       uv cache clean 2>/dev/null || rm -rf "${uv_cache:?}/"*
     fi
@@ -96,8 +96,8 @@ clean_uv_cache() {
 clean_pycache() {
   echo_step "清理 __pycache__ 目录..."
 
-  if $DRY_RUN; then
-    echo "  [dry-run] find ${HOME} -name __pycache__ -type d -prune -exec rm -rf {} +"
+  if is_dry_run; then
+    echo_detail "[dry-run] find ${HOME} -name __pycache__ -type d -prune -exec rm -rf {} +"
     return 0
   fi
 
@@ -150,8 +150,8 @@ clean_redundant_tools() {
 
       if ! $found; then
         echo_detail "发现冗余工具: ${tool}"
-        if $DRY_RUN; then
-          echo "  [dry-run] uv tool uninstall ${tool}"
+        if is_dry_run; then
+          echo_detail "[dry-run] uv tool uninstall ${tool}"
         else
           uv tool uninstall "$tool" 2>/dev/null && echo_success "已卸载: ${tool}" || true
         fi
@@ -173,8 +173,8 @@ clean_redundant_tools() {
 
       if ! $found; then
         echo_detail "发现冗余工具（pipx）: ${tool}"
-        if $DRY_RUN; then
-          echo "  [dry-run] pipx uninstall ${tool}"
+        if is_dry_run; then
+          echo_detail "[dry-run] pipx uninstall ${tool}"
         else
           pipx uninstall "$tool" 2>/dev/null && echo_success "已卸载: ${tool}" || true
         fi
@@ -199,8 +199,8 @@ clean_venv_cache() {
   fi
 
   # 清理 .pyc 文件
-  if $DRY_RUN; then
-    echo "  [dry-run] find ${venv_dir} -name '*.pyc' -delete"
+  if is_dry_run; then
+    echo_detail "[dry-run] find ${venv_dir} -name '*.pyc' -delete"
     return 0
   fi
 
@@ -219,7 +219,7 @@ clean_venv_cache() {
 # ======================
 main() {
   echo_title "Python 缓存清理"
-  $DRY_RUN && echo_warning "DRY-RUN 模式：仅预览，不实际执行"
+  is_dry_run && echo_warning "DRY-RUN 模式：仅预览，不实际执行"
   echo ""
 
   clean_pip_cache
@@ -233,7 +233,7 @@ main() {
   clean_redundant_tools
 
   echo_title "清理完成"
-  if ! $DRY_RUN; then
+  if ! is_dry_run; then
     echo_step "当前缓存目录大小:"
     du -sh "${HOME}/.cache/pip" 2>/dev/null || true
     du -sh "${HOME}/.cache/uv" 2>/dev/null || true

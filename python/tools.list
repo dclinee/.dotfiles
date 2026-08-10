@@ -30,6 +30,3 @@ pre-commit|
 
 # 文档工具
 mdformat|
-
-# Pydantic 数据模型 CLI
-pydantic-cli|

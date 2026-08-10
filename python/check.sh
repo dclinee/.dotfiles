@@ -17,14 +17,8 @@ set -euo pipefail
 # shellcheck source=/dev/null
 source "$(dirname "$0")/_common.sh"
 
-PASS=0
-WARN=0
-FAIL=0
-
-# 检查并统计
-check_ok()   { echo_success "$1"; PASS=$((PASS + 1)); }
-check_warn()  { echo_warning "$1"; WARN=$((WARN + 1)); }
-check_fail()  { echo_error "$1"; FAIL=$((FAIL + 1)); }
+# 初始化体检计数器
+check_init
 
 # ======================
 # 检查核心工具
@@ -63,7 +57,6 @@ check_core_tools() {
 check_mirror() {
   echo_step "镜像源配置"
 
-  # uv 配置
   local uv_config="${HOME}/.config/uv/uv.toml"
   if [[ -f "$uv_config" ]]; then
     if grep -q 'index-url' "$uv_config" 2>/dev/null; then
@@ -77,7 +70,6 @@ check_mirror() {
     check_warn "uv 配置不存在: ~/.config/uv/uv.toml"
   fi
 
-  # pip 配置
   local pip_config="${HOME}/.pip/pip.conf"
   if [[ -f "$pip_config" ]]; then
     if grep -q 'index-url' "$pip_config" 2>/dev/null; then
@@ -104,7 +96,6 @@ check_venv() {
     py_ver="$("${venv_dir}/bin/python" --version 2>&1)"
     check_ok "venv 存在: ${venv_dir} (${py_ver})"
 
-    # 检查关键依赖
     local key_pkgs=("pip" "setuptools" "wheel")
     for pkg in "${key_pkgs[@]}"; do
       if "${venv_dir}/bin/pip" show "$pkg" > /dev/null 2>&1; then
@@ -118,7 +109,6 @@ check_venv() {
     echo "  创建: make python-venv"
   fi
 
-  # PATH 标记文件
   local marker="${HOME}/.local/share/dotfiles-py-path"
   if [[ -f "$marker" ]]; then
     check_ok "PATH 标记存在: ${marker}"
@@ -128,35 +118,19 @@ check_venv() {
 }
 
 # ======================
-# 检查配置文件软链
+# 检查配置文件软链（复用 check_symlinks）
 # ======================
 check_configs() {
   echo_step "配置文件软链"
 
   local configs=(
-    "${HOME}/.config/uv/uv.toml:${PYTHON_DIR}/uv.toml.template"
-    "${HOME}/.pip/pip.conf:${PYTHON_DIR}/pip.conf"
-    "${HOME}/.pythonrc.py:${PYTHON_DIR}/pythonrc.py"
-    "${HOME}/.pyproject.toml:${PYTHON_DIR}/pyproject.toml.template"
+    "${HOME}/.config/uv/uv.toml|${PYTHON_DIR}/uv.toml.template"
+    "${HOME}/.pip/pip.conf|${PYTHON_DIR}/pip.conf"
+    "${HOME}/.pythonrc.py|${PYTHON_DIR}/pythonrc.py"
+    "${HOME}/.pyproject.toml|${PYTHON_DIR}/pyproject.toml.template"
   )
 
-  for pair in "${configs[@]}"; do
-    local dst="${pair%%:*}"
-    local src="${pair##*:}"
-    if [[ -L "$dst" ]]; then
-      local target
-      target="$(readlink "$dst" 2>/dev/null)"
-      if [[ "$target" == "$src" ]]; then
-        check_ok "软链正确: $(basename "$dst")"
-      else
-        check_warn "软链指向不同: $(basename "$dst") → ${target}"
-      fi
-    elif [[ -f "$dst" ]]; then
-      check_warn "存在独立文件（非软链）: $(basename "$dst")"
-    else
-      check_fail "缺失: $(basename "$dst")"
-    fi
-  done
+  check_symlinks "${configs[@]}"
 }
 
 # ======================
@@ -209,12 +183,11 @@ check_permissions() {
     fi
   done
 
-  # 检查 python3 路径
   if has_python3; then
     local py_path
     py_path="$(command -v python3)"
     if [[ "$py_path" == *"/linuxbrew/"* ]] || [[ "$py_path" == *"/homebrew/"* ]]; then
-      check_warn "python3 路径: Homebrew 模式"
+      check_ok "python3 路径: Homebrew 模式"
     elif [[ "$py_path" == /usr/bin/python3 ]]; then
       check_warn "python3 路径: 系统自带（建议使用 uv 管理版本）"
     else
@@ -229,33 +202,15 @@ check_permissions() {
 main() {
   echo_title "Python 环境体检"
 
-  check_core_tools
-  echo_separator
-  check_mirror
-  echo_separator
-  check_venv
-  echo_separator
-  check_configs
-  echo_separator
-  check_tools
-  echo_separator
+  check_core_tools; echo_separator
+  check_mirror;     echo_separator
+  check_venv;       echo_separator
+  check_configs;    echo_separator
+  check_tools;      echo_separator
   check_permissions
 
-  echo_title "体检结果"
-  printf "${GREEN}✓ 通过: ${PASS}${RESET}  ${YELLOW}⚠ 警告: ${WARN}${RESET}  ${RED}✗ 失败: ${FAIL}${RESET}\n"
-
-  if [[ $FAIL -gt 0 ]]; then
-    echo ""
-    echo_error "存在 ${FAIL} 项失败，建议修复"
-    exit 1
-  elif [[ $WARN -gt 0 ]]; then
-    echo ""
-    echo_warning "存在 ${WARN} 项警告，建议检查"
-  else
-    echo ""
-    echo_success "所有检查项通过"
-  fi
-  echo_separator
+  # 复用 check_summary（内部会根据 FAIL 决定是否 exit 1）
+  check_summary
 }
 
 main

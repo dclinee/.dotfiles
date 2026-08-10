@@ -426,9 +426,10 @@ install_python() {
 
     if ! $installed; then
       echo_error "Python 必装依赖安装失败，请查看日志: ${LOG_FILE}"
-      echo "  备选 1: 安装 uv 后重试: curl -LsSf https://astral.sh/uv/install.sh | sh"
-      echo "  备选 2: pip3 install --user -r ${req_file}"
-      echo "  备选 3: python3 -m venv ~/.venv-dotfiles && source ~/.venv-dotfiles/bin/activate && pip install -r ${req_file}"
+      echo "  备选 1: pip3 install --user uv --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple"
+      echo "  备选 2: 官方脚本: curl -LsSf https://astral.sh/uv/install.sh | sh"
+      echo "  备选 3: pip3 install --user -r ${req_file}"
+      echo "  备选 4: python3 -m venv ~/.venv-dotfiles && source ~/.venv-dotfiles/bin/activate && pip install -r ${req_file}"
       return 1
     fi
   fi

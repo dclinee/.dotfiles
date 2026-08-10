@@ -38,27 +38,18 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ======================
-# 移除配置软链
+# 移除配置软链（复用 lib/common.sh 中的 remove_symlinks）
 # ======================
-remove_symlinks() {
+remove_symlinks_local() {
   echo_step "移除 Rust 配置软链..."
 
   local configs=(
-    "${HOME}/.cargo/config.toml"
-    "${HOME}/.rustfmt.toml"
-    "${HOME}/.clippy.toml"
+    "${HOME}/.cargo/config.toml|${RUST_DIR}/cargo_config.toml.template"
+    "${HOME}/.rustfmt.toml|${RUST_DIR}/rustfmt.toml"
+    "${HOME}/.clippy.toml|${RUST_DIR}/clippy.toml"
   )
 
-  for cfg in "${configs[@]}"; do
-    if [[ -L "$cfg" ]]; then
-      rm -f "$cfg"
-      echo_success "已移除软链: ${cfg}"
-    elif [[ -f "$cfg" ]]; then
-      echo_warning "存在非软链文件，跳过: ${cfg}"
-    else
-      echo_skip "不存在: ${cfg}"
-    fi
-  done
+  remove_symlinks "${configs[@]}"
 }
 
 # ======================
@@ -145,7 +136,7 @@ purge_rustup() {
 main() {
   echo_title "Rust 配置卸载器"
 
-  remove_symlinks
+  remove_symlinks_local
   echo_separator
   cleanup_env
 

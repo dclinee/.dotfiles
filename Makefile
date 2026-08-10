@@ -86,8 +86,11 @@ python-install: ## 仅安装 uv（--uv-only 模式）
 python-venv: ## 创建 Python 虚拟环境并安装依赖
 	@printf "$(CYAN)→ 创建虚拟环境...$(RESET)\n"
 	@if command -v uv > /dev/null 2>&1; then \
-		uv venv ~/.venv-dotfiles && \
-		uv pip install -r python/requirements.txt && \
+		uv venv ~/.venv-dotfiles 2>/dev/null || \
+		uv venv --clear ~/.venv-dotfiles 2>/dev/null || \
+		uv venv --force ~/.venv-dotfiles 2>/dev/null || \
+		python3 -m venv ~/.venv-dotfiles; \
+		uv pip install --python ~/.venv-dotfiles/bin/python -r python/requirements.txt && \
 		printf "$(GREEN)✅ 虚拟环境创建完成: ~/.venv-dotfiles$(RESET)\n" && \
 		printf "$(YELLOW)   激活: source ~/.venv-dotfiles/bin/activate$(RESET)\n"; \
 	else \

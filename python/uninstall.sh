@@ -43,33 +43,29 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ======================
-# 移除配置软链
+# 移除配置软链（复用 lib/common.sh 中的 remove_symlinks）
 # ======================
-remove_symlinks() {
+remove_symlinks_local() {
   echo_step "移除 Python 配置软链..."
 
   local configs=(
-    "${HOME}/.config/uv/uv.toml"
-    "${HOME}/.pip/pip.conf"
-    "${HOME}/.pythonrc.py"
+    "${HOME}/.config/uv/uv.toml|${PYTHON_DIR}/uv.toml.template"
+    "${HOME}/.pip/pip.conf|${PYTHON_DIR}/pip.conf"
+    "${HOME}/.pythonrc.py|${PYTHON_DIR}/pythonrc.py"
+    "${HOME}/.pyproject.toml|${PYTHON_DIR}/pyproject.toml.template"
   )
 
-  for cfg in "${configs[@]}"; do
-    if [[ -L "$cfg" ]]; then
-      rm -f "$cfg"
-      echo_success "已移除软链: ${cfg}"
-    elif [[ -f "$cfg" ]]; then
-      echo_warning "存在非软链文件，跳过: ${cfg}"
-    else
-      echo_skip "不存在: ${cfg}"
-    fi
-  done
+  remove_symlinks "${configs[@]}"
 
   # 移除 PATH 标记文件
   local marker="${HOME}/.local/share/dotfiles-py-path"
   if [[ -f "$marker" ]]; then
-    rm -f "$marker"
-    echo_success "已移除 PATH 标记: ${marker}"
+    if is_dry_run; then
+      echo_detail "[dry-run] 将删除 PATH 标记: ${marker}"
+    else
+      rm -f "$marker"
+      echo_success "已移除 PATH 标记: ${marker}"
+    fi
   fi
 }
 
@@ -203,7 +199,7 @@ purge_uv() {
 main() {
   echo_title "Python 配置卸载器"
 
-  remove_symlinks
+  remove_symlinks_local
   echo_separator
   cleanup_shell
 

@@ -36,10 +36,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# 执行或预览
+# 执行或预览（复用 is_dry_run）
 run_cmd() {
-  if $DRY_RUN; then
-    echo "  [dry-run] $*"
+  if is_dry_run; then
+    echo_detail "[dry-run] $*"
   else
     eval "$@" 2>/dev/null || true
   fi
@@ -90,8 +90,8 @@ clean_cargo_global() {
     return 0
   fi
 
-  if $DRY_RUN; then
-    echo "  [dry-run] cargo cache clean"
+  if is_dry_run; then
+    echo_detail "[dry-run] cargo cache clean"
   else
     cargo cache -a 2>/dev/null || cargo cache --autoclean 2>/dev/null || {
       echo_skip "cargo-cache 未安装，跳过高级清理"
@@ -134,8 +134,8 @@ clean_redundant_tools() {
 
     if ! $found; then
       echo_detail "发现冗余工具: ${tool}"
-      if $DRY_RUN; then
-        echo "  [dry-run] cargo uninstall ${tool}"
+      if is_dry_run; then
+        echo_detail "[dry-run] cargo uninstall ${tool}"
       else
         cargo uninstall "$tool" 2>/dev/null && echo_success "已卸载: ${tool}" || true
       fi
@@ -175,7 +175,7 @@ clean_rustup_temp() {
 # ======================
 main() {
   echo_title "Rust 缓存清理"
-  $DRY_RUN && echo_warning "DRY-RUN 模式：仅预览，不实际执行"
+  is_dry_run && echo_warning "DRY-RUN 模式：仅预览，不实际执行"
   echo ""
 
   clean_cargo_cache
@@ -187,7 +187,7 @@ main() {
   clean_rustup_temp
 
   echo_title "清理完成"
-  if ! $DRY_RUN && has_cargo; then
+  if ! is_dry_run && has_cargo; then
     echo_step "当前 cargo 目录大小:"
     du -sh "${HOME}/.cargo" 2>/dev/null || true
   fi

@@ -48,6 +48,13 @@ done
 
 # ======================
 # 安装 uv
+#
+# 速度优先级（国内环境实测）：
+#   1. pip3 install --user uv --break-system-packages  ← 走 PyPI 镜像（清华），~4 秒完成
+#   2. GitHub Releases 二进制直链（ghproxy 加速）       ← 从国内代理下载二进制
+#   3. 官方脚本 astral.sh                                ← GitHub Releases（fallback）
+#
+# 注意: Homebrew Python 受 PEP 668 限制，pip install 需要 --break-system-packages 标志
 # ======================
 install_uv() {
   if has_uv; then
@@ -57,45 +64,135 @@ install_uv() {
 
   echo_step "安装 uv..."
 
+  # ---------- 方案 1: pip3 --user（最快，走 PyPI 镜像） ----------
+  if has_pip; then
+    echo_detail "方案 1/3: pip3 install --user uv（推荐，走清华镜像）"
+    if is_dry_run; then
+      echo_detail "[dry-run] pip3 install --user uv --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple"
+      _register_uv_path
+      return 0
+    fi
+
+    # --break-system-packages: 绕过 Homebrew Python 的 PEP 668 限制
+    # 优先尝试清华镜像，失败回退到默认源
+    if pip3 install --user uv --break-system-packages \
+        -i https://pypi.tuna.tsinghua.edu.cn/simple \
+        --trusted-host pypi.tuna.tsinghua.edu.cn 2>>"${LOG_FILE}" \
+      || pip3 install --user uv --break-system-packages 2>>"${LOG_FILE}"; then
+      if _register_uv_path; then
+        echo_success "uv 安装完成（pip3 方式）"
+        return 0
+      fi
+    else
+      echo_warning "pip3 安装 uv 失败，切换方案 2"
+    fi
+  else
+    echo_detail "方案 1/3 跳过: pip3 不可用"
+  fi
+
+  # ---------- 方案 2: GitHub Releases 二进制直链（ghproxy 加速） ----------
+  echo_detail "方案 2/3: GitHub Releases 二进制（ghproxy 加速）"
+  local uv_arch uv_os
+  uv_os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  case "$(uname -m)" in
+    x86_64|amd64)  uv_arch="x86_64" ;;
+    aarch64|arm64) uv_arch="aarch64" ;;
+    *)             echo_warning "不支持的架构: $(uname -m)，跳过方案 2" ;;
+  esac
+
+  if [[ -n "${uv_arch:-}" ]]; then
+    # GitHub Releases 标准命名格式: uv-x86_64-unknown-linux-gnu.tar.gz
+    local uv_filename="uv-${uv_arch}-unknown-${uv_os}-gnu.tar.gz"
+    # ghproxy 加速 GitHub Releases 下载
+    local uv_url="https://ghproxy.com/https://github.com/astral-sh/uv/releases/latest/download/${uv_filename}"
+    local uv_tmp
+    uv_tmp="$(mktemp -d)"
+    local _uv_tmpdir="${uv_tmp}"
+    trap "rm -rf '${_uv_tmpdir}'" EXIT RETURN
+
+    if is_dry_run; then
+      echo_detail "[dry-run] curl -fsSL ${uv_url} | tar -xz"
+      trap - EXIT RETURN
+      rm -rf "${uv_tmp}"
+      _register_uv_path
+      return 0
+    fi
+
+    if curl -fsSL --connect-timeout 10 --max-time 120 "${uv_url}" -o "${uv_tmp}/uv.tar.gz" 2>>"${LOG_FILE}"; then
+      if tar -xzf "${uv_tmp}/uv.tar.gz" -C "${uv_tmp}" 2>>"${LOG_FILE}"; then
+        local uv_bin_path
+        uv_bin_path="$(find "${uv_tmp}" -name uv -type f -executable 2>/dev/null | head -1)"
+        if [[ -n "$uv_bin_path" ]]; then
+          mkdir -p "${HOME}/.local/bin"
+          cp "$uv_bin_path" "${HOME}/.local/bin/uv"
+          chmod +x "${HOME}/.local/bin/uv"
+          ln -sf "${HOME}/.local/bin/uv" "${HOME}/.local/bin/uvx" 2>/dev/null || true
+          if _register_uv_path; then
+            trap - EXIT RETURN
+            rm -rf "${uv_tmp}"
+            echo_success "uv 安装完成（ghproxy 加速）"
+            return 0
+          fi
+        fi
+      fi
+    else
+      echo_warning "ghproxy 下载失败，切换方案 3"
+    fi
+    trap - EXIT RETURN
+    rm -rf "${uv_tmp}"
+  fi
+
+  # ---------- 方案 3: 官方脚本（GitHub Releases，fallback） ----------
+  echo_detail "方案 3/3: 官方安装脚本（astral.sh / GitHub Releases）"
   local install_script_url="https://astral.sh/uv/install.sh"
   local tmp_script
   tmp_script="$(mktemp)"
   local _uv_tmp="${tmp_script}"
   trap "rm -f '${_uv_tmp}'" EXIT RETURN
 
-  if ! curl -fsSL "${install_script_url}" -o "${tmp_script}" 2>>"${LOG_FILE}"; then
+  if ! curl -fsSL --connect-timeout 15 --max-time 300 "${install_script_url}" -o "${tmp_script}" 2>>"${LOG_FILE}"; then
     echo_error "无法下载 uv 安装脚本"
-    echo "  手动安装: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo "  推荐手动方案 1: pip3 install --user uv --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple"
+    echo "  推荐手动方案 2: curl -fsSL https://ghproxy.com/https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz | tar -xz"
+    echo "  官方脚本方案: curl -LsSf https://astral.sh/uv/install.sh | sh"
     trap - EXIT RETURN
     rm -f "${tmp_script}"
     return 1
   fi
 
-  if $DRY_RUN; then
+  if is_dry_run; then
     echo_detail "[dry-run] 将执行: sh ${tmp_script}"
     trap - EXIT RETURN
     rm -f "${tmp_script}"
+    _register_uv_path
     return 0
   fi
 
   if sh "${tmp_script}" 2>>"${LOG_FILE}"; then
     trap - EXIT RETURN
     rm -f "${tmp_script}"
-    echo_success "uv 安装完成"
-
-    # 加载 uv 到 PATH
-    local uv_bin="${HOME}/.local/bin"
-    if [[ -f "${uv_bin}/uv" ]]; then
-      export PATH="${uv_bin}:${PATH}"
-      echo_detail "已添加 ${uv_bin} 到 PATH"
-    fi
+    _register_uv_path
+    echo_success "uv 安装完成（官方脚本）"
+    return 0
   else
     trap - EXIT RETURN
     rm -f "${tmp_script}"
-    echo_error "uv 安装失败"
-    echo "  手动安装: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo_error "uv 安装失败（三种方案均失败）"
+    echo "  推荐手动方案 1: pip3 install --user uv --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple"
+    echo "  推荐手动方案 2: curl -fsSL https://ghproxy.com/https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz | tar -xz"
+    echo "  官方脚本方案: curl -LsSf https://astral.sh/uv/install.sh | sh"
     return 1
   fi
+}
+
+# 辅助: 确保 ~/.local/bin 在 PATH 中，并 has_uv 可识别
+_register_uv_path() {
+  local uv_bin="${HOME}/.local/bin"
+  if [[ -f "${uv_bin}/uv" ]]; then
+    export PATH="${uv_bin}:${PATH}"
+    return 0
+  fi
+  return 1
 }
 
 # ======================
@@ -192,13 +289,30 @@ install_python_deps() {
   local venv_dir="${HOME}/.venv-dotfiles"
   if has_uv; then
     echo_step "使用 uv 创建虚拟环境: ${venv_dir}"
-    uv venv "${venv_dir}" 2>>"${LOG_FILE}" || {
-      echo_warning "uv venv 创建失败，尝试 python3 -m venv"
-      python3 -m venv "${venv_dir}" 2>>"${LOG_FILE}" || return 1
-    }
+
+    local venv_created=false
+
+    # 策略链: 普通创建 → --clear 替换有效 venv → --force 清理损坏目录 → python3 -m venv
+    if uv venv "${venv_dir}" 2>>"${LOG_FILE}"; then
+      venv_created=true
+    elif [[ -f "${venv_dir}/pyvenv.cfg" ]] && uv venv --clear "${venv_dir}" 2>>"${LOG_FILE}"; then
+      echo_warning "旧 venv 已存在，使用 --clear 重建"
+      venv_created=true
+    elif uv venv --force "${venv_dir}" 2>>"${LOG_FILE}"; then
+      echo_warning "检测到损坏的旧 venv，已使用 --force 清理重建"
+      venv_created=true
+    elif python3 -m venv "${venv_dir}" 2>>"${LOG_FILE}"; then
+      echo_warning "uv 创建失败，回退到 python3 -m venv"
+      venv_created=true
+    fi
+
+    if ! $venv_created; then
+      echo_error "虚拟环境创建失败，请查看日志: ${LOG_FILE}"
+      return 1
+    fi
 
     echo_step "使用 uv 安装依赖..."
-    if uv pip install -r "${req_file}" 2>>"${LOG_FILE}"; then
+    if uv pip install --python "${venv_dir}/bin/python" -r "${req_file}" 2>>"${LOG_FILE}"; then
       echo_success "Python 依赖安装完成"
     else
       echo_error "依赖安装失败，请查看日志: ${LOG_FILE}"
