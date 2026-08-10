@@ -1,143 +1,154 @@
 # Rust 模块
 
-Rust 开发环境配置与维护工具集。
+Rust 开发环境配置：rustup 工具链、cargo 镜像、常用工具、代码质量工具。
 
-## 文件结构
+## 目录结构
 
 ```
 rust/
-├── install.sh                   # 部署主入口：安装 rustup、配置镜像、环境变量、全局工具
-├── uninstall.sh                 # 卸载：移除配置软链、清理环境变量，可选卸载 rust 本体
-├── check.sh                     # 环境体检：版本校验、源检测、权限排查
-├── upgrade.sh                   # 一键升级：rust 编译器 + 全局工具
-├── clean.sh                     # 清理：编译缓存、卸载冗余组件
-├── pin.sh                       # 版本固化：记录当前版本，支持恢复和对比
-├── _common.sh                   # 内部公共加载器（加载 lib/ 库 + 工具函数）
-├── cargo_config.toml.template   # Cargo 全局配置模板（镜像、编译参数、代理适配）
-├── tools.list                   # Rust 全局二进制工具清单（包名|版本）
-├── rustfmt.toml                 # rustfmt 格式化配置
-├── clippy.toml                  # clippy 代码检查配置
-├── rust-toolchain.toml          # 项目级工具链配置模板
-└── README.md                    # 本文件
+├── install.sh                 # Rust 模块安装主脚本
+├── _common.sh                 # 公共函数
+├── check.sh                   # 环境检查脚本
+├── clean.sh                   # 清理 registry/缓存
+├── uninstall.sh               # 卸载 Rust 工具链
+├── upgrade.sh                 # 升级 rustup 和所有 cargo 工具
+├── pin.sh                     # 固定工具链版本 (rust-toolchain.toml)
+├── cargo_config.toml.template # cargo 配置模板（含国内镜像源）
+├── rust-toolchain.toml        # 默认工具链 (stable)
+├── rustfmt.toml               # 代码格式化规则
+├── clippy.toml                # Clippy Lint 规则
+└── tools.list                 # cargo install 工具列表
 ```
 
-## 快速使用
+## 工具链管理
 
-### 安装
+默认工具链（`rust-toolchain.toml`）：
+
+```toml
+[toolchain]
+channel = "stable"
+components = [
+  "rustfmt",      # 代码格式化
+  "clippy",       # Lint 检查
+  "rust-analysis",# IDE 分析数据
+  "rust-docs",    # 本地文档
+  "rust-src"      # 标准库源码（IDE 跳转）
+]
+targets = []
+```
+
+### Homebrew Rust 兼容
+
+Homebrew 安装的 Rust 不创建 `~/.cargo/env` 文件，Zsh 配置中条件性添加：
+
+```zsh
+if [[ -f "${HOME}/.cargo/env" ]]; then
+  source "${HOME}/.cargo/env"
+fi
+```
+
+不影响 brew 安装的 Rust（已在 PATH 中）。
+
+## Cargo 国内镜像配置 (`cargo_config.toml.template`)
+
+安装后复制到 `~/.cargo/config.toml`：
+
+```toml
+[source.crates-io]
+replace-with = 'rsproxy-sparse'
+
+[source.rsproxy]
+registry = "https://rsproxy.cn/crates.io-index"
+
+[source.rsproxy-sparse]
+registry = "sparse+https://rsproxy.cn/index/"
+
+[registries.rsproxy]
+index = "https://rsproxy.cn/crates.io-index"
+
+[net]
+git-fetch-with-cli = true
+```
+
+## 代码质量工具
+
+### rustfmt.toml 格式化规则
+
+```toml
+max_width = 100
+use_small_heuristics = "Max"
+fn_args_layout = "Vertical"
+struct_variant_width = 100
+struct_field_align_threshold = 30
+enum_discrim_align_threshold = 30
+match_block_trailing_comma = true
+reorder_impl_items = true
+group_imports = "StdExternalCrate"
+imports_layout = "HorizontalVertical"
+wrap_comments = true
+condense_wildcard_suffixes = true
+format_code_in_doc_comments = true
+format_macro_matchers = true
+format_strings = true
+normalize_doc_attributes = true
+```
+
+### clippy.toml Lint 规则
+
+```toml
+msrv = "1.75.0"  # 最低支持 Rust 版本
+
+# 严格模式
+too-many-arguments-threshold = 5
+too-many-lines-threshold = 120
+type-complexity-threshold = 500
+cognitive-complexity-threshold = 25
+```
+
+## cargo 工具列表 (tools.list)
+
+安装时自动 `cargo install` 以下工具：
+
+| 工具 | 功能 | 替代 |
+|------|------|------|
+| `cargo-edit` | `cargo add/rm/upgrade` | 编辑 Cargo.toml |
+| `cargo-watch` | 文件变更自动编译/测试 | `cargo watch -x check` |
+| `cargo-audit` | 检查依赖漏洞 | `cargo audit` |
+| `cargo-outdated` | 检查过时依赖 | `cargo outdated` |
+| `cargo-tree` | 依赖树（duplicate 分析）| `cargo tree -d` |
+| `bat` | 带语法高亮的 `cat` | `cat` 替代 |
+| `fd-find` | 并行文件查找 | `find` 替代 |
+| `ripgrep` | 并行文本搜索 | `grep` 替代 |
+| `tokei` | 代码统计 | `cloc` 替代 |
+
+## 安装
 
 ```bash
-# 通过 Makefile
-make rust
-
-# 直接执行
+cd ~/.dotfiles
 ./rust/install.sh
-
-# 通过 bootstrap.sh
-./bootstrap.sh --rust
 ```
 
-### 日常维护
+安装脚本功能：
+1. 检测 rustup 是否安装，未安装时用 rustup.rs 脚本安装（国内镜像加速）
+2. 设置默认工具链 stable + components
+3. 写入 `cargo_config.toml.template` → `~/.cargo/config.toml`（国内镜像）
+4. 安装 tools.list 中的 cargo 工具
+5. 写入 `rustfmt.toml` / `clippy.toml` → `~/.config/`
+6. 设置环境变量（条件性加载 `~/.cargo/env`）
 
-```bash
-make rust-check      # 环境体检
-make rust-upgrade    # 一键升级
-make rust-clean      # 清理缓存
-make rust-uninstall  # 卸载配置
-```
+## 常用命令速查
 
-或直接执行脚本：
-
-```bash
-./rust/check.sh
-./rust/upgrade.sh
-./rust/clean.sh
-./rust/uninstall.sh
-```
-
-## 脚本说明
-
-### install.sh
-
-部署主入口，执行以下操作：
-1. 检测 Rust 安装方式（rustup 优先，Homebrew 兼容支持）
-2. rustup 模式：安装 stable 工具链及组件（rustfmt、clippy、rust-src）
-3. 链接 Cargo 配置（镜像源、编译参数、sparse 协议）
-4. 链接 rustfmt / clippy 配置
-5. 从 `tools.list` 安装 cargo 扩展工具
-6. 配置环境变量（条件性加载 `~/.cargo/env`）
-
-### uninstall.sh
-
-| 选项 | 说明 |
+| 功能 | 命令 |
 |------|------|
-| （默认） | 移除配置软链 + 清理环境变量 |
-| `--tools` | 额外卸载 cargo 扩展工具 |
-| `--purge` | 彻底卸载 rustup + 工具链（需确认） |
-
-### check.sh
-
-环境体检，检查以下项目：
-- 核心工具版本（rustup / rustc / cargo）
-- 安装方式检测（rustup / Homebrew 均支持）
-- 工具链与组件状态（仅 rustup 模式）
-- 镜像源配置
-- 配置文件软链正确性
-- cargo 工具安装状态
-- 目录权限排查
-
-### upgrade.sh
-
-| 选项 | 说明 |
-|------|------|
-| （默认） | 升级工具链 + cargo 工具 |
-| `--toolchain` | 仅升级 Rust 工具链 |
-| `--tools` | 仅升级 cargo 扩展工具 |
-
-### clean.sh
-
-| 选项 | 说明 |
-|------|------|
-| （默认） | 清理 cargo 缓存 + registry |
-| `--deep` | 深度清理（含卸载冗余工具） |
-| `--dry-run` | 预览将清理的内容 |
-
-### pin.sh
-
-| 选项 | 说明 |
-|------|------|
-| （默认） | 固化当前版本到 `versions.lock` |
-| `--restore` | 从 `versions.lock` 恢复版本 |
-| `--diff` | 对比当前版本与锁定版本 |
-
-## tools.list 格式
-
-```
-# 格式: 包名|版本
-#   版本留空 = 安装最新稳定版
-#   版本指定 = cargo install --version <ver>
-#   以 # 开头的行为注释，自动跳过
-#
-# 工具分类:
-#   文件监控: cargo-watch
-#   过期检查: cargo-outdated
-#   安全审计: cargo-audit
-#   代码展开: cargo-expand
-#   预编译: cargo-binstall
-```
-
-## 配置文件说明
-
-| 文件 | 链接目标 | 说明 |
-|------|----------|------|
-| `cargo_config.toml.template` | `~/.cargo/config.toml` | 镜像源、编译 profile、网络配置 |
-| `rustfmt.toml` | `~/.rustfmt.toml` | 代码格式化规则 |
-| `clippy.toml` | `~/.clippy.toml` | clippy 检查阈值 |
-| `rust-toolchain.toml` | （项目级复制） | 项目工具链覆盖模板 |
-
-## 镜像源
-
-默认使用清华大学 TUNA 镜像（sparse 协议），备选：
-- USTC: `sparse+https://mirrors.ustc.edu.cn/crates.io-index/`
-- SJTU: `sparse+https://mirrors.sjtug.sjtu.edu.cn/git/crates.io-index`
-
-切换镜像：编辑 `cargo_config.toml.template` 中的 `replace-with` 字段。
+| 新建项目 | `cargo new myproj` |
+| 编译 | `cargo build --release` |
+| 运行 | `cargo run` |
+| 测试 | `cargo test` |
+| 添加依赖 | `cargo add <crate>` / `cargo add --dev <crate>` |
+| 格式化 | `cargo fmt` |
+| Lint | `cargo clippy -- -D warnings` |
+| 检查漏洞 | `cargo audit` |
+| 检查过时依赖 | `cargo outdated` |
+| 依赖树 | `cargo tree` / `cargo tree -d` (重复) |
+| 升级工具链 | `rustup update` |
+| 自动编译测试 | `cargo watch -x test` |

@@ -19,17 +19,89 @@ zstyle ':completion:*:options' description 'yes'
 zstyle ':completion:*:options' auto-description '%d'
 
 # compinit 缓存优化
-# 策略：基于 compdump 文件 mtime 判断是否需要重建，而非按天
-# 优势：配置未变更时，连续多日启动均使用缓存路径
+# 策略：
+#   1. 若安装了 zsh-defer（zinit 或 brew install zsh-defer）
+#      → defer 模式：首次补全触发时才 compinit，冷启动节省 ~150ms
+#   2. 否则走传统 compinit：基于 mtime + -C/-s 缓存复用
 ZSH_COMPDUMP="${HOME}/.cache/zsh/zcompdump"
+mkdir -p "${HOME}/.cache/zsh" 2>/dev/null || true
 
-if [[ ! -f "${ZSH_COMPDUMP}" ]]; then
-  # 首次启动或缓存被清理，完整重建
-  compinit -u -d "${ZSH_COMPDUMP}"
+# 自动探测 zsh-defer
+#   可能位置: zinit 插件目录 / brew / /usr/share / 用户自装
+_zsh_defer_source=""
+for _d_src in \
+  "${HOME}/.zinit/plugins/romkatv---zsh-defer/zsh-defer.plugin.zsh" \
+  "${HOME}/.cache/zinit/plugins/romkatv---zsh-defer/zsh-defer.plugin.zsh" \
+  "$(command -v brew > /dev/null 2>&1 && brew --prefix zsh-defer 2>/dev/null)/share/zsh/site-functions/zsh-defer" \
+  "/usr/share/zsh-defer/zsh-defer.plugin.zsh" \
+  "/usr/share/zsh/site-functions/zsh-defer" \
+  "${DOTFILES_ROOT:-$HOME/.dotfiles}/zsh/plugins/zsh-defer/zsh-defer.plugin.zsh"
+do
+  [[ -n "${_d_src}" ]] && [[ -f "${_d_src}" ]] || continue
+  _zsh_defer_source="${_d_src}"
+  break
+done
+_unset_dummy() { unset _d_src; } 2>/dev/null
+_unset_dummy
+
+if [[ -n "${_zsh_defer_source}" ]]; then
+  # ============================================================
+  # 路径 A: zsh-defer 可用 → 延迟 compinit，冷启动最快路径
+  # ============================================================
+  # shellcheck source=/dev/null
+  source "${_zsh_defer_source}"
+  unset _zsh_defer_source
+
+  _init_completion_deferred() {
+    # 删除一次性钩子，避免重复调用
+    precmd_functions=("${(@)precmd_functions:#_init_completion_deferred}")
+    chpwd_functions=("${(@)chpwd_functions:#_init_completion_deferred}")
+
+    # 真正的 compinit（在首次交互事件后，用户无感知延迟）
+    if [[ ! -f "${ZSH_COMPDUMP}" ]]; then
+      compinit -u -d "${ZSH_COMPDUMP}"
+    else
+      # 跳过安全检查，直接加载已有 dump（最快）
+      compinit -C -d "${ZSH_COMPDUMP}" -s
+    fi
+  }
+
+  # 注册到第一个 precmd 事件（用户看到提示符后触发）
+  # 这样用户首次 Enter 前补全已就绪，体感无延迟
+  precmd_functions=("${precmd_functions[@]}" _init_completion_deferred)
+
+  # 防护：如果用户在首次 precmd 前按 Tab，兜底立即初始化
+  zle -N _compdef_first_keypress _init_completion_deferred
+  # 以下任一按键触发立即初始化：
+  for _k in "^I" "^X^I"; do  # Tab, Ctrl-X Tab
+    bindkey -M emacs "${_k}" "_generic_completion_init" 2>/dev/null || true
+    bindkey -M vicmd "${_k}" "_generic_completion_init" 2>/dev/null || true
+    bindkey -M viins "${_k}" "_generic_completion_init" 2>/dev/null || true
+  done
+  # 定义通用补全初始化 widget
+  _generic_completion_init() {
+    _init_completion_deferred 2>/dev/null || true
+    # 委派给真实的补全
+    if zle -l expand-or-complete > /dev/null 2>&1; then
+      zle expand-or-complete
+    else
+      zle complete-word
+    fi
+  }
+  zle -N _generic_completion_init 2>/dev/null || true
+  unset _k
 else
-  # 缓存存在，使用 -C 跳过检查直接加载（最快路径）
-  # 使用 -d 指定路径加速查找
-  compinit -C -d "${ZSH_COMPDUMP}" -s
+  unset _zsh_defer_source
+  # ============================================================
+  # 路径 B: 无 zsh-defer → 直接 compinit，但保持 mtime 缓存
+  # ============================================================
+  if [[ ! -f "${ZSH_COMPDUMP}" ]]; then
+    # 首次启动或缓存被清理，完整重建
+    compinit -u -d "${ZSH_COMPDUMP}"
+  else
+    # 缓存存在，使用 -C 跳过检查直接加载（最快路径）
+    compinit -C -d "${ZSH_COMPDUMP}" -s
+  fi
 fi
 
 # 历史记录配置

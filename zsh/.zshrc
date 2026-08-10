@@ -16,6 +16,11 @@ case "$(uname -s)" in
     ;;
   Linux)
     [ -f "${ZSH_HOME}/platform/linux.zsh" ] && source "${ZSH_HOME}/platform/linux.zsh"
+    # WSL 是 Linux 内核，先加载 Linux 配置，再叠加 WSL 专属配置
+    # (双加载模式：WSL 特有增强不覆盖 Linux 通用设置)
+    if grep -qi "microsoft\|wsl2\|wsl" /proc/version 2>/dev/null; then
+      [ -f "${ZSH_HOME}/platform/wsl.zsh" ] && source "${ZSH_HOME}/platform/wsl.zsh"
+    fi
     ;;
 esac
 

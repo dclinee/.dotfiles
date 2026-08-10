@@ -60,6 +60,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/*.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install Zsh
         run: sudo apt-get update && sudo apt-get install -y zsh
 
@@ -69,14 +77,87 @@ jobs:
       - name: Run static tests
         run: ./test_install.sh static
 
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache kcov and apt packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            ~/.cache/kcov
+          key: ${{ runner.os }}-coverage-${{ hashFiles('**/*.sh', '**/*.zsh') }}
+          restore-keys: |
+            ${{ runner.os }}-coverage-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh kcov
+
+      - name: Run tests with kcov coverage
+        run: |
+          mkdir -p coverage
+          kcov --include-pattern=.sh,.zsh \
+               --exclude-pattern=.git,elpa,~,coverage \
+               coverage ./test_install.sh static 2>&1 || true
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+      - name: Print coverage summary
+        run: |
+          if [[ -f coverage/test_install.sh/kcov-results.json ]]; then
+            python3 -c "
+import json, sys
+with open('coverage/test_install.sh/kcov-results.json') as f:
+    data = json.load(f)
+cov = data.get('percent_covered', 0)
+covered = data.get('covered_lines', 0)
+total = data.get('total_lines', 0)
+print(f'Code Coverage: {cov:.1f}% ({covered}/{total} lines)')
+"
+          else
+            echo "Coverage report generated in coverage/"
+            ls -la coverage/ || true
+          fi
+
   integration-test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build test image
-        run: docker build -f Dockerfile.test -t dotfiles-test .
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ hashFiles('Dockerfile.test') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image (cached)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.test
+          tags: dotfiles-test
+          load: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Run integration tests
         run: docker run --rm dotfiles-test

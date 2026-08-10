@@ -26,6 +26,8 @@
 #   ./bootstrap.sh --tmux     仅安装 Tmux
 #   ./bootstrap.sh --git      仅安装 Git 配置
 #   ./bootstrap.sh --editorconfig  仅安装 EditorConfig
+#   ./bootstrap.sh --rollback [dir]  回滚最近/指定失败的安装
+#   DOTFILES_AUTO_ROLLBACK=false ./bootstrap.sh  禁用失败模块的自动回滚
 
 set -euo pipefail
 
@@ -34,6 +36,9 @@ set -euo pipefail
 # ======================
 DOTFILES_DIR="${HOME}/.dotfiles"
 LOG_FILE="/tmp/dotfiles_bootstrap_$(date +%Y%m%d_%H%M%S).log"
+ROLLBACK_DIR="${HOME}/.cache/dotfiles_rollback_$(date +%Y%m%d_%H%M%S)"
+ROLLBACK_MANIFEST="${ROLLBACK_DIR}/manifest.txt"
+AUTO_ROLLBACK="${DOTFILES_AUTO_ROLLBACK:-true}"
 
 # 安装选项（默认全部安装）
 INSTALL_ALL=true
@@ -99,6 +104,260 @@ else
 fi
 
 # ======================
+# 自动回滚机制
+# ======================
+
+# 初始化回滚目录
+_init_rollback() {
+  mkdir -p "${ROLLBACK_DIR}"
+  : > "${ROLLBACK_MANIFEST}"
+  echo_detail "回滚目录: ${ROLLBACK_DIR}"
+}
+
+# 记录一个文件/链接的当前状态（用于失败后恢复）
+# 参数: $1 = 目标路径 (绝对路径)
+_snapshot_file() {
+  local target="$1"
+  local safe_name
+  safe_name=$(echo "$target" | sed 's|/|_|g; s|^_||')
+  local snapshot="${ROLLBACK_DIR}/${safe_name}"
+
+  # 四种状态:
+  #   1. 目标不存在        → 标记 REMOVE: 安装后要删除
+  #   2. 目标是符号链接     → 记录 SYMLINK: 当前链接的源
+  #   3. 目标是普通文件/目录 → 完整拷贝到 snapshot
+  #   4. 目标路径无法访问   → 跳过 (return 0)
+
+  if [[ ! -e "$target" ]] && [[ ! -L "$target" ]]; then
+    echo "REMOVE|${target}" >> "${ROLLBACK_MANIFEST}"
+    return 0
+  fi
+
+  if [[ -L "$target" ]]; then
+    local link_src
+    link_src=$(readlink "$target" 2>/dev/null || echo "__broken__")
+    echo "SYMLINK|${target}|${link_src}" >> "${ROLLBACK_MANIFEST}"
+    return 0
+  fi
+
+  if [[ -d "$target" ]]; then
+    cp -a "$target" "${snapshot}" 2>/dev/null || true
+    echo "DIR|${target}|${snapshot}" >> "${ROLLBACK_MANIFEST}"
+    return 0
+  fi
+
+  if [[ -f "$target" ]]; then
+    cp -a "$target" "${snapshot}" 2>/dev/null || true
+    echo "FILE|${target}|${snapshot}" >> "${ROLLBACK_MANIFEST}"
+    return 0
+  fi
+
+  return 0
+}
+
+# 快照一批文件（方便在每个模块安装前批量记录）
+# 参数: 任意多个目标路径
+_snapshot_paths() {
+  local p
+  for p in "$@"; do
+    _snapshot_file "$p"
+  done
+}
+
+# 回滚一个模块的修改（根据 manifest 逆序执行）
+_rollback_from_manifest() {
+  local module_name="${1:-}"
+  local restored=0 removed=0 failed=0
+
+  echo_warning "执行回滚${module_name:+ (模块: ${module_name})}..."
+
+  if [[ ! -f "${ROLLBACK_MANIFEST}" ]]; then
+    echo_warning "回滚清单为空，无需操作"
+    return 0
+  fi
+
+  # 从下往上处理（后装的先还原）
+  tac "${ROLLBACK_MANIFEST}" 2>/dev/null | while IFS='|' read -r action target snapshot; do
+    case "$action" in
+      REMOVE)
+        # 安装前不存在 → 删掉这次安装创建的链接/文件
+        if [[ -L "$target" ]] || [[ -e "$target" ]]; then
+          if rm -rf "$target" 2>/dev/null; then
+            echo_detail "已移除: $target"
+            removed=$((removed + 1))
+          else
+            failed=$((failed + 1))
+          fi
+        fi
+        ;;
+      SYMLINK)
+        # 安装前是符号链接 → 恢复原链接
+        local link_src="$snapshot"  # 第三字段是 snapshot，即原 link target
+        if [[ "$link_src" == "__broken__" ]]; then
+          # 安装前是损坏链接 → 直接删掉当前，重建损坏链接 (不实际)
+          rm -f "$target" 2>/dev/null || true
+        else
+          rm -f "$target" 2>/dev/null || true
+          if ln -sf "$link_src" "$target" 2>/dev/null; then
+            echo_detail "已恢复链接: $target → $link_src"
+            restored=$((restored + 1))
+          else
+            failed=$((failed + 1))
+          fi
+        fi
+        ;;
+      DIR)
+        # 安装前是目录 → 还原
+        if [[ -n "$snapshot" ]] && [[ -d "$snapshot" ]]; then
+          rm -rf "$target" 2>/dev/null || true
+          if cp -a "$snapshot" "$target" 2>/dev/null; then
+            echo_detail "已恢复目录: $target"
+            restored=$((restored + 1))
+          else
+            failed=$((failed + 1))
+          fi
+        fi
+        ;;
+      FILE)
+        # 安装前是普通文件 → 还原
+        if [[ -n "$snapshot" ]] && [[ -f "$snapshot" ]]; then
+          if cp -a "$snapshot" "$target" 2>/dev/null; then
+            echo_detail "已恢复文件: $target"
+            restored=$((restored + 1))
+          else
+            failed=$((failed + 1))
+          fi
+        fi
+        ;;
+      *)
+        : # 空行或未知，忽略
+        ;;
+    esac
+  done
+
+  echo_warning "回滚完成: 恢复 ${restored} / 移除 ${removed} / 失败 ${failed}"
+  [[ $failed -eq 0 ]]
+}
+
+# 每个模块执行的包装器：快照 → 安装 → 成功→丢弃快照  失败→回滚
+_run_with_rollback() {
+  local module_name="$1"
+  shift
+  local install_func="$1"
+  shift
+
+  # 1. 保存清单旧长度位置（模块范围标记）
+  local manifest_marker="${ROLLBACK_DIR}/MANIFEST_START_$$"
+  wc -l < "${ROLLBACK_MANIFEST}" > "${manifest_marker}" 2>/dev/null || true
+  echo "MODULE_BEGIN|${module_name}" >> "${ROLLBACK_MANIFEST}"
+
+  # 2. 执行模块特定的快照（由模块函数自行调用 _snapshot_paths，我们也在此快照常用 HOME 路径）
+  #    注意：完整快照所有 HOME 下的 dotfiles
+  case "$module_name" in
+    EditorConfig)   _snapshot_paths "${HOME}/.editorconfig" ;;
+    Git)            _snapshot_paths \
+                      "${HOME}/.gitconfig" "${HOME}/.gitconfig.local" \
+                      "${HOME}/.gitignore_global" "${HOME}/.gitattributes" ;;
+    Brew)           _snapshot_paths \
+                      "${HOME}/.cache/Homebrew" ;;
+    Zsh)            _snapshot_paths \
+                      "${HOME}/.zshrc" "${HOME}/.zshenv" \
+                      "${HOME}/.config/zsh" "${HOME}/.cache/zinit" \
+                      "${HOME}/.zinit" ;;
+    Vim)            _snapshot_paths \
+                      "${HOME}/.vimrc" "${HOME}/.vim" "${HOME}/.cache/vim" ;;
+    Emacs)          _snapshot_paths \
+                      "${HOME}/.emacs.d" "${HOME}/.config/emacs" \
+                      "${HOME}/.emacs" "${HOME}/.emacs-custom.el" ;;
+    WezTerm)        _snapshot_paths \
+                      "${HOME}/.wezterm.lua" "${HOME}/.config/wezterm" ;;
+    Python)         _snapshot_paths \
+                      "${HOME}/.pip/pip.conf" "${HOME}/.pip" \
+                      "${HOME}/.config/uv" "${HOME}/.pythonrc.py" \
+                      "${HOME}/.pythonrc" \
+                      "${HOME}/.cache/dotfiles-py-venv" \
+                      "${HOME}/.venv-dotfiles" \
+                      "${HOME}/.local/share/dotfiles-py-path" ;;
+    Rust)           _snapshot_paths \
+                      "${HOME}/.cargo/config.toml" "${HOME}/.cargo" \
+                      "${HOME}/.rustup" \
+                      "${HOME}/.config/rustfmt.toml" "${HOME}/.config/clippy.toml" ;;
+    Tmux)           _snapshot_paths \
+                      "${HOME}/.tmux.conf" "${HOME}/.tmux" "${HOME}/.config/tmux" ;;
+  esac
+
+  # 3. 执行安装函数
+  local rc=0
+  "$install_func" "$@" || rc=$?
+
+  if [[ $rc -eq 0 ]]; then
+    # 安装成功 → 仅标记模块结束（保留在 manifest 中，用户仍可全量回滚）
+    echo "MODULE_OK|${module_name}" >> "${ROLLBACK_MANIFEST}"
+    rm -f "${manifest_marker}"
+    return 0
+  else
+    echo "MODULE_FAIL|${module_name}" >> "${ROLLBACK_MANIFEST}"
+
+    if [[ "${AUTO_ROLLBACK}" == "true" ]]; then
+      echo_warning "模块 ${module_name} 安装失败，自动回滚..."
+      # 提取该模块的 manifest 段并做回滚
+      local start_line
+      start_line=$(cat "${manifest_marker}" 2>/dev/null || echo "0")
+      local tmp_manifest="${ROLLBACK_DIR}/partial_$$.txt"
+      # 从标记行开始到 MODULE_FAIL
+      local end_line
+      end_line=$(wc -l < "${ROLLBACK_MANIFEST}")
+      sed -n "$((start_line + 1)),$((end_line - 1))p" "${ROLLBACK_MANIFEST}" \
+        | grep -v "^MODULE_" > "${tmp_manifest}" 2>/dev/null || true
+      # 用一个临时的 manifest 文件执行回滚
+      local saved_manifest="${ROLLBACK_MANIFEST}"
+      ROLLBACK_MANIFEST="${tmp_manifest}"
+      _rollback_from_manifest "${module_name}" || true
+      ROLLBACK_MANIFEST="${saved_manifest}"
+      rm -f "${tmp_manifest}" "${manifest_marker}"
+    fi
+
+    return 1
+  fi
+}
+
+# 完整回滚入口：用户可调用 ./bootstrap.sh --rollback <dir>
+# 回滚 ROLLBACK_DIR 中最后一次失败的安装
+full_rollback() {
+  local rollback_dir="${1:-}"
+  if [[ -z "${rollback_dir}" ]]; then
+    # 找最近的一次回滚目录
+    rollback_dir=$(find "${HOME}/.cache" -maxdepth 1 -type d -name 'dotfiles_rollback_*' 2>/dev/null | sort -r | head -1)
+  fi
+  if [[ -z "${rollback_dir}" ]] || [[ ! -d "${rollback_dir}" ]]; then
+    echo_error "未找到回滚目录"
+    echo "可用方式:"
+    echo "  $0 --rollback <rollback_dir>"
+    echo "  $0 --rollback  (自动找最近一次)"
+    exit 1
+  fi
+  echo_title "回滚安装状态: ${rollback_dir}"
+  local saved_manifest="${ROLLBACK_MANIFEST}"
+  ROLLBACK_MANIFEST="${rollback_dir}/manifest.txt"
+  ROLLBACK_DIR="${rollback_dir}"
+  _rollback_from_manifest "ALL"
+  ROLLBACK_MANIFEST="${saved_manifest}"
+  echo_success "回滚执行完成，可检查回滚目录: ${rollback_dir}"
+}
+
+# 安装完成后询问是否保留快照（如果全成功可以释放空间）
+_maybe_cleanup_snapshots() {
+  if [[ ${#FAILED_STEPS[@]} -eq 0 ]] && [[ -d "${ROLLBACK_DIR}" ]]; then
+    echo_warning "所有模块安装成功，可安全删除回滚快照: ${ROLLBACK_DIR}"
+    echo "  建议保留 7 天，或手动清理: rm -rf ${ROLLBACK_DIR}"
+  elif [[ -d "${ROLLBACK_DIR}" ]]; then
+    echo_warning "回滚快照已保留: ${ROLLBACK_DIR}"
+    echo "  如需回滚: $0 --rollback ${ROLLBACK_DIR}"
+  fi
+}
+
+
+# ======================
 # 参数解析
 # ======================
 parse_args() {
@@ -120,13 +379,18 @@ parse_args() {
       --tmux)     INSTALL_TMUX=true ;;
       --git)      INSTALL_GIT=true ;;
       --editorconfig) INSTALL_EDITORCONFIG=true ;;
+      --rollback)
+        shift
+        full_rollback "${1:-}"
+        exit 0
+        ;;
       -h|--help)
         head -30 "$0" | tail -25
         exit 0
         ;;
       *)
         echo_error "未知参数: $arg"
-        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--editorconfig]"
+        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--editorconfig|--rollback [dir]]"
         exit 1
         ;;
     esac
@@ -681,11 +945,14 @@ main() {
   echo_success "当前目录: $(pwd)"
   echo ""
 
-  # 安装组件（每个组件独立执行，失败不中断后续步骤）
+  # 初始化回滚点
+  _init_rollback
+
+  # 安装组件（每个组件独立执行，失败自动回滚模块级改动，不中断后续步骤）
   # 顺序：基础层 → 编辑器层 → 终端层 → 开发层
   # 1. EditorConfig（最早安装，所有编辑器后续加载时立即生效）
   if $INSTALL_ALL || $INSTALL_EDITORCONFIG; then
-    if install_editorconfig; then
+    if _run_with_rollback "EditorConfig" install_editorconfig; then
       COMPLETED_STEPS+=("EditorConfig")
     else
       FAILED_STEPS+=("EditorConfig")
@@ -694,7 +961,7 @@ main() {
 
   # 2. Git 配置（早期安装，影响所有后续 git 操作）
   if $INSTALL_ALL || $INSTALL_GIT; then
-    if install_git; then
+    if _run_with_rollback "Git" install_git; then
       COMPLETED_STEPS+=("Git")
     else
       FAILED_STEPS+=("Git")
@@ -703,7 +970,7 @@ main() {
 
   # 3. Brew（提前安装，后续所有模块可复用）
   if $INSTALL_ALL || $INSTALL_BREW; then
-    if install_brew; then
+    if _run_with_rollback "Brew" install_brew; then
       COMPLETED_STEPS+=("Brew")
     else
       FAILED_STEPS+=("Brew")
@@ -712,7 +979,7 @@ main() {
 
   # 4. Zsh（依赖 Brew 安装 zinit，内部不再执行 brew bundle）
   if $INSTALL_ALL || $INSTALL_ZSH; then
-    if install_zsh; then
+    if _run_with_rollback "Zsh" install_zsh; then
       COMPLETED_STEPS+=("Zsh")
     else
       FAILED_STEPS+=("Zsh")
@@ -721,7 +988,7 @@ main() {
 
   # 5. Vim（依赖 EditorConfig + 核心工具就绪）
   if $INSTALL_ALL || $INSTALL_VIM; then
-    if install_vim; then
+    if _run_with_rollback "Vim" install_vim; then
       COMPLETED_STEPS+=("Vim")
     else
       FAILED_STEPS+=("Vim")
@@ -730,7 +997,7 @@ main() {
 
   # 6. Emacs（依赖 EditorConfig + 核心工具就绪）
   if $INSTALL_ALL || $INSTALL_EMACS; then
-    if install_emacs; then
+    if _run_with_rollback "Emacs" install_emacs; then
       COMPLETED_STEPS+=("Emacs")
     else
       FAILED_STEPS+=("Emacs")
@@ -739,7 +1006,7 @@ main() {
 
   # 7. WezTerm（核心工具就绪后即可安装）
   if $INSTALL_ALL || $INSTALL_WEZTERM; then
-    if install_wezterm; then
+    if _run_with_rollback "WezTerm" install_wezterm; then
       COMPLETED_STEPS+=("WezTerm")
     else
       FAILED_STEPS+=("WezTerm")
@@ -748,7 +1015,7 @@ main() {
 
   # 8. Python（依赖 Brew 包管理器）
   if $INSTALL_ALL || $INSTALL_PYTHON; then
-    if install_python; then
+    if _run_with_rollback "Python" install_python; then
       COMPLETED_STEPS+=("Python")
     else
       FAILED_STEPS+=("Python")
@@ -757,7 +1024,7 @@ main() {
 
   # 9. Rust（依赖 Brew 包管理器）
   if $INSTALL_ALL || $INSTALL_RUST; then
-    if install_rust; then
+    if _run_with_rollback "Rust" install_rust; then
       COMPLETED_STEPS+=("Rust")
     else
       FAILED_STEPS+=("Rust")
@@ -766,7 +1033,7 @@ main() {
 
   # 10. Tmux（依赖 Brew + Git）
   if $INSTALL_ALL || $INSTALL_TMUX; then
-    if install_tmux; then
+    if _run_with_rollback "Tmux" install_tmux; then
       COMPLETED_STEPS+=("Tmux")
     else
       FAILED_STEPS+=("Tmux")
@@ -786,6 +1053,9 @@ main() {
     printf "${YELLOW}失败步骤不影响其他组件，可稍后重试: cd ~/.dotfiles && ./bootstrap.sh --<组件>${RESET}\n"
   fi
   echo_separator
+
+  # 回滚快照处理建议
+  _maybe_cleanup_snapshots
 }
 
 main "$@"

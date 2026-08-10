@@ -1,97 +1,114 @@
 # Vim 模块
 
-现代化 Vim 配置，基于 vim-plug 插件管理器，集成 coc.nvim 作为 LSP 后端，LazyVim 风格主题。
+Vim 9+ 兼容的模块化配置，聚焦轻量级体验和多语言开发。
 
-## 文件结构
+## 目录结构
 
 ```
 vim/
-├── .vimrc                         # 主配置入口
-├── install.sh                     # Vim 安装脚本
-├── vimrc.local.example            # 本地自定义配置模板
-├── core/                          # 核心配置
-│   ├── 00_basic.vim               # 基础设置（编码、缩进、光标）
-│   └── 01_keybindings.vim         # 快捷键映射
-├── plugins/                       # 插件配置
-│   └── plugins.vim                # vim-plug 插件列表与配置
-├── platform/                      # 平台特定配置
-│   ├── linux.vim                  # Linux 配置
-│   ├── macos.vim                  # macOS 配置
-│   └── windows.vim                # Windows 配置
-├── ftplugin/                      # 文件类型配置
-│   ├── python.vim                 # Python 缩进（4 空格）
-│   ├── javascript.vim            # JavaScript 缩进（2 空格）
-│   ├── go.vim                     # Go 缩进（tabs）
-│   ├── make.vim                   # Makefile 缩进（tabs）
-│   └── rust.vim                   # Rust 缩进（4 空格）
-└── .gitignore
+├── .vimrc                # 主入口（按排序加载子模块）
+├── install.sh            # Vim 安装脚本
+├── core/                 # 核心配置
+│   ├── 00_basic.vim      # 基础选项（缩进、换行、备份）
+│   └── 01_keybindings.vim # 快捷键绑定
+├── plugins/
+│   └── plugins.vim       # 插件定义（vim-plug）
+├── ftplugin/             # 文件类型专属配置
+│   ├── python.vim        # Python (4 空格缩进)
+│   ├── javascript.vim    # JS/TS (2 空格缩进)
+│   ├── go.vim            # Go (tabs + 4 空格显示宽)
+│   ├── rust.vim          # Rust (4 空格缩进)
+│   └── make.vim          # Makefile (tabs)
+└── platform/             # 平台特定配置
+    ├── linux.vim         # Linux 专属（剪贴板、字体）
+    ├── macos.vim         # macOS 专属（剪贴板：macos_clipboard）
+    └── windows.vim       # Windows 专属（编码兼容、字体）
 ```
 
-## 快速使用
+## Vim 9+ 兼容性
 
-### 安装
+| 问题 | 处理方式 |
+|------|----------|
+| `\` 行连续语法 | 统一使用单行或替代方式，避免反斜杠 |
+| colorscheme 缺失 | 使用 `silent! colorscheme` 不阻塞启动 |
+| 插件安装静默 | 输出重定向到 `/dev/null`，超时 30s |
+| 文件加载顺序 | 按字母/数字排序，避免依赖问题 |
 
-```bash
-# 通过 Makefile
-make vim
+## 缩进规范
 
-# 直接执行
-./vim/install.sh
+| 文件类型 | 缩进方式 | 缩进宽度 |
+|----------|----------|----------|
+| Python | 空格 | 4 |
+| Rust | 空格 | 4 |
+| JavaScript | 空格 | 2 |
+| TypeScript | 空格 | 2 |
+| Go | Tab | 4 空格显示 |
+| Makefile | Tab | 8 空格显示 |
+| Shell | 空格 | 4 |
+| YAML | 空格 | 2 |
+| Markdown | 空格 | 2 |
 
-# 通过 bootstrap.sh
-./bootstrap.sh --vim
+## 核心特性
+
+### 📦 插件管理（vim-plug）
+
+```vim
+call plug#begin('~/.vim/plugged')
+" 配色
+Plug 'morhetz/gruvbox'
+" 注释
+Plug 'preservim/nerdcommenter'
+" 补全
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+" Git 集成
+Plug 'tpope/vim-fugitive'
+" 文件浏览器
+Plug 'preservim/nerdtree'
+call plug#end()
 ```
 
-### 插件列表
-
-| 插件 | 说明 |
-|------|------|
-| `morhetz/gruvbox` | Gruvbox 主题（基础可用） |
-| `ghifarit53/tokyonight-vim` | Tokyo Night 主题（LazyVim 风格） |
-| `neoclide/coc.nvim` | 智能补全 + LSP 统一后端 |
-| `preservim/nerdtree` | 文件浏览器 |
-| `preservim/tagbar` | 标签导航 |
-| `tpope/vim-fugitive` | Git 集成 |
-| `airblade/vim-gitgutter` | Git 状态标记 |
-| `preservim/nerdcommenter` | 代码注释 |
-| `ryanoasis/vim-devicons` | 文件图标支持 |
-| `vim-airline/vim-airline` | 状态栏增强 |
-| `terryma/vim-multiple-cursors` | 多光标编辑 |
-| `mbbill/undotree` | 撤销树 |
-| `jiangmiao/auto-pairs` | 自动括号匹配 |
-| `tpope/vim-surround` | 环绕字符操作 |
-| `junegunn/fzf.vim` | FZF 文件搜索 |
-
-### Coc 扩展
-
-首次启动时自动安装以下 coc 扩展：
-`coc-json`, `coc-pyright`, `coc-java`, `coc-html`, `coc-css`, `coc-tsserver`, `coc-vimlsp`, `coc-go`, `coc-rust-analyzer`, `coc-snippets`, `coc-markdownlint`, `coc-prettier`, `coc-yaml`, `coc-toml`, `coc-sh`, `coc-docker`, `coc-terraform`, `coc-lua`, `coc-spell-checker`
-
-## 常用快捷键
+### ⌨️ 快捷键
 
 | 快捷键 | 功能 |
 |--------|------|
-| `<Leader>n` | 切换 Nerdtree |
-| `<Leader>t` | 切换 Tagbar |
-| `<Leader>ff` | FZF 文件搜索 |
-| `<Leader>fg` | FZF Git 文件搜索 |
-| `<Leader>fs` | FZF 文本搜索 |
-| `<Leader>gs` | Fugitive Git 面板 |
-| `<Leader>gb` | Fugitive blame |
-| `<Leader>gl` | Fugitive log |
-| `<Leader>u` | Undotree 切换 |
+| `,` | 前缀键（Leader） |
+| `,w` / `,q` | 保存 / 退出 |
+| `,n` / `,p` | 下一个 / 上一个 Buffer |
+| `,nt` | 切换 NERDTree |
+| `,xx` / `,xu` | 注释 / 反注释一行 |
+| `,cc` / `,cu` | 注释 / 反注释块 |
+| `Ctrl-h/j/k/l` | 移动到左/下/上/右窗口 |
+| `%%` | 在命令中展开 `%` 路径 |
+| `jj` | 插入模式下快速 Esc |
 
-## 自定义配置
+### 🎨 配色
 
-复制 `vimrc.local.example` 到 `~/.vimrc.local`：
+- 默认配色: `gruvbox` (dark hard contrast)
+- 自动降级: 如果配色不存在，自动加载默认配色
 
-```vim
-" ~/.vimrc.local 示例
-let g:your_var = 'value'
+### 🔤 搜索优化
+
+- 搜索默认忽略大小写 (`ignorecase smartcase`)
+- 输入大写字符时自动改为精确匹配
+- 搜索结果高亮，取消搜索后自动清除
+
+## 安装
+
+```bash
+cd ~/.dotfiles
+./vim/install.sh
+# 首次启动 Vim 自动安装插件
+vim +PlugInstall +qa
 ```
 
-## 注意事项
+安装脚本功能：
+1. 检测系统包管理器，安装 Vim / GVim
+2. 自动安装 vim-plug 插件管理器（国内镜像回退）
+3. 创建 `.vimrc` → `~/.vimrc` 符号链接
+4. 启动 Vim 自动执行 `:PlugInstall`
 
-- Vim 9.2+ 不支持 `\` 行续语法，所有插件配置已改为单行
-- coc.nvim 首次安装扩展需要网络连接
-- vim-plug 安装失败时脚本会静默跳过，不阻塞启动
+## 性能注意
+
+- 插件懒加载（`Plug 'xxx', { 'on': [...] }` / `{ 'for': [...] }`）
+- 避免使用 `autocmd VimEnter *` 阻塞启动
+- 启动时间分析：`vim --startuptime vim.log`
