@@ -4,7 +4,7 @@
 # 统一命令入口，简化操作
 # 设计原则：所有 target 都委托给 per-component install.sh，避免与 bootstrap.sh 逻辑漂移
 
-.PHONY: install update backup test check clean help zsh vim emacs wezterm brew python rust tmux git editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin
+.PHONY: install update backup test check clean help zsh vim emacs wezterm wezterm-check wezterm-uninstall brew python rust tmux git editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -59,6 +59,16 @@ emacs: ## 安装 Emacs 配置
 wezterm: ## 安装 WezTerm 配置
 	@printf "$(CYAN)→ 安装 WezTerm 配置...$(RESET)\n"
 	@bash wezterm/install.sh
+
+wezterm-check: ## WezTerm 环境体检
+	@printf "$(CYAN)→ WezTerm 环境体检...$(RESET)\n"
+	@if [ -f wezterm/check.sh ]; then bash wezterm/check.sh; \
+	else printf "$(YELLOW)⚠️  wezterm/check.sh 不存在$(RESET)\n"; fi
+
+wezterm-uninstall: ## 卸载 WezTerm 配置（不含本体）
+	@printf "$(CYAN)→ 卸载 WezTerm 配置...$(RESET)\n"
+	@if [ -f wezterm/uninstall.sh ]; then bash wezterm/uninstall.sh; \
+	else printf "$(YELLOW)⚠️  wezterm/uninstall.sh 不存在$(RESET)\n"; fi
 
 brew: ## 安装 Homebrew 包
 	@printf "$(CYAN)→ 安装 Homebrew 包...$(RESET)\n"
