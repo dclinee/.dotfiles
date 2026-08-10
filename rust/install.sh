@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ======================
-# Rust 开发环境安装器
+# Rust 开发环境安装器（部署主入口）
 # ======================
 #
 # 功能:
@@ -9,70 +9,22 @@
 #   2. 安装 stable 工具链及常用组件
 #   3. 配置 cargo 镜像源（国内加速）
 #   4. 链接 rustfmt / clippy 配置
-#   5. 安装常用 cargo 扩展工具
+#   5. 安装常用 cargo 扩展工具（读取 tools.list）
 
 set -euo pipefail
 
-DOTFILES_ROOT="${HOME}/.dotfiles"
-RUST_DIR="${DOTFILES_ROOT}/rust"
+# 加载公共库与工具函数
+# shellcheck source=/dev/null
+source "$(dirname "$0")/_common.sh"
+
 LOG_FILE="/tmp/dotfiles_rust_install_$(date +%Y%m%d_%H%M%S).log"
-
-# ======================
-# 加载公共输出函数库
-# ======================
-_OUTPUT_LIB="${DOTFILES_ROOT}/lib/output.sh"
-if [[ -f "${_OUTPUT_LIB}" ]]; then
-  # shellcheck source=/dev/null
-  source "${_OUTPUT_LIB}"
-else
-  RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; BLUE="\033[34m"
-  CYAN="\033[36m"; WHITE="\033[37m"; RESET="\033[0m"; BOLD="\033[1m"
-  CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"; SKIP="⏭️"
-  SEPARATOR="${BLUE}=============================================${RESET}"
-  echo_step()      { printf "${BOLD}${BLUE}${INFO} %s${RESET}\n"  "${1}"; }
-  echo_success()   { printf "${GREEN}${CHECK} %s${RESET}\n"        "${1}"; }
-  echo_warning()   { printf "${YELLOW}${WARN} %s${RESET}\n"        "${1}"; }
-  echo_error()     { printf "${RED}${ERROR} %s${RESET}\n"          "${1}"; }
-  echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"          "${1}"; }
-  echo_detail()    { printf "${BLUE}  %s${RESET}\n"                "${1}"; }
-  echo_separator() { printf '%b\n' "${SEPARATOR}"; }
-  echo_title() {
-    echo_separator
-    printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
-    echo_separator
-  }
-fi
-
-# ======================
-# 加载公共符号链接函数库
-# ======================
-_SYMLINK_LIB="${DOTFILES_ROOT}/lib/symlink.sh"
-if [[ -f "${_SYMLINK_LIB}" ]]; then
-  # shellcheck source=/dev/null
-  source "${_SYMLINK_LIB}"
-else
-  # 回退：当 lib/symlink.sh 不存在时使用内联定义
-  safe_symlink() {
-    local src="$1" dst="$2"
-    [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
-    if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
-      echo_skip "链接已存在: $dst"; return 0
-    fi
-    if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
-      local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
-      mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
-    fi
-    mkdir -p "$(dirname "$dst")" 2>/dev/null
-    ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
-  }
-fi
 
 # ======================
 # 安装 rustup（Rust 工具链管理器）
 # ======================
 install_rustup() {
-  if command -v rustup > /dev/null 2>&1; then
-    echo_success "rustup 已安装: $(rustup --version)"
+  if has_rustup; then
+    echo_success "rustup 已安装: $(rustup --version 2>&1 | head -1)"
     return 0
   fi
 
@@ -94,7 +46,6 @@ install_rustup() {
 
   echo_step "安装 rustup..."
 
-  # 通过官方脚本安装
   local rustup_url="https://sh.rustup.rs"
   local tmp_script
   tmp_script="$(mktemp)"
@@ -106,10 +57,8 @@ install_rustup() {
     return 1
   fi
 
-  # 非交互式安装
   if sh "${tmp_script}" -y --default-toolchain stable 2>>"${LOG_FILE}"; then
     echo_success "rustup 安装完成"
-    # 加载环境变量
     # shellcheck source=/dev/null
     source "${HOME}/.cargo/env" 2>/dev/null || true
   else
@@ -122,8 +71,7 @@ install_rustup() {
 # 安装工具链组件
 # ======================
 install_components() {
-  if command -v rustup > /dev/null 2>&1; then
-    # rustup 模式：使用 rustup component add
+  if has_rustup; then
     echo_step "安装 Rust 工具链组件（rustup 模式）..."
 
     local components=("rustfmt" "clippy" "rust-src")
@@ -138,10 +86,8 @@ install_components() {
     rustup update stable > /dev/null 2>&1 || true
     echo_success "Rust 工具链已更新（rustup）"
   elif command -v rustc > /dev/null 2>&1; then
-    # 非 rustup 模式（如 Homebrew 安装）：检查常见组件是否已包含
     echo_step "检查 Rust 组件（非 rustup 模式）..."
 
-    # rustfmt 和 clippy 通常随 brew rust 一起安装
     local missing_components=()
     for tool in rustfmt clippy; do
       if command -v "${tool}" > /dev/null 2>&1; then
@@ -158,10 +104,9 @@ install_components() {
       echo "    或: rustup component add ${missing_components[*]}"
     fi
 
-    # rust-analyzer 需要单独安装
     if ! command -v rust-analyzer > /dev/null 2>&1; then
       echo_step "安装 rust-analyzer..."
-      if command -v cargo > /dev/null 2>&1; then
+      if has_cargo; then
         cargo install rust-analyzer > /dev/null 2>&1 || {
           echo_warning "rust-analyzer 安装失败"
           echo "  可通过 brew 安装: brew install rust-analyzer"
@@ -181,17 +126,15 @@ install_components() {
 link_configs() {
   echo_step "链接 Rust 配置文件..."
 
-  # cargo config
   local cargo_dir="${HOME}/.cargo"
   mkdir -p "${cargo_dir}"
 
+  # cargo config（从模板链接）
   local cargo_config="${cargo_dir}/config.toml"
   if [[ ! -L "${cargo_config}" ]] && [[ ! -f "${cargo_config}" ]]; then
-    if safe_symlink "${RUST_DIR}/config.toml" "${cargo_config}" 2>/dev/null; then
-      echo_success "已链接 ~/.cargo/config.toml"
-    else
+    safe_symlink "${RUST_DIR}/cargo_config.toml.template" "${cargo_config}" 2>/dev/null && \
+      echo_success "已链接 ~/.cargo/config.toml" || \
       echo_warning "无法链接 ~/.cargo/config.toml（权限或环境限制）"
-    fi
   else
     echo_warning "~/.cargo/config.toml 已存在，跳过"
   fi
@@ -199,11 +142,9 @@ link_configs() {
   # rustfmt 配置（全局）
   local rustfmt_config="${HOME}/.rustfmt.toml"
   if [[ ! -L "${rustfmt_config}" ]] && [[ ! -f "${rustfmt_config}" ]]; then
-    if safe_symlink "${RUST_DIR}/rustfmt.toml" "${rustfmt_config}" 2>/dev/null; then
-      echo_success "已链接 ~/.rustfmt.toml"
-    else
+    safe_symlink "${RUST_DIR}/rustfmt.toml" "${rustfmt_config}" 2>/dev/null && \
+      echo_success "已链接 ~/.rustfmt.toml" || \
       echo_warning "无法链接 ~/.rustfmt.toml（权限或环境限制）"
-    fi
   else
     echo_warning "~/.rustfmt.toml 已存在，跳过"
   fi
@@ -211,44 +152,63 @@ link_configs() {
   # clippy 配置（全局）
   local clippy_config="${HOME}/.clippy.toml"
   if [[ ! -L "${clippy_config}" ]] && [[ ! -f "${clippy_config}" ]]; then
-    if safe_symlink "${RUST_DIR}/clippy.toml" "${clippy_config}" 2>/dev/null; then
-      echo_success "已链接 ~/.clippy.toml"
-    else
+    safe_symlink "${RUST_DIR}/clippy.toml" "${clippy_config}" 2>/dev/null && \
+      echo_success "已链接 ~/.clippy.toml" || \
       echo_warning "无法链接 ~/.clippy.toml（权限或环境限制）"
-    fi
   else
     echo_warning "~/.clippy.toml 已存在，跳过"
   fi
 }
 
 # ======================
-# 安装常用 cargo 扩展工具
+# 安装 cargo 扩展工具（读取 tools.list）
 # ======================
 install_cargo_tools() {
-  if ! command -v cargo > /dev/null 2>&1; then
+  if ! has_cargo; then
     echo_warning "cargo 不可用，跳过扩展工具安装"
     return 0
   fi
 
   echo_step "安装常用 cargo 扩展工具..."
 
-  # 常用工具列表（排除已内置功能：cargo-tree 自 1.44、cargo-add 自 1.62）
-  local tools=(
-    "cargo-watch"         # 文件变化自动重新编译
-    "cargo-outdated"      # 检查依赖更新
-    "cargo-audit"         # 安全漏洞检查
-    "cargo-expand"        # 宏展开
-    "cargo-binstall"      # 预编译二进制安装
-  )
+  # 检查 tools.list 是否存在
+  if ! read_tools_list > /dev/null 2>&1; then
+    echo_warning "tools.list 不存在，跳过工具安装"
+    return 0
+  fi
 
-  for tool in "${tools[@]}"; do
-    printf "${BOLD}${CYAN}${ARROW} 安装 %s...${RESET}\n" "${tool}"
-    if cargo install "${tool}" > /dev/null 2>&1; then
-      echo_success "${tool} 安装完成"
+  local count=0
+  local failed=0
+
+  while read -r name version; do
+    [[ -z "$name" ]] && continue
+    count=$((count + 1))
+
+    if [[ -n "$version" ]]; then
+      printf "${BOLD}${CYAN}${ARROW} 安装 %s@%s...${RESET}\n" "${name}" "${version}"
+      if cargo install "${name}" --version "${version}" > /dev/null 2>&1; then
+        echo_success "${name}@${version} 安装完成"
+      else
+        echo_warning "${name}@${version} 安装失败"
+        failed=$((failed + 1))
+      fi
     else
-      echo_warning "${tool} 安装失败（可能需要 nightly 或网络问题）"
+      printf "${BOLD}${CYAN}${ARROW} 安装 %s...${RESET}\n" "${name}"
+      if cargo install "${name}" > /dev/null 2>&1; then
+        echo_success "${name} 安装完成"
+      else
+        echo_warning "${name} 安装失败（可能需要 nightly 或网络问题）"
+        failed=$((failed + 1))
+      fi
     fi
-  done
+  done < <(read_tools_list)
+
+  echo ""
+  if [[ $failed -eq 0 ]]; then
+    echo_success "全部 ${count} 个工具安装完成"
+  else
+    echo_warning "${count} 个工具中 ${failed} 个安装失败"
+  fi
 }
 
 # ======================
@@ -257,17 +217,15 @@ install_cargo_tools() {
 setup_env() {
   echo_step "配置 Rust 环境变量..."
 
-  # 清理可能存在的无效 cargo/env 引用（Homebrew 安装时 ~/.cargo/env 不存在）
+  # 清理可能存在的无效 cargo/env 引用
   local zshrc_local="${HOME}/.zshrc.local"
   if [[ -f "${zshrc_local}" ]]; then
     if grep -q 'source.*\.cargo/env' "${zshrc_local}" 2>/dev/null; then
-      # 移除无效行（使用临时文件，兼容 macOS/Linux）
       local tmp_file
       tmp_file="$(mktemp)"
       grep -v 'source.*\.cargo/env' "${zshrc_local}" | grep -v '# Rust/cargo 环境' > "${tmp_file}" 2>/dev/null || true
       mv "${tmp_file}" "${zshrc_local}" 2>/dev/null || cp "${tmp_file}" "${zshrc_local}" 2>/dev/null
       rm -f "${tmp_file}"
-      # 文件为空则删除
       if [[ ! -s "${zshrc_local}" ]]; then
         rm -f "${zshrc_local}" 2>/dev/null
       fi
@@ -280,21 +238,18 @@ setup_env() {
   if [[ -f "${cargo_env}" ]]; then
     local cargo_env_line='source "$HOME/.cargo/env"'
 
-    # 检查 .zshenv 中是否已包含
     local zshenv="${HOME}/.zshenv"
     if [[ -f "${zshenv}" ]] && grep -q '.cargo/env' "${zshenv}" 2>/dev/null; then
       echo_success "环境变量已配置（.zshenv）"
       return 0
     fi
 
-    # 检查 .zshrc 中是否已包含
     local zshrc="${HOME}/.zshrc"
     if [[ -f "${zshrc}" ]] && grep -q '.cargo/env' "${zshrc}" 2>/dev/null; then
       echo_success "环境变量已配置（.zshrc）"
       return 0
     fi
 
-    # 添加到 .zshrc.local 或 .zshenv
     local target_file=""
     if [[ -f "${zshrc}" ]]; then
       if grep -q 'dotfiles' "${zshrc}" 2>/dev/null; then
@@ -310,8 +265,7 @@ setup_env() {
     echo '# Rust/cargo 环境（由 rustup 安装）' >> "${target_file}"
     echo "${cargo_env_line}" >> "${target_file}"
     echo_success "已添加 cargo 环境变量到 ${target_file}"
-  elif command -v cargo > /dev/null 2>&1; then
-    # Homebrew 模式：cargo 已在 PATH 中，无需额外配置
+  elif has_cargo; then
     echo_success "cargo 已在 PATH 中（$(command -v cargo)），无需额外配置"
   else
     echo_warning "cargo 不可用，请先安装 Rust"
@@ -326,27 +280,14 @@ main() {
   echo "安装日志: ${LOG_FILE}"
   echo ""
 
-  # 1. 安装 rustup
   install_rustup
-
   echo_separator
-
-  # 2. 安装组件
   install_components
-
   echo_separator
-
-  # 3. 链接配置文件
   link_configs
-
   echo_separator
-
-  # 4. 安装 cargo 扩展工具
   install_cargo_tools
-
   echo_separator
-
-  # 5. 环境变量检查
   setup_env
 
   echo_title "Rust 环境安装完成"
@@ -357,14 +298,11 @@ main() {
   echo "  cargo --version"
   echo "  rustup --version"
   echo ""
-  printf "${BOLD}常用命令:${RESET}\n"
-  echo "  cargo new my-project    # 创建新项目"
-  echo "  cargo build              # 编译"
-  echo "  cargo run                # 运行"
-  echo "  cargo test               # 测试"
-  echo "  cargo clippy             # 代码检查"
-  echo "  cargo fmt                # 格式化"
-  echo "  cargo watch -x run       # 文件变化自动运行"
+  printf "${BOLD}维护命令:${RESET}\n"
+  echo "  make rust-check      # 环境体检"
+  echo "  make rust-upgrade    # 一键升级"
+  echo "  make rust-clean      # 清理缓存"
+  echo "  make rust-uninstall  # 卸载配置"
   echo ""
   echo "安装日志: ${LOG_FILE}"
   echo_separator

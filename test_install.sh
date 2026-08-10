@@ -597,6 +597,13 @@ test_all_bash_syntax() {
     "$DOTFILES_DIR/brew/install_brew.sh"
     "$DOTFILES_DIR/wezterm/install.sh"
     "$DOTFILES_DIR/vim/install.sh"
+    "$DOTFILES_DIR/rust/install.sh"
+    "$DOTFILES_DIR/rust/uninstall.sh"
+    "$DOTFILES_DIR/rust/check.sh"
+    "$DOTFILES_DIR/rust/upgrade.sh"
+    "$DOTFILES_DIR/rust/clean.sh"
+    "$DOTFILES_DIR/rust/pin.sh"
+    "$DOTFILES_DIR/rust/_common.sh"
     "$DOTFILES_DIR/validate.sh"
   )
 

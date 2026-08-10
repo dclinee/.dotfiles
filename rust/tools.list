@@ -1,0 +1,17 @@
+# ======================
+# Rust 全局二进制工具清单
+# ======================
+#
+# 格式: 包名|版本
+#   - 版本留空表示安装最新稳定版
+#   - 版本指定时使用 cargo install --version <ver>
+#   - 以 # 开头的行为注释，自动跳过
+#
+# 安装: rust/install.sh 或 rust/upgrade.sh
+# 升级: rust/upgrade.sh
+
+cargo-watch|
+cargo-outdated|
+cargo-audit|
+cargo-expand|
+cargo-binstall|

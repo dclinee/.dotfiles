@@ -4,7 +4,7 @@
 # 统一命令入口，简化操作
 # 设计原则：所有 target 都委托给 per-component install.sh，避免与 bootstrap.sh 逻辑漂移
 
-.PHONY: install update backup test check clean help zsh vim emacs wezterm brew python rust tmux git editorconfig
+.PHONY: install update backup test check clean help zsh vim emacs wezterm brew python rust tmux git editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -91,6 +91,31 @@ rust: ## 配置 Rust 环境
 	else \
 		printf "$(YELLOW)⚠️  rust/install.sh 不存在$(RESET)\n"; \
 	fi
+
+rust-check: ## Rust 环境体检
+	@printf "$(CYAN)→ Rust 环境体检...$(RESET)\n"
+	@if [ -f rust/check.sh ]; then bash rust/check.sh; \
+	else printf "$(YELLOW)⚠️  rust/check.sh 不存在$(RESET)\n"; fi
+
+rust-upgrade: ## 一键升级 Rust 工具链和 cargo 工具
+	@printf "$(CYAN)→ 升级 Rust 环境...$(RESET)\n"
+	@if [ -f rust/upgrade.sh ]; then bash rust/upgrade.sh; \
+	else printf "$(YELLOW)⚠️  rust/upgrade.sh 不存在$(RESET)\n"; fi
+
+rust-clean: ## 清理 Rust 编译缓存
+	@printf "$(CYAN)→ 清理 Rust 缓存...$(RESET)\n"
+	@if [ -f rust/clean.sh ]; then bash rust/clean.sh; \
+	else printf "$(YELLOW)⚠️  rust/clean.sh 不存在$(RESET)\n"; fi
+
+rust-uninstall: ## 卸载 Rust 配置（不含工具链本体）
+	@printf "$(CYAN)→ 卸载 Rust 配置...$(RESET)\n"
+	@if [ -f rust/uninstall.sh ]; then bash rust/uninstall.sh; \
+	else printf "$(YELLOW)⚠️  rust/uninstall.sh 不存在$(RESET)\n"; fi
+
+rust-pin: ## 固化当前 Rust 版本到 versions.lock
+	@printf "$(CYAN)→ 固化 Rust 版本...$(RESET)\n"
+	@if [ -f rust/pin.sh ]; then bash rust/pin.sh; \
+	else printf "$(YELLOW)⚠️  rust/pin.sh 不存在$(RESET)\n"; fi
 
 tmux: ## 安装 Tmux 配置
 	@printf "$(CYAN)→ 安装 Tmux 配置...$(RESET)\n"
