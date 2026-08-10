@@ -34,8 +34,16 @@ check_core_tools() {
 
   if has_rustup; then
     check_ok "rustup: $(rustup --version 2>&1 | head -1)"
+  elif command -v rustc > /dev/null 2>&1 && has_cargo; then
+    local rust_provider
+    rust_provider="$(command -v rustc)"
+    if [[ "$rust_provider" == *"/linuxbrew/"* ]] || [[ "$rust_provider" == *"/homebrew/"* ]]; then
+      check_warn "rustup: 未安装（当前使用 Homebrew 模式，建议迁移到 rustup）"
+    else
+      check_warn "rustup: 未安装（使用其他安装方式，建议迁移到 rustup）"
+    fi
   else
-    check_fail "rustup: 未安装"
+    check_fail "rustup: 未安装，且未检测到 rustc/cargo"
   fi
 
   if command -v rustc > /dev/null 2>&1; then
