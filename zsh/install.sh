@@ -16,7 +16,7 @@ PLUGINS_DIR="${DOTFILES_DIR}/plugins"
 # ======================
 # 加载公共输出函数库
 # ======================
-_OUTPUT_LIB="${DOTFILES_ROOT}/zsh/lib/output.sh"
+_OUTPUT_LIB="${DOTFILES_ROOT}/lib/output.sh"
 if [[ -f "${_OUTPUT_LIB}" ]]; then
   # shellcheck source=/dev/null
   source "${_OUTPUT_LIB}"
@@ -24,17 +24,43 @@ else
   # 回退：当 lib/output.sh 不存在时使用内联定义
   RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; BLUE="\033[34m"
   CYAN="\033[36m"; WHITE="\033[37m"; RESET="\033[0m"; BOLD="\033[1m"
-  CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"
+  CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"; SKIP="⏭️"
   SEPARATOR="${BLUE}=============================================${RESET}"
   echo_step()      { printf "${BOLD}${BLUE}${INFO} %s${RESET}\n"  "${1}"; }
   echo_success()   { printf "${GREEN}${CHECK} %s${RESET}\n"        "${1}"; }
   echo_warning()   { printf "${YELLOW}${WARN} %s${RESET}\n"        "${1}"; }
   echo_error()     { printf "${RED}${ERROR} %s${RESET}\n"          "${1}"; }
+  echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"          "${1}"; }
+  echo_detail()    { printf "${BLUE}  %s${RESET}\n"                "${1}"; }
   echo_separator() { printf '%b\n' "${SEPARATOR}"; }
   echo_title() {
     echo_separator
     printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
     echo_separator
+  }
+fi
+
+# ======================
+# 加载公共符号链接函数库
+# ======================
+_SYMLINK_LIB="${DOTFILES_ROOT}/lib/symlink.sh"
+if [[ -f "${_SYMLINK_LIB}" ]]; then
+  # shellcheck source=/dev/null
+  source "${_SYMLINK_LIB}"
+else
+  # 回退：当 lib/symlink.sh 不存在时使用内联定义
+  safe_symlink() {
+    local src="$1" dst="$2"
+    [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
+    if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
+      echo_skip "链接已存在: $dst"; return 0
+    fi
+    if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
+      local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
+      mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
+    fi
+    mkdir -p "$(dirname "$dst")" 2>/dev/null
+    ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
   }
 fi
 
@@ -420,7 +446,7 @@ install_python_config() {
   # 配置 pip 符号链接
   if [[ ! -L "${HOME}/.pip/pip.conf" ]] && [[ ! -f "${HOME}/.pip/pip.conf" ]]; then
     mkdir -p "${HOME}/.pip" > /dev/null 2>&1
-    ln -sf "${HOME}/.dotfiles/python/pip.conf" "${HOME}/.pip/pip.conf" > /dev/null 2>&1
+    safe_symlink "${HOME}/.dotfiles/python/pip.conf" "${HOME}/.pip/pip.conf" || true
     echo_success "已创建 pip.conf 符号链接"
   fi
 
@@ -454,7 +480,7 @@ main() {
   # 创建 .zshrc 符号链接
   echo_step "配置 .zshrc 符号链接..."
   if [[ ! -L "${HOME}/.zshrc" ]]; then
-    ln -sf "${DOTFILES_DIR}/.zshrc" "${HOME}/.zshrc"
+    safe_symlink "${DOTFILES_DIR}/.zshrc" "${HOME}/.zshrc" || true
     echo_success "已创建 .zshrc 符号链接"
   else
     echo_warning ".zshrc 符号链接已存在"
@@ -463,7 +489,7 @@ main() {
   # 创建 .zshenv 符号链接（用于所有 zsh 会话的环境变量初始化）
   echo_step "配置 .zshenv 符号链接..."
   if [[ ! -L "${HOME}/.zshenv" ]]; then
-    ln -sf "${DOTFILES_DIR}/.zshenv" "${HOME}/.zshenv"
+    safe_symlink "${DOTFILES_DIR}/.zshenv" "${HOME}/.zshenv" || true
     echo_success "已创建 .zshenv 符号链接"
   else
     echo_warning ".zshenv 符号链接已存在"

@@ -8,7 +8,7 @@
 # 适用于 bash 和 zsh 脚本
 #
 # 使用方法:
-#   source "${DOTFILES_DIR}/zsh/lib/output.sh"
+#   source "${DOTFILES_DIR}/lib/output.sh"
 #   echo_step "开始执行"
 #   echo_success "完成"
 
@@ -31,6 +31,7 @@ if [[ -z "${__OUTPUT_SH_LOADED:-}" ]]; then
   WARN="⚠️"
   ERROR="❌"
   ARROW="➡️"
+  SKIP="⏭️"
 
   # 分隔线
   SEPARATOR="${BLUE}============================================${RESET}"
@@ -51,6 +52,14 @@ echo_warning() {
 
 echo_error() {
   printf "${RED}${ERROR} %s${RESET}\n" "${1}"
+}
+
+echo_skip() {
+  printf "${CYAN}${SKIP} %s${RESET}\n" "${1}"
+}
+
+echo_detail() {
+  printf "${BLUE}  %s${RESET}\n" "${1}"
 }
 
 echo_separator() {

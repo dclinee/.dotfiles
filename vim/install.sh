@@ -26,17 +26,45 @@ BLUE="\033[34m"
 CYAN="\033[36m"
 RESET="\033[0m"
 BOLD="\033[1m"
+ARROW="➡️"
+SKIP="⏭️"
 
 echo_step()      { printf "${BOLD}${BLUE}ℹ️  %s${RESET}\n"  "${1}"; }
 echo_success()   { printf "${GREEN}✅ %s${RESET}\n"         "${1}"; }
 echo_warning()   { printf "${YELLOW}⚠️  %s${RESET}\n"       "${1}"; }
 echo_error()     { printf "${RED}❌ %s${RESET}\n"           "${1}"; }
+echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"     "${1}"; }
+echo_detail()    { printf "${BLUE}  %s${RESET}\n"           "${1}"; }
 echo_separator() { printf "${BLUE}=============================================${RESET}\n"; }
 echo_title() {
   echo_separator
   printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
   echo_separator
 }
+
+# ======================
+# 加载公共符号链接函数库
+# ======================
+_SYMLINK_LIB="${DOTFILES_DIR}/lib/symlink.sh"
+if [[ -f "${_SYMLINK_LIB}" ]]; then
+  # shellcheck source=/dev/null
+  source "${_SYMLINK_LIB}"
+else
+  # 回退：当 lib/symlink.sh 不可用时使用内联定义
+  safe_symlink() {
+    local src="$1" dst="$2"
+    [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
+    if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
+      echo_skip "链接已存在: $dst"; return 0
+    fi
+    if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
+      local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
+      mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
+    fi
+    mkdir -p "$(dirname "$dst")" 2>/dev/null
+    ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
+  }
+fi
 
 # ======================
 # 检测 sudo 可用性
@@ -110,7 +138,7 @@ create_vimrc_link() {
     mv "${vimrc_dst}" "${vimrc_dst}.bak"
   fi
 
-  ln -sf "${vimrc_src}" "${vimrc_dst}"
+  safe_symlink "${vimrc_src}" "${vimrc_dst}" || true
   echo_success ".vimrc 链接已创建"
 }
 

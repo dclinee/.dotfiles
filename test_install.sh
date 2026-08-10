@@ -136,6 +136,7 @@ setup_test_env() {
   cp -r "$DOTFILES_DIR/brew" "$TEST_DIR/home/.dotfiles/"
   cp -r "$DOTFILES_DIR/python" "$TEST_DIR/home/.dotfiles/" 2>/dev/null || true
   cp -r "$DOTFILES_DIR/wezterm" "$TEST_DIR/home/.dotfiles/" 2>/dev/null || true
+  cp -r "$DOTFILES_DIR/lib" "$TEST_DIR/home/.dotfiles/" 2>/dev/null || true
 
   # 创建 mock 命令
   create_mock_commands "$ostype" "$arch"

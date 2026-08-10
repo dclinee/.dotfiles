@@ -58,17 +58,45 @@ BLUE="\033[34m"
 CYAN="\033[36m"
 RESET="\033[0m"
 BOLD="\033[1m"
+ARROW="➡️"
+SKIP="⏭️"
 
 echo_step()      { printf "${BOLD}${BLUE}ℹ️  %s${RESET}\n"  "${1}"; }
 echo_success()   { printf "${GREEN}✅ %s${RESET}\n"         "${1}"; }
 echo_warning()   { printf "${YELLOW}⚠️  %s${RESET}\n"       "${1}"; }
 echo_error()     { printf "${RED}❌ %s${RESET}\n"           "${1}"; }
+echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"     "${1}"; }
+echo_detail()    { printf "${BLUE}  %s${RESET}\n"           "${1}"; }
 echo_separator() { printf "${BLUE}=============================================${RESET}\n"; }
 echo_title() {
   echo_separator
   printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
   echo_separator
 }
+
+# ======================
+# 加载公共符号链接函数库
+# ======================
+_SYMLINK_LIB="${DOTFILES_DIR}/lib/symlink.sh"
+if [[ -f "${_SYMLINK_LIB}" ]]; then
+  # shellcheck source=/dev/null
+  source "${_SYMLINK_LIB}"
+else
+  # 回退：当 lib/symlink.sh 不可用时使用内联定义
+  safe_symlink() {
+    local src="$1" dst="$2"
+    [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
+    if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
+      echo_skip "链接已存在: $dst"; return 0
+    fi
+    if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
+      local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
+      mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
+    fi
+    mkdir -p "$(dirname "$dst")" 2>/dev/null
+    ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
+  }
+fi
 
 # ======================
 # 参数解析
@@ -209,18 +237,8 @@ install_vim() {
   local vimrc_src="${DOTFILES_DIR}/vim/.vimrc"
   local vimrc_dst="${HOME}/.vimrc"
 
-  # 创建符号链接
-  if [[ -L "${vimrc_dst}" ]]; then
-    echo_warning ".vimrc 链接已存在"
-  elif [[ -f "${vimrc_dst}" ]]; then
-    echo_warning "发现现有 .vimrc，备份为 .vimrc.bak"
-    mv "${vimrc_dst}" "${vimrc_dst}.bak"
-    ln -sf "${vimrc_src}" "${vimrc_dst}"
-    echo_success ".vimrc 链接已创建"
-  else
-    ln -sf "${vimrc_src}" "${vimrc_dst}"
-    echo_success ".vimrc 链接已创建"
-  fi
+  # 创建符号链接（safe_symlink 自动处理已存在链接和备份）
+  safe_symlink "${vimrc_src}" "${vimrc_dst}" || true
 
   # 确保缓存目录存在
   mkdir -p "${HOME}/.cache/vim/undo" "${HOME}/.cache/vim/backup" "${HOME}/.cache/vim/swap"
@@ -301,9 +319,7 @@ install_python() {
 
   # pip 配置链接
   mkdir -p "${HOME}/.pip"
-  if [[ ! -L "${HOME}/.pip/pip.conf" ]]; then
-    ln -sf "${DOTFILES_DIR}/python/pip.conf" "${HOME}/.pip/pip.conf"
-  fi
+  safe_symlink "${DOTFILES_DIR}/python/pip.conf" "${HOME}/.pip/pip.conf" || true
 
   # 安装必装依赖（PEP 668 兼容：--user → pipx → venv 三级回退）
   if [[ -f "${DOTFILES_DIR}/python/requirements.txt" ]]; then
@@ -441,7 +457,7 @@ install_tmux() {
   fi
 
   # 创建符号链接
-  ln -sf "${DOTFILES_DIR}/tmux/.tmux.conf" "${HOME}/.tmux.conf"
+  safe_symlink "${DOTFILES_DIR}/tmux/.tmux.conf" "${HOME}/.tmux.conf" || true
   echo_success "Tmux 配置已链接"
 
   # 安装 TPM (Tmux Plugin Manager，含国内镜像降级)
@@ -481,10 +497,10 @@ install_git() {
   echo_step "安装 Git 配置..."
 
   # .gitconfig
-  ln -sf "${DOTFILES_DIR}/git/.gitconfig" "${HOME}/.gitconfig"
+  safe_symlink "${DOTFILES_DIR}/git/.gitconfig" "${HOME}/.gitconfig" || true
 
   # .gitignore_global
-  ln -sf "${DOTFILES_DIR}/git/.gitignore_global" "${HOME}/.gitignore_global"
+  safe_symlink "${DOTFILES_DIR}/git/.gitignore_global" "${HOME}/.gitignore_global" || true
 
   echo_success "Git 配置已链接"
 
@@ -526,7 +542,7 @@ GITLOCAL_EOF
 # ======================
 install_editorconfig() {
   echo_step "配置 .editorconfig..."
-  ln -sf "${DOTFILES_DIR}/.editorconfig" "${HOME}/.editorconfig"
+  safe_symlink "${DOTFILES_DIR}/.editorconfig" "${HOME}/.editorconfig" || true
   echo_success ".editorconfig 已链接"
 }
 

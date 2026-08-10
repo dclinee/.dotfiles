@@ -20,24 +20,50 @@ LOG_FILE="/tmp/dotfiles_rust_install_$(date +%Y%m%d_%H%M%S).log"
 # ======================
 # 加载公共输出函数库
 # ======================
-_OUTPUT_LIB="${DOTFILES_ROOT}/zsh/lib/output.sh"
+_OUTPUT_LIB="${DOTFILES_ROOT}/lib/output.sh"
 if [[ -f "${_OUTPUT_LIB}" ]]; then
   # shellcheck source=/dev/null
   source "${_OUTPUT_LIB}"
 else
   RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; BLUE="\033[34m"
   CYAN="\033[36m"; WHITE="\033[37m"; RESET="\033[0m"; BOLD="\033[1m"
-  CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"
+  CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"; SKIP="⏭️"
   SEPARATOR="${BLUE}=============================================${RESET}"
   echo_step()      { printf "${BOLD}${BLUE}${INFO} %s${RESET}\n"  "${1}"; }
   echo_success()   { printf "${GREEN}${CHECK} %s${RESET}\n"        "${1}"; }
   echo_warning()   { printf "${YELLOW}${WARN} %s${RESET}\n"        "${1}"; }
   echo_error()     { printf "${RED}${ERROR} %s${RESET}\n"          "${1}"; }
+  echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"          "${1}"; }
+  echo_detail()    { printf "${BLUE}  %s${RESET}\n"                "${1}"; }
   echo_separator() { printf '%b\n' "${SEPARATOR}"; }
   echo_title() {
     echo_separator
     printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
     echo_separator
+  }
+fi
+
+# ======================
+# 加载公共符号链接函数库
+# ======================
+_SYMLINK_LIB="${DOTFILES_ROOT}/lib/symlink.sh"
+if [[ -f "${_SYMLINK_LIB}" ]]; then
+  # shellcheck source=/dev/null
+  source "${_SYMLINK_LIB}"
+else
+  # 回退：当 lib/symlink.sh 不存在时使用内联定义
+  safe_symlink() {
+    local src="$1" dst="$2"
+    [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
+    if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
+      echo_skip "链接已存在: $dst"; return 0
+    fi
+    if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
+      local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
+      mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
+    fi
+    mkdir -p "$(dirname "$dst")" 2>/dev/null
+    ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
   }
 fi
 
@@ -161,7 +187,7 @@ link_configs() {
 
   local cargo_config="${cargo_dir}/config.toml"
   if [[ ! -L "${cargo_config}" ]] && [[ ! -f "${cargo_config}" ]]; then
-    if ln -sf "${RUST_DIR}/config.toml" "${cargo_config}" 2>/dev/null; then
+    if safe_symlink "${RUST_DIR}/config.toml" "${cargo_config}" 2>/dev/null; then
       echo_success "已链接 ~/.cargo/config.toml"
     else
       echo_warning "无法链接 ~/.cargo/config.toml（权限或环境限制）"
@@ -173,7 +199,7 @@ link_configs() {
   # rustfmt 配置（全局）
   local rustfmt_config="${HOME}/.rustfmt.toml"
   if [[ ! -L "${rustfmt_config}" ]] && [[ ! -f "${rustfmt_config}" ]]; then
-    if ln -sf "${RUST_DIR}/rustfmt.toml" "${rustfmt_config}" 2>/dev/null; then
+    if safe_symlink "${RUST_DIR}/rustfmt.toml" "${rustfmt_config}" 2>/dev/null; then
       echo_success "已链接 ~/.rustfmt.toml"
     else
       echo_warning "无法链接 ~/.rustfmt.toml（权限或环境限制）"
@@ -185,7 +211,7 @@ link_configs() {
   # clippy 配置（全局）
   local clippy_config="${HOME}/.clippy.toml"
   if [[ ! -L "${clippy_config}" ]] && [[ ! -f "${clippy_config}" ]]; then
-    if ln -sf "${RUST_DIR}/clippy.toml" "${clippy_config}" 2>/dev/null; then
+    if safe_symlink "${RUST_DIR}/clippy.toml" "${clippy_config}" 2>/dev/null; then
       echo_success "已链接 ~/.clippy.toml"
     else
       echo_warning "无法链接 ~/.clippy.toml（权限或环境限制）"
