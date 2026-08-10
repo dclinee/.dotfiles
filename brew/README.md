@@ -9,7 +9,7 @@ brew/
 ├── Brewfile             # 通用包（git、gh、fzf、ripgrep、bat、eza、zoxide 等）
 ├── Brewfile.linux       # Linux 特定包
 ├── Brewfile.macos       # macOS 特定包
-├── install_brew.sh      # Homebrew 安装脚本（USTC 镜像）
+├── install.sh            # Homebrew 安装脚本（USTC 镜像）
 └── .gitignore
 ```
 
@@ -19,7 +19,7 @@ brew/
 
 ```bash
 # macOS / Linux（使用 USTC 镜像）
-./brew/install_brew.sh
+./brew/install.sh
 ```
 
 或使用官方安装：

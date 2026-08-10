@@ -375,7 +375,7 @@ ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 │   ├── Brewfile          # 通用包（git/gh/fzf/ripgrep/bat/eza...）
 │   ├── Brewfile.linux    # Linux 特定包
 │   ├── Brewfile.macos    # macOS 特定包
-│   └── install_brew.sh   # Brew 安装脚本
+│   └── install.sh       # Brew 安装脚本
 ├── python/               # Python 配置
 │   ├── pythonrc.py       # Python 交互式配置
 │   ├── pip.conf          # Pip 配置

@@ -518,15 +518,15 @@ test_install_error_handling() {
 }
 
 test_install_brew_fixes() {
-  log_info "测试: brew/install_brew.sh 修复"
-  local brew_install="$DOTFILES_DIR/brew/install_brew.sh"
+  log_info "测试: brew/install.sh 修复"
+  local brew_install="$DOTFILES_DIR/brew/install.sh"
 
-  assert_file_contains "install_brew.sh 有 set -euo pipefail" "$brew_install" "set -euo pipefail"
-  assert_file_contains "install_brew.sh 有 brew shellenv 条件判断" "$brew_install" "command -v brew"
-  assert_file_contains "install_brew.sh 有 Linux 条件" "$brew_install" "Linux"
-  assert_file_contains "install_brew.sh 有 Darwin 条件" "$brew_install" "Darwin"
-  assert_file_not_contains "install_brew.sh 无无效 cask 镜像" "$brew_install" "HOMEBREW_CASK"
-  assert_file_contains "install_brew.sh 有持久化提示" "$brew_install" "brew shellenv"
+  assert_file_contains "install.sh 有 set -euo pipefail" "$brew_install" "set -euo pipefail"
+  assert_file_contains "install.sh 有 brew shellenv 条件判断" "$brew_install" "command -v brew"
+  assert_file_contains "install.sh 有 Linux 条件" "$brew_install" "Linux"
+  assert_file_contains "install.sh 有 Darwin 条件" "$brew_install" "Darwin"
+  assert_file_not_contains "install.sh 无无效 cask 镜像" "$brew_install" "HOMEBREW_CASK"
+  assert_file_contains "install.sh 有持久化提示" "$brew_install" "brew shellenv"
 }
 
 test_fallback_config_generation() {
@@ -593,7 +593,7 @@ test_all_bash_syntax() {
   local bash_files=(
     "$DOTFILES_DIR/bootstrap.sh"
     "$DOTFILES_DIR/zsh/install.sh"
-    "$DOTFILES_DIR/brew/install_brew.sh"
+    "$DOTFILES_DIR/brew/install.sh"
     "$DOTFILES_DIR/wezterm/install.sh"
     "$DOTFILES_DIR/vim/install.sh"
     "$DOTFILES_DIR/rust/install.sh"
