@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# pre-push: 检查目标分支保护
+set -euo pipefail
+
+protected_branches="main master develop"
+
+while read local_ref local_sha remote_ref remote_sha; do
+  remote_branch="${remote_ref#refs/heads/}"
+  
+  for protected in $protected_branches; do
+    if [[ "$remote_branch" == "$protected" ]]; then
+      echo "❌ 禁止直接推送到 $remote_branch 分支"
+      echo "   请创建 Pull Request 进行审查"
+      exit 1
+    fi
+  done
+done
+
+echo "✅ pre-push 检查通过"
+exit 0

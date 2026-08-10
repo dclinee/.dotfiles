@@ -523,6 +523,9 @@ install_git() {
   # .gitignore_global
   safe_symlink "${DOTFILES_DIR}/git/.gitignore_global" "${HOME}/.gitignore_global" || true
 
+  # .gitattributes
+  safe_symlink "${DOTFILES_DIR}/git/.gitattributes" "${HOME}/.gitattributes" || true
+
   echo_success "Git 配置已链接"
 
   # 创建 .gitconfig.local 模板（如不存在）
@@ -603,6 +606,12 @@ final_check() {
   else
     echo_error "Git: .gitconfig 未链接"
     all_good=false
+  fi
+
+  if [[ -L "${HOME}/.gitattributes" ]]; then
+    echo_success "Git: .gitattributes 已链接"
+  else
+    echo_warning "Git: .gitattributes 未链接（可选）"
   fi
 
   # 检查 Tmux

@@ -28,6 +28,9 @@
     quotepath = false
     excludesfile = ~/.dotfiles/git/.gitignore_global
     attributesfile = ~/.dotfiles/git/.gitattributes
+	hooksPath = /home/dclee/.dotfiles/git/hooks
+    # Git hooks 目录（可选，集中管理公共 hooks）
+    # hooksPath = ~/.dotfiles/git/hooks
 
 # --- 初始化配置 ---
 [init]
@@ -36,6 +39,10 @@
 # --- 拉取配置 ---
 [pull]
     rebase = false
+
+# --- 协议配置 ---
+[protocol]
+    version = 2
 
 # --- 推送配置 ---
 [push]
@@ -131,15 +138,53 @@
     aliases = config --get-regexp ^alias\\.
     edit = !git diff --name-only --diff-filter=U | xargs -r ${EDITOR:-vim}
 
+    # --- GitHub 相关（需安装 GitHub CLI: gh） ---
+    ghpr = "!gh pr view --web"
+    ghprlist = "!gh pr list"
+    ghissue = "!gh issue view --web"
+    ghissuelist = "!gh issue list"
+    ghrepo = "!gh repo view --web"
+    ghprcreate = "!gh pr create"
+    ghrelease = "!gh release list"
+    ghworkflow = "!gh workflow list"
+    ghruncancel = "!gh run cancel"
+    ghrerun = "!gh run rerun"
+    ghstatus = "!gh repo view --json name,description,stargazerCount,forkCount,updatedAt"
+    ghauth = "!gh auth status"
+    ghlabels = "!gh label list"
+    ghmilestones = "!gh milestone list"
+
 # --- 凭证 ---
-# 不使用明文 store（~/.git-credentials 明文存储密码/token）
-# macOS 用 Keychain（osxkeychain），Linux 用 libsecret 或内存缓存
+# 默认使用内存缓存（避免明文存储 Token/密码）
+# macOS 可改用: helper = osxkeychain
+# Linux 可改用: helper = /usr/share/doc/git/contrib/credential/libsecret/git-credential-libsecret
+# 保守方案：内存缓存 1 小时
 [credential]
-	helper = store
-    # Linux 用户请改用以下配置（需安装 git-credential-libsecret）:
-    # helper = /usr/share/doc/git/contrib/credential/libsecret/git-credential-libsecret
-    # 或保守方案：内存缓存 1 小时
-    # helper = cache --timeout=3600
+    helper = cache
+    # 缓存有效期（秒）
+    timeout = 3600
+    # 以下为备选方案，按需切换:
+    # helper = store     # 明文存储（仅适合个人单用户机器）
+    # helper = cache --timeout=7200  # 延长缓存至 2 小时
+
+# --- GPG 签名 ---
+# 启用 Git 提交/标签签名
+# 具体密钥在 ~/.gitconfig.local 中配置:
+#   gpg.program = gpg
+#   gpg.format = openpgp
+#   user.signingkey = YOUR_KEY_ID
+[gpg]
+    # macOS 可能需要: program = /usr/local/bin/gpg
+    # Linux 可能需要: program = /usr/bin/gpg
+    program = gpg
+
+[commit]
+    # 默认启用签名（需要在 ~/.gitconfig.local 中设置 user.signingkey）
+    # gpgsign = true
+
+[tag]
+    # 默认启用标签签名
+    # gpgsign = true
 
 # --- rerere ---
 [rerere]
@@ -152,5 +197,9 @@
 # --- include local 覆盖 ---
 [include]
     path = ~/.gitconfig.local
-[safe]
-	directory = *
+# --- 安全目录 ---
+# 留空为安全默认值，仅允许用户显式授权的仓库
+# 如需信任某个目录，使用: git config --global safe.directory /path/to/repo
+# 或在 ~/.gitconfig.local 中添加:
+# [safe]
+#     directory = /path/to/trusted/repo

@@ -1,0 +1,46 @@
+# ======================
+# GitHub CLI 配置模板
+# ======================
+#
+# 使用方法:
+#   1. 安装 GitHub CLI: brew install gh / apt install gh / go install github.com/cli/cli/v2/cmd/gh@latest
+#   2. 初始化认证: gh auth login
+#   3. 配置迁移: gh config set <key> <value>
+#
+# 以下为推荐配置，按需启用:
+
+# --- 默认仓库协议 ---
+git_protocol: https
+
+# --- 默认编辑器 ---
+editor: nvim
+
+# --- 输出配置 ---
+# 终端输出颜色
+color: enabled
+# 分页器
+pager: "less -FRX"
+
+# --- 浏览器（macOS/Linux 默认即可） ---
+# browser: ""
+
+# --- HTTP 超时（秒） ---
+http_timeout: 30
+
+# --- 启用 Delta 差异视图（如已安装） ---
+# prompt:
+#   diff: colorless
+#   # 如需 Delta:
+#   # diff: delta
+
+# --- 签名提交（需配置 GPG key） ---
+# git:
+#   signing_key: YOUR_GPG_KEY_ID
+#   protocol: https
+
+# --- 企业 GitHub 用户 ---
+# 企业实例默认域名:
+# gh_hostname: github.mycompany.com
+
+# --- 迁移 Token 存储位置 ---
+# gh auth login --with-token

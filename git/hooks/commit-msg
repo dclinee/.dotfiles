@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# commit-msg: 检查提交信息格式
+set -euo pipefail
+
+commit_msg_file="$1"
+commit_msg=$(head -n 1 "$commit_msg_file")
+
+# 跳过合并提交和回滚提交
+if echo "$commit_msg" | grep -qE '^(Merge|Revert|fixup!|squash!)'; then
+  exit 0
+fi
+
+# 检查提交信息长度
+if [[ ${#commit_msg} -gt 72 ]]; then
+  echo "❌ 提交信息首行超过 72 字符（当前 ${#commit_msg} 字符）"
+  echo "   $commit_msg"
+  exit 1
+fi
+
+# 检查是否包含破坏性变更标记
+if echo "$commit_msg" | grep -qE '^[a-z]+(\([^)]+\))?!:'; then
+  echo "⚠️  检测到破坏性变更标记，请注意版本号升级"
+fi
+
+echo "✅ commit-msg 检查通过"
+exit 0

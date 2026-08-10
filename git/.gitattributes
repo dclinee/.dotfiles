@@ -1,0 +1,92 @@
+# ======================
+# Git 全局属性配置
+# ======================
+
+# --- 自动换行 ---
+* text=auto
+
+# 显式声明文本文件
+*.text    text eol=lf
+*.txt     text eol=lf
+*.md      text eol=lf
+*.markdown text eol=lf
+
+# Shell 脚本
+*.sh      text eol=lf
+*.zsh     text eol=lf
+*.bash    text eol=lf
+
+# 配置文件
+*.json    text eol=lf
+*.yaml    text eol=lf
+*.yml     text eol=lf
+*.toml    text eol=lf
+*.ini     text eol=lf
+*.cfg     text eol=lf
+*.conf    text eol=lf
+
+# 编程语言
+*.py      text eol=lf
+*.rb      text eol=lf
+*.go      text eol=lf
+*.rs      text eol=lf
+*.js      text eol=lf
+*.ts      text eol=lf
+*.tsx     text eol=lf
+*.jsx     text eol=lf
+*.lua     text eol=lf
+*.c       text eol=lf
+*.h       text eol=lf
+*.cpp     text eol=lf
+*.hpp     text eol=lf
+*.java    text eol=lf
+*.vim     text eol=lf
+*.el      text eol=lf
+*.css     text eol=lf
+*.html    text eol=lf
+*.xml     text eol=lf
+*.sql     text eol=lf
+*.php     text eol=lf
+*.swift   text eol=lf
+*.kt      text eol=lf
+
+# Windows 批处理文件保留 CRLF
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+
+# 二进制文件（不进行换行转换）
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.svg     binary
+*.webp    binary
+*.pdf     binary
+*.zip     binary
+*.tar     binary
+*.gz      binary
+*.bz2     binary
+*.xz      binary
+*.7z      binary
+*.rar     binary
+*.woff    binary
+*.woff2   binary
+*.ttf     binary
+*.otf     binary
+*.eot     binary
+*.mp3     binary
+*.mp4     binary
+*.mov     binary
+*.avi     binary
+
+# --- 语言标记（用于统计） ---
+*.sh      linguist-detectable=true
+*.zsh     linguist-detectable=true
+*.vim     linguist-detectable=true
+*.el      linguist-detectable=true
+*.lua     linguist-detectable=true
+
+# ---  linguist 覆盖（如有需要可注释掉以下行） ---
+# .ts      linguist-language=TypeScript
+# .tsx     linguist-language=TSX
