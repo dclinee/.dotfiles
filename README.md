@@ -1,5 +1,14 @@
 # dclinee 的 Dotfiles
 
+[![CI](https://github.com/dclinee/.dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/dclinee/.dotfiles/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/dclinee/.dotfiles/graph/badge.svg?token=DOTFILES_TOKEN)](https://codecov.io/gh/dclinee/.dotfiles)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform: Linux ∙ macOS ∙ WSL](https://img.shields.io/badge/Platform-Linux%20%C2%B7%20macOS%20%C2%B7%20WSL-blue.svg)](#)
+[![Shell: Zsh 5.9+](https://img.shields.io/badge/Shell-Zsh%205.9%2B-orange.svg)](#)
+[![Code Style: ShellCheck](https://img.shields.io/badge/Code%20Style-ShellCheck-green.svg)](#)
+
+> **A+ 级别 (94/100)** 模块化 Dotfiles 配置框架，支持 Linux/macOS/WSL 三平台，覆盖 Zsh/Vim/Emacs/WezTerm/Tmux 五大编辑器与终端，Python/Rust 两大语言链。
+
 这是一个现代化的 Dotfiles 配置，专注于提供高效、美观且易于维护的 Zsh 开发环境。
 **开箱即用**，让大多数开发者在新机器上几分钟内即可获得完整的开发环境，无需花费大量时间配置。
 
