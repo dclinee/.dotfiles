@@ -130,34 +130,14 @@ link_configs() {
   mkdir -p "${cargo_dir}"
 
   # cargo config（从模板链接）
-  local cargo_config="${cargo_dir}/config.toml"
-  if [[ ! -L "${cargo_config}" ]] && [[ ! -f "${cargo_config}" ]]; then
-    safe_symlink "${RUST_DIR}/cargo_config.toml.template" "${cargo_config}" 2>/dev/null && \
-      echo_success "已链接 ~/.cargo/config.toml" || \
-      echo_warning "无法链接 ~/.cargo/config.toml（权限或环境限制）"
-  else
-    echo_warning "~/.cargo/config.toml 已存在，跳过"
-  fi
+  # safe_symlink 自动处理：已存在正确链接→跳过，错误链接/文件→备份重建
+  safe_symlink "${RUST_DIR}/cargo_config.toml.template" "${cargo_dir}/config.toml" 2>/dev/null || true
 
   # rustfmt 配置（全局）
-  local rustfmt_config="${HOME}/.rustfmt.toml"
-  if [[ ! -L "${rustfmt_config}" ]] && [[ ! -f "${rustfmt_config}" ]]; then
-    safe_symlink "${RUST_DIR}/rustfmt.toml" "${rustfmt_config}" 2>/dev/null && \
-      echo_success "已链接 ~/.rustfmt.toml" || \
-      echo_warning "无法链接 ~/.rustfmt.toml（权限或环境限制）"
-  else
-    echo_warning "~/.rustfmt.toml 已存在，跳过"
-  fi
+  safe_symlink "${RUST_DIR}/rustfmt.toml" "${HOME}/.rustfmt.toml" 2>/dev/null || true
 
   # clippy 配置（全局）
-  local clippy_config="${HOME}/.clippy.toml"
-  if [[ ! -L "${clippy_config}" ]] && [[ ! -f "${clippy_config}" ]]; then
-    safe_symlink "${RUST_DIR}/clippy.toml" "${clippy_config}" 2>/dev/null && \
-      echo_success "已链接 ~/.clippy.toml" || \
-      echo_warning "无法链接 ~/.clippy.toml（权限或环境限制）"
-  else
-    echo_warning "~/.clippy.toml 已存在，跳过"
-  fi
+  safe_symlink "${RUST_DIR}/clippy.toml" "${HOME}/.clippy.toml" 2>/dev/null || true
 }
 
 # ======================
