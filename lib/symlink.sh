@@ -14,7 +14,7 @@
 #   safe_symlink "${DOTFILES_DIR}/zsh/.zshrc" "${HOME}/.zshrc"
 
 if [[ -z "${__SYMLINK_SH_LOADED:-}" ]]; then
-  export __SYMLINK_SH_LOADED=1
+  __SYMLINK_SH_LOADED=1
 
 # safe_symlink <source> <target>
 #

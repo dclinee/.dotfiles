@@ -3,6 +3,10 @@
 # ======================
 # Zsh 配置安装器
 # ======================
+#
+# 注意：brew 安装和 brew bundle 已统一由 bootstrap.sh 处理。
+# 如需独立运行此脚本，请先执行: ./bootstrap.sh --brew
+# 或直接使用: ./bootstrap.sh --zsh（会自动处理 brew 依赖）
 
 set -euo pipefail
 LOG_FILE="/tmp/dotfiles_install_$(date +%Y%m%d_%H%M%S).log"
@@ -498,16 +502,6 @@ main() {
 
   echo_separator
 
-  # 安装 Homebrew
-  install_brew
-
-  echo_separator
-
-  # 通过 brew bundle 安装 Brewfile 中的包
-  brew_bundle_install
-
-  echo_separator
-
   # 安装必备工具
   install_essential_tools
 
@@ -515,16 +509,6 @@ main() {
 
   # 安装 Zsh 插件
   install_plugins
-
-  echo_separator
-
-  # 配置 Python 环境
-  install_python_config
-
-  echo_separator
-
-  # 初始化 zoxide
-  init_zoxide
 
   echo_title "安装完成"
   printf "${GREEN}${CHECK} ${BOLD}所有配置安装完成！${RESET}\n"

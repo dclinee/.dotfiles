@@ -24,7 +24,7 @@
 #   check_init; check_ok "xxx"; check_summary
 
 if [[ -z "${__COMMON_SH_LOADED:-}" ]]; then
-export __COMMON_SH_LOADED=1
+__COMMON_SH_LOADED=1
 
 # ======================
 # 1. 自动加载依赖库（含 fallback，保证任何时候输出函数都可用）
@@ -58,7 +58,7 @@ _common_load_libs() {
     printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
     echo_separator
   }
-  export __OUTPUT_SH_LOADED=1
+  __OUTPUT_SH_LOADED=1
 }
 
 _common_load_symlink() {
@@ -86,7 +86,7 @@ _common_load_symlink() {
     mkdir -p "$(dirname "$dst")" 2>/dev/null
     ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
   }
-  export __SYMLINK_SH_LOADED=1
+  __SYMLINK_SH_LOADED=1
 }
 
 # 执行自动加载（在 DOTFILES_ROOT 已定义后立即调用）

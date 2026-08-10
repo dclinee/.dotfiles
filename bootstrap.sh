@@ -680,70 +680,17 @@ main() {
   echo ""
 
   # 安装组件（每个组件独立执行，失败不中断后续步骤）
-  if $INSTALL_ALL || $INSTALL_ZSH; then
-    if install_zsh; then
-      COMPLETED_STEPS+=("Zsh")
+  # 顺序：基础层 → 编辑器层 → 终端层 → 开发层
+  # 1. EditorConfig（最早安装，所有编辑器后续加载时立即生效）
+  if $INSTALL_ALL || $INSTALL_EDITORCONFIG; then
+    if install_editorconfig; then
+      COMPLETED_STEPS+=("EditorConfig")
     else
-      FAILED_STEPS+=("Zsh")
+      FAILED_STEPS+=("EditorConfig")
     fi
   fi
 
-  if $INSTALL_ALL || $INSTALL_VIM; then
-    if install_vim; then
-      COMPLETED_STEPS+=("Vim")
-    else
-      FAILED_STEPS+=("Vim")
-    fi
-  fi
-
-  if $INSTALL_ALL || $INSTALL_EMACS; then
-    if install_emacs; then
-      COMPLETED_STEPS+=("Emacs")
-    else
-      FAILED_STEPS+=("Emacs")
-    fi
-  fi
-
-  if $INSTALL_ALL || $INSTALL_WEZTERM; then
-    if install_wezterm; then
-      COMPLETED_STEPS+=("WezTerm")
-    else
-      FAILED_STEPS+=("WezTerm")
-    fi
-  fi
-
-  if $INSTALL_ALL || $INSTALL_BREW; then
-    if install_brew; then
-      COMPLETED_STEPS+=("Brew")
-    else
-      FAILED_STEPS+=("Brew")
-    fi
-  fi
-
-  if $INSTALL_ALL || $INSTALL_PYTHON; then
-    if install_python; then
-      COMPLETED_STEPS+=("Python")
-    else
-      FAILED_STEPS+=("Python")
-    fi
-  fi
-
-  if $INSTALL_ALL || $INSTALL_RUST; then
-    if install_rust; then
-      COMPLETED_STEPS+=("Rust")
-    else
-      FAILED_STEPS+=("Rust")
-    fi
-  fi
-
-  if $INSTALL_ALL || $INSTALL_TMUX; then
-    if install_tmux; then
-      COMPLETED_STEPS+=("Tmux")
-    else
-      FAILED_STEPS+=("Tmux")
-    fi
-  fi
-
+  # 2. Git 配置（早期安装，影响所有后续 git 操作）
   if $INSTALL_ALL || $INSTALL_GIT; then
     if install_git; then
       COMPLETED_STEPS+=("Git")
@@ -752,12 +699,75 @@ main() {
     fi
   fi
 
-  # EditorConfig: 默认随 --all 安装；也可单独 --editorconfig
-  if $INSTALL_ALL || $INSTALL_EDITORCONFIG; then
-    if install_editorconfig; then
-      COMPLETED_STEPS+=("EditorConfig")
+  # 3. Brew（提前安装，后续所有模块可复用）
+  if $INSTALL_ALL || $INSTALL_BREW; then
+    if install_brew; then
+      COMPLETED_STEPS+=("Brew")
     else
-      FAILED_STEPS+=("EditorConfig")
+      FAILED_STEPS+=("Brew")
+    fi
+  fi
+
+  # 4. Zsh（依赖 Brew 安装 zinit，内部不再执行 brew bundle）
+  if $INSTALL_ALL || $INSTALL_ZSH; then
+    if install_zsh; then
+      COMPLETED_STEPS+=("Zsh")
+    else
+      FAILED_STEPS+=("Zsh")
+    fi
+  fi
+
+  # 5. Vim（依赖 EditorConfig + 核心工具就绪）
+  if $INSTALL_ALL || $INSTALL_VIM; then
+    if install_vim; then
+      COMPLETED_STEPS+=("Vim")
+    else
+      FAILED_STEPS+=("Vim")
+    fi
+  fi
+
+  # 6. Emacs（依赖 EditorConfig + 核心工具就绪）
+  if $INSTALL_ALL || $INSTALL_EMACS; then
+    if install_emacs; then
+      COMPLETED_STEPS+=("Emacs")
+    else
+      FAILED_STEPS+=("Emacs")
+    fi
+  fi
+
+  # 7. WezTerm（核心工具就绪后即可安装）
+  if $INSTALL_ALL || $INSTALL_WEZTERM; then
+    if install_wezterm; then
+      COMPLETED_STEPS+=("WezTerm")
+    else
+      FAILED_STEPS+=("WezTerm")
+    fi
+  fi
+
+  # 8. Python（依赖 Brew 包管理器）
+  if $INSTALL_ALL || $INSTALL_PYTHON; then
+    if install_python; then
+      COMPLETED_STEPS+=("Python")
+    else
+      FAILED_STEPS+=("Python")
+    fi
+  fi
+
+  # 9. Rust（依赖 Brew 包管理器）
+  if $INSTALL_ALL || $INSTALL_RUST; then
+    if install_rust; then
+      COMPLETED_STEPS+=("Rust")
+    else
+      FAILED_STEPS+=("Rust")
+    fi
+  fi
+
+  # 10. Tmux（依赖 Brew + Git）
+  if $INSTALL_ALL || $INSTALL_TMUX; then
+    if install_tmux; then
+      COMPLETED_STEPS+=("Tmux")
+    else
+      FAILED_STEPS+=("Tmux")
     fi
   fi
 
