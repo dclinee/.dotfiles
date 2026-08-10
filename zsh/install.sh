@@ -243,10 +243,11 @@ _install_zinit_manual() {
   done
 
   if $cloned; then
-    # 添加到 PATH
-    if ! grep -q 'zinit' "${HOME}/.zshrc" 2>/dev/null; then
-      echo "# zinit 插件管理器" >> "${HOME}/.zshrc"
-      echo "source ${zinit_dir}/zinit.zsh" >> "${HOME}/.zshrc"
+    # 添加到 ~/.zshrc.local（避免污染仓库内的 .zshrc 软链文件）
+    local local_rc="${HOME}/.zshrc.local"
+    if ! grep -q 'zinit' "$local_rc" 2>/dev/null; then
+      echo "# zinit 插件管理器（由 install.sh 自动添加）" >> "$local_rc"
+      echo "source ${zinit_dir}/zinit.zsh" >> "$local_rc"
     fi
     echo_success "zinit 安装完成（手动）"
     echo_warning "请重启终端或执行: source ~/.zshrc"

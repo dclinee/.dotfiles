@@ -16,15 +16,15 @@
      platform/windows.lua  ← Windows 平台特定配置
  ]]
 
-local wezterm = require 'wezterm'
+local wezterm = require('wezterm')
 local config = wezterm.config_builder()
 
 -- ======================
 -- 平台检测
 -- ======================
-local function is_macos()  return wezterm.target_triple:find 'darwin' ~= nil end
-local function is_linux()  return wezterm.target_triple:find 'linux' ~= nil end
-local function is_windows() return wezterm.target_triple:find 'windows' ~= nil end
+local function is_macos()  return (wezterm.target_triple or ''):find('darwin') ~= nil end
+local function is_linux()  return (wezterm.target_triple or ''):find('linux') ~= nil end
+local function is_windows() return (wezterm.target_triple or ''):find('windows') ~= nil end
 
 -- ======================
 -- 模块加载器
@@ -39,11 +39,11 @@ end
 
 -- 合并配置表: 数组型追加，字典型按键合并
 local function merge_config(config_table, file_path)
-  local f = io.open(file_path, "r")
-  if not f then return end
-  io.close(f)
-
-  local user_config = dofile(file_path)
+  local ok, user_config = pcall(dofile, file_path)
+  if not ok then
+    wezterm.log_error('加载配置失败: ' .. file_path .. ' - ' .. tostring(user_config))
+    return
+  end
   for k, v in pairs(user_config) do
     if type(v) == 'table' and type(config_table[k]) == 'table' then
       if is_array(v) then
@@ -74,6 +74,7 @@ local wezterm_dir = home_dir .. '/.dotfiles/wezterm'
 
 -- 1. 加载 core/ 下的所有 .lua（按文件名排序）
 local core_files = wezterm.glob(wezterm_dir .. '/core/*.lua')
+table.sort(core_files)
 for _, file in ipairs(core_files) do
   merge_config(config, file)
 end

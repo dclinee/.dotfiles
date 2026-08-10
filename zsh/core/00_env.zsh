@@ -13,10 +13,7 @@ fi
 # ZSH 配置入口
 export ZSH_HOME="${HOME}/.dotfiles/zsh"
 
-# 基础路径设置
-if [[ -d "${HOME}/.local/bin" ]]; then
-  export PATH="${HOME}/.local/bin:${PATH}"
-fi
+# 注: ~/.local/bin 已在 .zshenv 中通过去重逻辑添加，此处不再重复
 
 # Homebrew 路径配置
 # 注：HOMEBREW_PREFIX 已由 .zshenv 统一设置，此处仅 fallback
@@ -46,10 +43,7 @@ export HISTFILE="${HOME}/.cache/zsh/history"
 
 # 历史记录增强选项（在 01_options.zsh 中通过 setopt 设置）
 export HISTTIMEFORMAT="%Y-%m-%d %H:%M:%S "
-export HISTORY_IGNORE_ALL="(ls|cd|pwd|exit|clear)"
-export HIST_FCNTL_LOCK="2"
-export HIST_SAVE_BY_COPY="yes"
-export HIST_REDUCE_BLANKS="yes"
+export HISTORY_IGNORE="(ls|cd|pwd|exit|clear)"
 
 # 确保历史记录目录存在
 mkdir -p "${HOME}/.cache/zsh" 2>/dev/null

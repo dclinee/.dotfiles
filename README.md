@@ -349,9 +349,11 @@ ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 │   ├── plugins/          # 插件目录
 │   │   ├── zinit/        # Zinit 插件管理器
 │   │   └── zoxide/       # Zoxide 插件
+│   ├── starship/          # Starship 提示符配置
+│   │   ├── starship.toml     # Nerd Font 版本
+│   │   └── starship_fallback.toml # Unicode 回退版本
 │   ├── install.sh        # Zsh 安装脚本（集成 brew bundle）
-│   ├── profile_performance.sh # 启动性能分析
-│   └── starship.toml     # Starship 主题配置
+│   └── profile_performance.sh # 启动性能分析
 ├── vim/                  # Vim 配置
 │   ├── core/             # 核心配置
 │   │   ├── 00_basic.vim     # 基础配置
@@ -444,7 +446,7 @@ function myfunc() {
 
 ### 自定义 Starship 主题
 
-编辑 `~/.dotfiles/zsh/starship.toml` 文件，根据 [Starship 文档](https://starship.rs/config/) 自定义主题。
+编辑 `~/.dotfiles/zsh/starship/starship.toml` 文件，根据 [Starship 文档](https://starship.rs/config/) 自定义主题。
 
 ## 🔄 更新与维护
 

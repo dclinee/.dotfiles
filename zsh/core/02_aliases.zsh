@@ -185,7 +185,7 @@ alias reload='source ~/.zshrc'     # 重新加载 zshrc
 # ----------------------
 # 12. Brew 相关
 # ----------------------
-alias b='brew'                 # brew 简写
+alias br='brew'                # brew 简写
 alias ba='brew analytics'
 alias bac='brew autoremove'     # 自动移除无用依赖
 alias bcl='brew cleanup'        # 清理旧版本和缓存

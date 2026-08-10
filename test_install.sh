@@ -394,15 +394,15 @@ test_env_zsh_fixes() {
   assert_file_contains "PYTHONPATH 移除有注释说明" \
     "$env_file" "已移除对 PYTHONPATH"
 
-  # HISTORY_IGNORE_ALL
-  assert_file_contains "HISTORY_IGNORE_ALL 正确变量名" \
-    "$env_file" "HISTORY_IGNORE_ALL"
+  # HISTORY_IGNORE（正确的 Zsh 变量名）
+  assert_file_contains "HISTORY_IGNORE 正确变量名" \
+    "$env_file" "HISTORY_IGNORE="
 
-  # 无无效 HISTORY_IGNORE（不带 _ALL）
-  if grep -q '^export HISTORY_IGNORE=' "$env_file" 2>/dev/null; then
-    assert_fail "存在无效 HISTORY_IGNORE 变量"
+  # 无无效的 HISTORY_IGNORE_ALL（不是有效 Zsh 变量）
+  if grep -q 'HISTORY_IGNORE_ALL' "$env_file" 2>/dev/null; then
+    assert_fail "存在无效 HISTORY_IGNORE_ALL 变量"
   else
-    assert_pass "无无效 HISTORY_IGNORE 变量"
+    assert_pass "无无效 HISTORY_IGNORE_ALL 变量"
   fi
 
   # 检查 Linux brew 路径检查：统计 export PATH 中包含 linuxbrew 的行数
@@ -448,11 +448,10 @@ test_starship_font_detection() {
   local starship_file="$DOTFILES_DIR/zsh/core/05_starship.zsh"
 
   assert_file_contains "包含 _has_nerd_font 函数" "$starship_file" "_has_nerd_font"
-  assert_file_contains "包含 _generate_fallback 函数" "$starship_file" "_generate_fallback"
   assert_file_contains "包含 fc-list 检测" "$starship_file" "fc-list"
   assert_file_contains "包含字体目录扫描" "$starship_file" ".local/share/fonts"
   assert_file_contains "包含 brew 字体检测" "$starship_file" "share/fonts"
-  assert_file_contains "降级配置包含 FALLBACK_EOF" "$starship_file" "FALLBACK_EOF"
+  assert_file_contains "引用 starship_fallback.toml" "$starship_file" "starship_fallback.toml"
 
   if command -v zsh > /dev/null 2>&1; then
     if zsh -n "$starship_file" 2>/dev/null; then
@@ -522,7 +521,7 @@ test_install_brew_fixes() {
   log_info "测试: brew/install_brew.sh 修复"
   local brew_install="$DOTFILES_DIR/brew/install_brew.sh"
 
-  assert_file_contains "install_brew.sh 有 set -eo pipefail" "$brew_install" "set -eo pipefail"
+  assert_file_contains "install_brew.sh 有 set -euo pipefail" "$brew_install" "set -euo pipefail"
   assert_file_contains "install_brew.sh 有 brew shellenv 条件判断" "$brew_install" "command -v brew"
   assert_file_contains "install_brew.sh 有 Linux 条件" "$brew_install" "Linux"
   assert_file_contains "install_brew.sh 有 Darwin 条件" "$brew_install" "Darwin"
@@ -532,9 +531,9 @@ test_install_brew_fixes() {
 
 test_fallback_config_generation() {
   log_info "测试: 降级配置生成"
-  local starship_file="$DOTFILES_DIR/zsh/core/05_starship.zsh"
+  local starship_file="$DOTFILES_DIR/zsh/starship/starship_fallback.toml"
 
-  # 检查降级配置中的 Unicode 符号（在 heredoc 内）
+  # 检查降级配置中的 Unicode 符号（在独立 TOML 文件中）
   assert_file_contains "降级配置使用 Unicode 三角" "$starship_file" "▓"
   assert_file_contains "降级配置使用 Unicode 角标" "$starship_file" "░"
 
@@ -548,7 +547,7 @@ test_fallback_config_generation() {
 
 test_starship_toml_comments() {
   log_info "测试: starship.toml Nerd Font 说明"
-  local toml_file="$DOTFILES_DIR/zsh/starship.toml"
+  local toml_file="$DOTFILES_DIR/zsh/starship/starship.toml"
 
   assert_file_contains "starship.toml 有 Nerd Font 说明" "$toml_file" "Nerd Font"
   assert_file_contains "starship.toml 有降级说明" "$toml_file" "降级"

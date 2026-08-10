@@ -10,8 +10,6 @@ zsh/
 ├── .zshenv                       # 最早加载的环境变量（PATH/Homebrew）
 ├── install.sh                    # Zsh 安装脚本（Homebrew + zinit + starship + zoxide）
 ├── profile_performance.sh        # 启动性能分析工具
-├── starship.toml                 # Starship 主题配置（Nerd Font 版本）
-├── starship_fallback.toml        # Starship 回退配置（无 Nerd Font 版本）
 ├── core/                         # 核心配置模块
 │   ├── 00_env.zsh                # 环境变量（PATH、语言、历史）
 │   ├── 01_options.zsh            # Zsh 选项（目录栈、自动补全、语法）
@@ -19,6 +17,9 @@ zsh/
 │   ├── 03_functions.zsh          # 自定义函数（check_env、mkcd、extract 等）
 │   ├── 04_plugins.zsh            # zinit 插件加载配置
 │   └── 05_starship.zsh           # Starship 主题加载逻辑
+├── starship/                     # Starship 提示符配置
+│   ├── starship.toml             # Nerd Font 版本（含图标）
+│   └── starship_fallback.toml    # Unicode 版本（跨平台兼容）
 ├── functions/                    # 功能专题（从 03_functions.zsh 拆分）
 │   ├── nav.zsh                   # 导航函数（z、j、bk）
 │   ├── file.zsh                  # 文件操作（mkcd、extract、tre）
@@ -123,3 +124,16 @@ unzip FiraCode.zip && rm FiraCode.zip && fc-cache -fv
 ```
 
 未安装 Nerd Font 时，Starship 会自动降级到无图标配置。
+
+## Starship 配置
+
+Starship 提示符配置存放在 `starship/` 目录：
+
+| 文件 | 说明 |
+|---|---|
+| `starship/starship.toml` | 主配置（Nerd Font 图标版本） |
+| `starship/starship_fallback.toml` | 回退配置（Unicode 符号版本） |
+
+`05_starship.zsh` 中的字体检测逻辑会自动选择使用哪个配置文件。
+
+两个文件结构完全相同，仅图标字符不同。修改格式布局或样式时，需同步更新两个文件。

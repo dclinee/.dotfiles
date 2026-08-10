@@ -177,8 +177,8 @@ highlight LineNr ctermfg=240 guifg=#3b4261
 highlight CursorLineNr ctermfg=242 guifg=#706d61
 
 " 光标行高亮（LazyVim 风格 - 柔和高亮）
-highlight CursorLine cterm=NONE ctermbg=235 guibg=NONE guibg=#1a1b26
-highlight CursorColumn cterm=NONE ctermbg=235 guibg=NONE guibg=#1a1b26
+highlight CursorLine cterm=NONE ctermbg=235 guibg=#1a1b26
+highlight CursorColumn cterm=NONE ctermbg=235 guibg=#1a1b26
 
 " 视觉选择背景（Tokyo Night storm 风格）
 highlight Visual ctermbg=24 guibg=#283457

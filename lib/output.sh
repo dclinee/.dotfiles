@@ -35,7 +35,6 @@ if [[ -z "${__OUTPUT_SH_LOADED:-}" ]]; then
 
   # 分隔线
   SEPARATOR="${BLUE}============================================${RESET}"
-fi
 
 # 输出美化函数
 echo_step() {
@@ -71,3 +70,4 @@ echo_title() {
   printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
   echo_separator
 }
+fi

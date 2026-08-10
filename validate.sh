@@ -75,7 +75,7 @@ simulate_install() {
 
   # Zsh 安装模拟
   log SIM "[Zsh] 将配置："
-  find "${DOTFILES_DIR}/zsh" -name '*.zsh' -exec grep '^source\|^export' {} \; | sort | uniq | head -20
+  find "${DOTFILES_DIR}/zsh" -name '*.zsh' -exec grep -E '^source|^export' {} \; | sort | uniq | head -20
 }
 
 # 功能验证

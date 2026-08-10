@@ -1,5 +1,5 @@
-#!/bin/bash
-set -eo pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 
 # 使用 USTC 镜像安装 Homebrew (macOS/Linux) - 修正版
 # 来源：https://mirrors.ustc.edu.cn/help/brew.git.html

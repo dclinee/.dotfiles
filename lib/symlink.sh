@@ -38,7 +38,7 @@ safe_symlink() {
   fi
 
   # 2. 已是正确链接 → 跳过
-  if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
+  if [[ -L "$dst" ]] && [[ "$(readlink -f "$dst" 2>/dev/null)" == "$(readlink -f "$src" 2>/dev/null)" ]]; then
     echo_skip "链接已存在: $dst"
     return 0
   fi

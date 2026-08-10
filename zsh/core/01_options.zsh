@@ -53,6 +53,10 @@ setopt hist_find_no_dups
 setopt hist_reduce_blanks
 # 历史命令保存时添加时间戳
 setopt hist_save_no_dups
+# 历史文件fcntl锁（防止并发写入损坏）
+setopt hist_fcntl_lock
+# 历史文件保存时先复制再写入（兼容性）
+setopt hist_save_by_copy
 
 # 文件匹配和扩展选项
 # 启用隐藏文件匹配

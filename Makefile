@@ -4,7 +4,7 @@
 # 统一命令入口，简化操作
 # 设计原则：所有 target 都委托给 per-component install.sh，避免与 bootstrap.sh 逻辑漂移
 
-.PHONY: install update backup test check clean help zsh vim emacs wezterm wezterm-check wezterm-uninstall brew python rust tmux git editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin
+.PHONY: install update backup test check clean help zsh vim emacs wezterm wezterm-check wezterm-uninstall brew python rust tmux git editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin perf validate
 
 # 默认目标
 .DEFAULT_GOAL := help

@@ -1,3 +1,9 @@
+# ======================
+# Starship 降级配置（无 Nerd Font 时使用）
+# 图标使用标准 Unicode 符号，确保跨平台兼容
+# 结构与 starship.toml 完全一致，修改格式/样式时请同步更新两个文件
+# ======================
+
 "$schema" = 'https://starship.rs/config-schema.json'
 
 format = """
@@ -43,6 +49,9 @@ color_purple = '#b16286'
 color_red = '#cc241d'
 color_yellow = '#d79921'
 
+# ======================
+# OS 图标（Unicode 版本）
+# ======================
 [os]
 disabled = false
 style = "bg:color_orange fg:color_fg0"
@@ -70,12 +79,18 @@ Redhat = "🎩"
 RedHatEnterprise = "🎩"
 Pop = "💫"
 
+# ======================
+# 用户名
+# ======================
 [username]
 show_always = true
 style_user = "bg:color_orange fg:color_fg0"
 style_root = "bg:color_orange fg:color_fg0"
 format = '[ $user ]($style)'
 
+# ======================
+# 目录
+# ======================
 [directory]
 style = "fg:color_fg0 bg:color_yellow"
 format = "[ $path ]($style)"
@@ -89,6 +104,9 @@ truncation_symbol = "…/"
 "Pictures" = "🖼 "
 "Developer" = "💻 "
 
+# ======================
+# Git
+# ======================
 [git_branch]
 symbol = "⎇"
 style = "bg:color_aqua"
@@ -98,6 +116,9 @@ format = '[[ $symbol $branch ](fg:color_fg0 bg:color_aqua)]($style)'
 style = "bg:color_aqua"
 format = '[[($all_status$ahead_behind )](fg:color_fg0 bg:color_aqua)]($style)'
 
+# ======================
+# 语言 / 运行时
+# ======================
 [nodejs]
 symbol = "⬢"
 style = "bg:color_blue"
@@ -148,6 +169,9 @@ symbol = "🐍"
 style = "bg:color_blue"
 format = '[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)'
 
+# ======================
+# 容器 / 环境
+# ======================
 [docker_context]
 symbol = "🐳"
 style = "bg:color_bg3"
@@ -161,6 +185,9 @@ format = '[[ $symbol( $environment) ](fg:#83a598 bg:color_bg3)]($style)'
 style = "bg:color_bg3"
 format = '[[ $symbol( $version)( $environment) ](fg:color_fg0 bg:color_bg3)]($style)'
 
+# ======================
+# 时间 / 提示符
+# ======================
 [time]
 disabled = false
 time_format = "%R"

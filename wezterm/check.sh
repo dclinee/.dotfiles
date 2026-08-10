@@ -68,7 +68,7 @@ check_syntax() {
           all_valid=false
         fi
       else
-        check_ok "跳过$(basename "$file"): luac 不可用"
+        check_ok "跳过 $(basename "$file"): luac 不可用"
       fi
     fi
   done

@@ -66,21 +66,7 @@ return {
   },
   
   -- 键表配置 (模态操作)
-  key_tables = {
-    -- 调整窗格大小模式
-    resize_pane = {
-      { key = 'LeftArrow', action = act.AdjustPaneSize { 'Left', 1 } },
-      { key = 'h', action = act.AdjustPaneSize { 'Left', 1 } },
-      { key = 'RightArrow', action = act.AdjustPaneSize { 'Right', 1 } },
-      { key = 'l', action = act.AdjustPaneSize { 'Right', 1 } },
-      { key = 'UpArrow', action = act.AdjustPaneSize { 'Up', 1 } },
-      { key = 'k', action = act.AdjustPaneSize { 'Up', 1 } },
-      { key = 'DownArrow', action = act.AdjustPaneSize { 'Down', 1 } },
-      { key = 'j', action = act.AdjustPaneSize { 'Down', 1 } },
-      { key = 'Escape', action = 'PopKeyTable' },
-      { key = 'Enter', action = 'PopKeyTable' },
-    },
-  },
+  key_tables = {},
   
   -- 鼠标配置
   mouse_bindings = {
