@@ -1,5 +1,6 @@
 #!/usr/bin/env zsh
 # Zsh 性能分析脚本
+set -euo pipefail
 
 echo "=== Zsh 启动时间分析 ==="
 echo "冷启动（清除缓存后）:"

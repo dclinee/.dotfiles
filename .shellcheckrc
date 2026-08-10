@@ -1,0 +1,18 @@
+# ShellCheck 配置文件
+# https://github.com/koalaman/shellcheck#rc-files
+
+# 排除被 source 的库文件（无独立执行上下文）
+exclude_path=./.git,./emacs/elpa*,./~
+
+# 排除的规则（适用于本项目的设计决策）
+# SC1090: source 文件不存在（动态路径）
+# SC1091: 指定文件未找到（跨平台路径差异）
+# SC2154: 变量未定义（被 source 时由调用者定义）
+# SC2034: 变量未使用（库文件中定义供外部使用）
+disable=SC1090,SC1091,SC2154,SC2034
+
+# 检查级别（warning = warning + error）
+severity=warning
+
+# 输出格式
+format=gcc

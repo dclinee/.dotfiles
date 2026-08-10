@@ -1,0 +1,13 @@
+# asdf 版本管理配置
+# 安装 asdf: https://asdf-vm.com/guide/getting-started.html
+# 使用方法: 在项目根目录运行 `asdf install` 自动安装指定版本
+
+# 语言运行时
+python 3.12.4
+rust 1.79.0
+nodejs 22.5.1
+go 1.22.5
+
+# 基础工具
+tmux 3.4
+zsh 5.9

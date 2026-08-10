@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eo pipefail
+set -euo pipefail
 
 # 配置变量
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -168,7 +168,7 @@ main() {
   init_platform
 
   # 检查命令行参数
-  if [[ "$1" == "--dry-run" || "$1" == "--simulate" ]]; then
+  if [[ "${1:-}" == "--dry-run" || "${1:-}" == "--simulate" ]]; then
     simulate_install
     exit 0
   fi

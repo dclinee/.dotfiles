@@ -1,0 +1,43 @@
+FROM ubuntu:24.04
+
+# 防止交互式提示
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+
+# 安装基础依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    git \
+    zsh \
+    vim \
+    emacs \
+    tmux \
+    python3 \
+    python3-pip \
+    python3-venv \
+    build-essential \
+    procps \
+    locales \
+    && rm -rf /var/lib/apt/lists/*
+
+# 生成中文 UTF-8 语言环境
+RUN locale-gen zh_CN.UTF-8
+ENV LANG=zh_CN.UTF-8
+ENV LC_ALL=zh_CN.UTF-8
+
+# 创建非 root 用户
+RUN useradd -m -s /usr/bin/zsh -u 1000 dotfiles-tester
+
+# 复制项目文件
+COPY --chown=dotfiles-tester:dotfiles-tester . /home/dotfiles-tester/.dotfiles
+
+# 切换到非 root 用户
+USER dotfiles-tester
+WORKDIR /home/dotfiles-tester
+
+# 运行安装脚本
+RUN bash ~/.dotfiles/bootstrap.sh --all 2>&1 || true
+
+# 验证安装结果
+CMD ["bash", "-c", "~/.dotfiles/test_integration.sh"]

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# 本文件由调用者 source，预期调用者已设置 set -euo pipefail
 
 # ======================
 # Wezterm 模块公共加载器（内部文件）

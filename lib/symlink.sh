@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# 本文件由调用者 source，预期调用者已设置 set -euo pipefail
 
 # ======================
 # 公共符号链接函数库
