@@ -28,9 +28,8 @@
     quotepath = false
     excludesfile = ~/.dotfiles/git/.gitignore_global
     attributesfile = ~/.dotfiles/git/.gitattributes
-	hooksPath = /home/dclee/.dotfiles/git/hooks
     # Git hooks 目录（可选，集中管理公共 hooks）
-    # hooksPath = ~/.dotfiles/git/hooks
+    hooksPath = ~/.dotfiles/git/hooks
 
 # --- 初始化配置 ---
 [init]

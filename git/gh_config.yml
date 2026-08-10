@@ -42,5 +42,5 @@ http_timeout: 30
 # 企业实例默认域名:
 # gh_hostname: github.mycompany.com
 
-# --- 迁移 Token 存储位置 ---
+# --- CI/CD Token 认证 ---
 # gh auth login --with-token
