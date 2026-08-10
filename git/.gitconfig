@@ -135,7 +135,7 @@
 # 不使用明文 store（~/.git-credentials 明文存储密码/token）
 # macOS 用 Keychain（osxkeychain），Linux 用 libsecret 或内存缓存
 [credential]
-    helper = osxkeychain
+	helper = store
     # Linux 用户请改用以下配置（需安装 git-credential-libsecret）:
     # helper = /usr/share/doc/git/contrib/credential/libsecret/git-credential-libsecret
     # 或保守方案：内存缓存 1 小时

@@ -1,0 +1,35 @@
+# ======================
+# Python 全局 CLI 工具清单
+# ======================
+#
+# 格式: 包名|版本
+#   - 版本留空表示安装最新稳定版
+#   - 版本指定时使用 uv tool install --version <ver>
+#   - 以 # 开头的行为注释，自动跳过
+#
+# 安装方式: uv tool install（隔离环境，不污染全局）
+# 安装命令: python/install.sh 或 python/upgrade.sh
+
+# 代码格式化
+black|
+
+# Linter（替代 flake8/pylint，极快）
+ruff|
+
+# 类型检查
+mypy|
+
+# 增强 REPL
+ipython|
+
+# HTTP 客户端
+httpie|
+
+# Git hook 管理器
+pre-commit|
+
+# 文档工具
+mdformat|
+
+# Pydantic 数据模型 CLI
+pydantic-cli|

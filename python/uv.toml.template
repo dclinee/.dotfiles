@@ -1,0 +1,32 @@
+# uv 全局配置
+# 文档: https://docs.astral.sh/uv/concepts/config/
+
+# 国内镜像源（清华 TUNA）
+index-url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+extra-index-url = [
+  "https://mirrors.aliyun.com/pypi/simple/",
+  "https://pypi.mirrors.ustc.edu.cn/simple/",
+]
+
+# 信任国内镜像
+trusted-host = [
+  "pypi.tuna.tsinghua.edu.cn",
+  "mirrors.aliyun.com",
+  "pypi.mirrors.ustc.edu.cn",
+]
+
+# 缓存目录
+cache-dir = "~/.cache/uv"
+
+# 并发下载
+concurrency = 100
+
+# 解析器设置
+# uv 默认使用 uv-resolver（比 pip 更快）
+
+# Python 版本管理
+# 默认 Python 安装路径
+python-install-dir = "~/.local/share/uv/python"
+
+# 虚拟环境默认位置
+# 不在此处设置，每个项目独立管理

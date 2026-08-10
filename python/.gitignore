@@ -5,3 +5,16 @@ __pycache__/
 # 测试覆盖率
 .coverage
 coverage/
+
+# uv 运行时文件
+uv.lock
+.lock
+
+# 版本锁定文件（由 pin.sh 生成）
+versions.lock
+
+# 安装/卸载日志
+*.log
+
+# 备份文件
+*.bak

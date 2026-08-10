@@ -1,0 +1,78 @@
+# ======================
+# Python 代码质量工具配置
+# ======================
+#
+# 此文件为项目级配置模板，用于：
+#   - black: 代码格式化规则
+#   - ruff: 代码检查规则（替代 flake8/pylint/isort）
+#   - mypy: 类型检查规则
+#
+# 链接目标: ~/.config/python/pyproject.toml 或复制到项目根目录
+
+# ----- black 配置 -----
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | node_modules
+)/
+'''
+
+# ----- ruff 配置 -----
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# 启用规则集：
+# E: pycodestyle errors
+# W: pycodestyle warnings
+# F: pyflakes
+# I: isort
+# N: pep8-naming
+# B: bugbear
+# C4: comprehensions
+# UP: pyupgrade
+# RUF: ruff-specific
+select = ["E", "W", "F", "I", "N", "B", "C4", "UP", "RUF"]
+ignore = [
+  "E501",  # 行长由 black 处理
+  "B008",  # 函数默认值（如 FastAPI Depends）
+]
+
+[tool.ruff.lint.isort]
+known-first-party = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ----- mypy 配置 -----
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # 逐步启用，初期宽松
+ignore_missing_imports = true
+follow_imports = "silent"
+
+# ----- pytest 配置 -----
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]

@@ -317,40 +317,96 @@ install_python() {
     return 0
   fi
 
-  # pip 配置链接
+  # 优先使用 python/install.sh（集成 uv）
+  local py_installer="${DOTFILES_DIR}/python/install.sh"
+  if [[ -f "${py_installer}" ]]; then
+    echo_step "使用 python/install.sh 配置 Python 环境..."
+    if bash "${py_installer}" 2>>"${LOG_FILE}"; then
+      echo_success "Python 环境配置完成"
+      return 0
+    else
+      echo_warning "python/install.sh 执行失败，回退到手动配置"
+    fi
+  fi
+
+  # pip 配置链接（回退）
   mkdir -p "${HOME}/.pip"
   safe_symlink "${DOTFILES_DIR}/python/pip.conf" "${HOME}/.pip/pip.conf" || true
 
-  # 安装必装依赖（PEP 668 兼容：--user → pipx → venv 三级回退）
+  # uv 配置链接（回退）
+  if command -v uv > /dev/null 2>&1; then
+    local uv_config_dir="${HOME}/.config/uv"
+    mkdir -p "${uv_config_dir}"
+    safe_symlink "${DOTFILES_DIR}/python/uv.toml.template" "${uv_config_dir}/uv.toml" || true
+  fi
+
+  # pythonrc.py 链接（回退）
+  safe_symlink "${DOTFILES_DIR}/python/pythonrc.py" "${HOME}/.pythonrc.py" || true
+
+  # 安装必装依赖（PEP 668 兼容：uv → pipx → pip → venv 四级回退）
   if [[ -f "${DOTFILES_DIR}/python/requirements.txt" ]]; then
     echo_step "安装 Python 必装依赖..."
     local req_file="${DOTFILES_DIR}/python/requirements.txt"
+    local installed=false
 
-    # 工具：自动安装 pipx
-    _ensure_pipx() {
-      if command -v pipx > /dev/null 2>&1; then return 0; fi
-      echo_step "自动安装 pipx..."
-      if command -v brew > /dev/null 2>&1; then
-        brew install pipx > /dev/null 2>&1 || return 1
-      elif command -v apt > /dev/null 2>&1; then
-        sudo apt update -qq > /dev/null 2>&1 || true
-        sudo apt install -y -qq pipx > /dev/null 2>&1 || return 1
-      elif command -v dnf > /dev/null 2>&1; then
-        sudo dnf install -y pipx > /dev/null 2>&1 || return 1
-      elif command -v pacman > /dev/null 2>&1; then
-        sudo pacman -S --noconfirm python-pipx > /dev/null 2>&1 || return 1
+    # 方案 1: 使用 uv（最快）
+    if command -v uv > /dev/null 2>&1; then
+      local venv_dir="${HOME}/.venv-dotfiles"
+      echo_step "使用 uv 创建虚拟环境并安装依赖..."
+      if uv venv "${venv_dir}" 2>>"${LOG_FILE}" && \
+         uv pip install -r "${req_file}" 2>>"${LOG_FILE}"; then
+        local marker="${HOME}/.local/share/dotfiles-py-path"
+        mkdir -p "$(dirname "${marker}")"
+        printf '%s\n' "${venv_dir}/bin" > "${marker}"
+        installed=true
+      fi
+    fi
+
+    # 方案 2: 使用 pipx
+    if ! $installed; then
+      _ensure_pipx() {
+        if command -v pipx > /dev/null 2>&1; then return 0; fi
+        echo_step "自动安装 pipx..."
+        if command -v brew > /dev/null 2>&1; then
+          brew install pipx > /dev/null 2>&1 || return 1
+        elif command -v apt > /dev/null 2>&1; then
+          sudo apt update -qq > /dev/null 2>&1 || true
+          sudo apt install -y -qq pipx > /dev/null 2>&1 || return 1
+        elif command -v dnf > /dev/null 2>&1; then
+          sudo dnf install -y pipx > /dev/null 2>&1 || return 1
+        elif command -v pacman > /dev/null 2>&1; then
+          sudo pacman -S --noconfirm python-pipx > /dev/null 2>&1 || return 1
+        else
+          pip3 install --user pipx > /dev/null 2>&1 || return 1
+        fi
+        pipx ensurepath > /dev/null 2>&1 || true
+        if [[ -d "${HOME}/.local/bin" ]]; then
+          export PATH="${HOME}/.local/bin:${PATH}"
+        fi
+        command -v pipx > /dev/null 2>&1
+      }
+
+      local externally_managed=false
+      if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
+        externally_managed=true
+      fi
+
+      if $externally_managed; then
+        if _ensure_pipx; then
+          echo_step "使用 pipx 安装必装依赖..."
+          if pipx install --include-deps -r "${req_file}" 2>>"${LOG_FILE}"; then
+            installed=true
+          fi
+        fi
       else
-        pip3 install --user pipx > /dev/null 2>&1 || return 1
+        if pip3 install --user -r "${req_file}" 2>>"${LOG_FILE}"; then
+          installed=true
+        fi
       fi
-      pipx ensurepath > /dev/null 2>&1 || true
-      if [[ -d "${HOME}/.local/bin" ]]; then
-        export PATH="${HOME}/.local/bin:${PATH}"
-      fi
-      command -v pipx > /dev/null 2>&1
-    }
+    fi
 
-    # 工具：venv 兜底安装
-    _install_in_venv() {
+    # 方案 3: venv 兜底
+    if ! $installed; then
       local venv_dir
       if [[ "$(uname -s)" == "Darwin" ]]; then
         venv_dir="${HOME}/Library/Caches/dotfiles-py-venv"
@@ -364,63 +420,27 @@ install_python() {
         local marker="${HOME}/.local/share/dotfiles-py-path"
         mkdir -p "$(dirname "${marker}")"
         printf '%s\n' "${venv_dir}/bin" > "${marker}"
-        return 0
-      fi
-      return 1
-    }
-
-    local installed=false
-    local externally_managed=false
-    if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
-      externally_managed=true
-    fi
-
-    if $externally_managed; then
-      echo_warning "检测到 PEP 668 外部管理环境，跳过 --user 方案"
-      if _ensure_pipx; then
-        echo_step "使用 pipx 安装必装依赖..."
-        if pipx install --include-deps -r "${req_file}" 2>>"${LOG_FILE}"; then
-          installed=true
-        fi
-      fi
-    else
-      if pip3 install --user -r "${req_file}" 2>>"${LOG_FILE}"; then
-        installed=true
-      else
-        echo_warning "pip3 --user 失败，尝试 pipx"
-        if _ensure_pipx; then
-          if pipx install --include-deps -r "${req_file}" 2>>"${LOG_FILE}"; then
-            installed=true
-          fi
-        fi
-      fi
-    fi
-
-    if ! $installed; then
-      if _install_in_venv; then
-        echo_success "Python 基础依赖已安装到独立虚拟环境"
-        echo "  新开 zsh 会自动加载该 venv bin；当前会话执行:"
-        echo "    export PATH=\"\$(cat ~/.local/share/dotfiles-py-path):\$PATH\""
         installed=true
       fi
     fi
 
     if ! $installed; then
       echo_error "Python 必装依赖安装失败，请查看日志: ${LOG_FILE}"
-      echo "  备选 1: brew install pipx && pipx install --include-deps -r ${req_file}"
-      echo "  备选 2: python3 -m venv ~/.venv-dotfiles && source ~/.venv-dotfiles/bin/activate && pip install -r ${req_file}"
+      echo "  备选 1: 安装 uv 后重试: curl -LsSf https://astral.sh/uv/install.sh | sh"
+      echo "  备选 2: pip3 install --user -r ${req_file}"
+      echo "  备选 3: python3 -m venv ~/.venv-dotfiles && source ~/.venv-dotfiles/bin/activate && pip install -r ${req_file}"
       return 1
     fi
   fi
 
-  # 提示可选依赖（不自动安装，避免失败噪音）
+  # 提示可选依赖
   local optional_files=("requirements-dev.txt" "requirements-data.txt" "requirements-web.txt")
   local opt_file
   for opt_file in "${optional_files[@]}"; do
     if [[ -f "${DOTFILES_DIR}/python/${opt_file}" ]]; then
       echo_step "可选依赖（不自动安装）: ${opt_file}"
-      echo "  按需安装: pip3 install --user -r python/${opt_file}"
-      break  # 只提示一次
+      echo "  按需安装: uv pip install -r python/${opt_file}"
+      break
     fi
   done
 
