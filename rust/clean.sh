@@ -41,7 +41,7 @@ run_cmd() {
   if is_dry_run; then
     echo_detail "[dry-run] $*"
   else
-    eval "$@" 2>/dev/null || true
+    "$@" 2>/dev/null || true
   fi
 }
 
@@ -63,7 +63,7 @@ clean_cargo_cache() {
     local size
     size="$(du -sh "$cargo_cache" 2>/dev/null | awk '{print $1}')"
     echo_detail "registry/cache 大小: ${size}"
-    run_cmd "rm -rf ${cargo_cache}/*"
+    run_cmd rm -rf "${cargo_cache:?}"/*
     echo_success "已清理 registry/cache"
   else
     echo_skip "registry/cache 不存在"
@@ -73,7 +73,7 @@ clean_cargo_cache() {
     local size
     size="$(du -sh "$cargo_src" 2>/dev/null | awk '{print $1}')"
     echo_detail "registry/src 大小: ${size}"
-    run_cmd "rm -rf ${cargo_src}/*"
+    run_cmd rm -rf "${cargo_src:?}"/*
     echo_success "已清理 registry/src"
   else
     echo_skip "registry/src 不存在"
@@ -163,7 +163,7 @@ clean_rustup_temp() {
     local size
     size="$(du -sh "$rustup_tmp" 2>/dev/null | awk '{print $1}')"
     echo_detail "tmp 大小: ${size}"
-    run_cmd "rm -rf ${rustup_tmp}/*"
+    run_cmd rm -rf "${rustup_tmp:?}"/*
     echo_success "已清理 rustup/tmp"
   else
     echo_skip "rustup/tmp 不存在"

@@ -23,7 +23,7 @@ fi
 # 调试日志（提前定义，供初始化使用）
 _plugins_debug() {
   if [[ "${ZSH_DEBUG_PLUGINS:-0}" == "1" ]]; then
-    echo -e "\033[36m[PLUGIN DEBUG]\033[0m $*" >&2
+    printf '\033[36m[PLUGIN DEBUG]\033[0m %s\n' "$*" >&2
   fi
 }
 
@@ -60,9 +60,9 @@ _zinit_init() {
   fi
 
   if [[ -z "${zinit_zsh}" ]]; then
-    echo -e "\033[33m[WARN]\033[0m zinit 未安装，跳过插件加载" >&2
-    echo -e "\033[33m[INFO]\033[0m 安装方式: brew install zinit" >&2
-    echo -e "\033[33m[INFO]\033[0m 或: git clone https://github.com/zdharma-continuum/zinit.git ~/.zinit" >&2
+    printf '\033[33m[WARN]\033[0m %s\n' "zinit 未安装，跳过插件加载" >&2
+    printf '\033[33m[INFO]\033[0m %s\n' "安装方式: brew install zinit" >&2
+    printf '\033[33m[INFO]\033[0m %s\n' "或: git clone https://github.com/zdharma-continuum/zinit.git ~/.zinit" >&2
     return 1
   fi
 
@@ -95,10 +95,11 @@ zinit light zsh-users/zsh-history-substring-search
 zinit ice wait lucid
 zinit light wfxr/forgit
 
-# zsh-z - 智能目录跳转（首次使用 z 命令时加载）
-# 注：zoxide 已提供相同功能，zsh-z 作为 fallback
-zinit ice wait lucid
-zinit light agkozak/zsh-z
+# zsh-z - 智能目录跳转（仅在 zoxide 未安装时作为 fallback）
+if ! command -v zoxide > /dev/null 2>&1; then
+  zinit ice wait lucid
+  zinit light agkozak/zsh-z
+fi
 
 # fzf-tab - Tab 补全增强（首次触发 Tab 补全时加载）
 zinit ice wait lucid

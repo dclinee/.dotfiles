@@ -7,9 +7,12 @@ let s:plug_path = expand('~/.vim/autoload/plug.vim')
 if empty(glob(s:plug_path))
   if executable('curl')
     " 国内镜像优先，失败则直连官方；全部输出重定向到 /dev/null 避免干扰
-    silent execute '!curl -fLo ' . s:plug_path . ' --create-dirs --connect-timeout 10 --max-time 30 -s -S https://ghfast.top/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim >/dev/null 2>&1'
+    silent execute '!curl -fLo ' . s:plug_path . ' --create-dirs --connect-timeout 30 --max-time 60 -s -S https://ghproxy.net/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim >/dev/null 2>&1'
     if !filereadable(s:plug_path)
-      silent execute '!curl -fLo ' . s:plug_path . ' --create-dirs --connect-timeout 10 --max-time 30 -s -S https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim >/dev/null 2>&1'
+      silent execute '!curl -fLo ' . s:plug_path . ' --create-dirs --connect-timeout 30 --max-time 60 -s -S https://gh-proxy.com/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim >/dev/null 2>&1'
+    endif
+    if !filereadable(s:plug_path)
+      silent execute '!curl -fLo ' . s:plug_path . ' --create-dirs --connect-timeout 30 --max-time 60 -s -S https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim >/dev/null 2>&1'
     endif
   endif
   if !filereadable(s:plug_path)

@@ -164,6 +164,17 @@ _snapshot_paths() {
   done
 }
 
+# 跨平台反序输出（macOS 无 tac）
+_reverse_lines() {
+  if command -v tac >/dev/null 2>&1; then
+    tac "$1"
+  elif command -v tail >/dev/null 2>&1; then
+    tail -r "$1" 2>/dev/null
+  else
+    sed '1!G;h;$!d' "$1"
+  fi
+}
+
 # 回滚一个模块的修改（根据 manifest 逆序执行）
 _rollback_from_manifest() {
   local module_name="${1:-}"
@@ -177,7 +188,17 @@ _rollback_from_manifest() {
   fi
 
   # 从下往上处理（后装的先还原）
-  tac "${ROLLBACK_MANIFEST}" 2>/dev/null | while IFS='|' read -r action target snapshot; do
+  while IFS='|' read -r action target snapshot; do
+    # 跳过空行/未知格式
+    if [[ -z "$action" ]]; then
+      continue
+    fi
+    # 路径安全守卫：只允许操作 $HOME 下的路径
+    if [[ "$target" != "$HOME"/* ]]; then
+      echo_warning "跳过不安全路径: $target"
+      failed=$((failed + 1))
+      continue
+    fi
     case "$action" in
       REMOVE)
         # 安装前不存在 → 删掉这次安装创建的链接/文件
@@ -233,7 +254,7 @@ _rollback_from_manifest() {
         : # 空行或未知，忽略
         ;;
     esac
-  done
+  done < <(_reverse_lines "${ROLLBACK_MANIFEST}" 2>/dev/null)
 
   echo_warning "回滚完成: 恢复 ${restored} / 移除 ${removed} / 失败 ${failed}"
   [[ $failed -eq 0 ]]
@@ -692,7 +713,7 @@ install_python() {
 
     if ! $installed; then
       echo_error "Python 必装依赖安装失败，请查看日志: ${LOG_FILE}"
-      echo "  备选 1: pip3 install --user uv --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple"
+      echo "  备选 1: pipx install uv"
       echo "  备选 2: 官方脚本: curl -LsSf https://astral.sh/uv/install.sh | sh"
       echo "  备选 3: pip3 install --user -r ${req_file}"
       echo "  备选 4: python3 -m venv ~/.venv-dotfiles && source ~/.venv-dotfiles/bin/activate && pip install -r ${req_file}"
@@ -752,11 +773,16 @@ install_tmux() {
   if [[ ! -d "${tpm_dir}" ]] || [[ -z "$(ls -A "${tpm_dir}" 2>/dev/null)" ]]; then
     echo_step "安装 Tmux Plugin Manager (TPM)..."
     # 镜像源列表（GitHub 官方优先，国内镜像降级）
-    local tpm_mirrors=(
-      "https://github.com/tmux-plugins/tpm.git"
-      "https://ghfast.top/https://github.com/tmux-plugins/tpm.git"
-      "https://mirror.ghproxy.com/https://github.com/tmux-plugins/tpm.git"
-    )
+    local tpm_mirrors
+    if [[ -n "${NO_MIRROR:-}" ]]; then
+      tpm_mirrors=("https://github.com/tmux-plugins/tpm.git")
+    else
+      tpm_mirrors=(
+        "https://github.com/tmux-plugins/tpm.git"
+        "https://ghproxy.net/https://github.com/tmux-plugins/tpm.git"
+        "https://gh-proxy.com/https://github.com/tmux-plugins/tpm.git"
+      )
+    fi
     local tpm_cloned=false
     for tpm_url in "${tpm_mirrors[@]}"; do
       if git clone --depth 1 "${tpm_url}" "${tpm_dir}" 2>>"${LOG_FILE}"; then

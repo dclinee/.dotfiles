@@ -17,7 +17,7 @@ set -euo pipefail
 # shellcheck source=/dev/null
 source "$(dirname "$0")/_common.sh"
 
-LOG_FILE="/tmp/dotfiles_rust_install_$(date +%Y%m%d_%H%M%S).log"
+LOG_FILE="$(mktemp -t dotfiles_rust_install_XXXXXX.log 2>/dev/null || mktemp)"
 
 # ======================
 # 安装 rustup（Rust 工具链管理器）
@@ -49,11 +49,18 @@ install_rustup() {
   local rustup_url="https://sh.rustup.rs"
   local tmp_script
   tmp_script="$(mktemp)"
-  trap 'rm -f "${tmp_script}"' EXIT RETURN
+  trap "rm -f '${tmp_script}'" EXIT RETURN
+
+  # SJTU 镜像加速（受 NO_MIRROR 控制）
+  if [[ -z "${NO_MIRROR:-}" ]]; then
+    export RUSTUP_DIST_SERVER="https://mirrors.sjtug.sjtu.edu.cn/rust-static"
+    export RUSTUP_UPDATE_ROOT="https://mirrors.sjtug.sjtu.edu.cn/rust-static/rustup"
+  fi
 
   if ! curl -fsSL "${rustup_url}" -o "${tmp_script}" 2>>"${LOG_FILE}"; then
     echo_error "无法下载 rustup 安装脚本"
     echo "  手动安装: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+    rm -f "${tmp_script}"; trap - EXIT RETURN
     return 1
   fi
 
@@ -63,8 +70,11 @@ install_rustup() {
     source "${HOME}/.cargo/env" 2>/dev/null || true
   else
     echo_error "rustup 安装失败，请查看日志: ${LOG_FILE}"
+    rm -f "${tmp_script}"; trap - EXIT RETURN
     return 1
   fi
+
+  rm -f "${tmp_script}"; trap - EXIT RETURN
 }
 
 # ======================
@@ -74,7 +84,7 @@ install_components() {
   if has_rustup; then
     echo_step "安装 Rust 工具链组件（rustup 模式）..."
 
-    local components=("rustfmt" "clippy" "rust-src")
+    local components=("rustfmt" "clippy" "rust-src" "rust-analyzer")
     for comp in "${components[@]}"; do
       if rustup component add "${comp}" > /dev/null 2>&1; then
         echo_success "组件已安装: ${comp}"
@@ -106,11 +116,15 @@ install_components() {
 
     if ! command -v rust-analyzer > /dev/null 2>&1; then
       echo_step "安装 rust-analyzer..."
-      if has_cargo; then
-        cargo install rust-analyzer > /dev/null 2>&1 || {
+      if command -v brew > /dev/null 2>&1; then
+        brew install rust-analyzer > /dev/null 2>&1 || {
           echo_warning "rust-analyzer 安装失败"
-          echo "  可通过 brew 安装: brew install rust-analyzer"
+          echo "  可手动安装: brew install rust-analyzer"
         }
+      else
+        echo_warning "rust-analyzer 不可用（非 rustup 模式）"
+        echo "  macOS: brew install rust-analyzer"
+        echo "  或安装 rustup 后: rustup component add rust-analyzer"
       fi
     else
       echo_success "rust-analyzer 已可用"

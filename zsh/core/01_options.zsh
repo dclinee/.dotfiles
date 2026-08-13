@@ -62,7 +62,7 @@ if [[ -n "${_zsh_defer_source}" ]]; then
       compinit -u -d "${ZSH_COMPDUMP}"
     else
       # 跳过安全检查，直接加载已有 dump（最快）
-      compinit -C -d "${ZSH_COMPDUMP}" -s
+      compinit -C -d "${ZSH_COMPDUMP}"
     fi
   }
 
@@ -100,7 +100,7 @@ else
     compinit -u -d "${ZSH_COMPDUMP}"
   else
     # 缓存存在，使用 -C 跳过检查直接加载（最快路径）
-    compinit -C -d "${ZSH_COMPDUMP}" -s
+    compinit -C -d "${ZSH_COMPDUMP}"
   fi
 fi
 
@@ -167,7 +167,7 @@ setopt pushd_minus
 setopt pushd_silent
 
 # 输入/输出选项
-# 允许使用 ^D 退出 shell
+# 禁止使用 ^D 退出 shell（需 exit 显式退出）
 setopt ignore_eof
 # 允许使用 >! 和 >>! 强制覆盖文件
 setopt no_clobber

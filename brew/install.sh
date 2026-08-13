@@ -5,9 +5,12 @@ set -euo pipefail
 # 来源：https://mirrors.ustc.edu.cn/help/brew.git.html
 
 # 设置环境变量
-export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
-export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
-export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
+if [[ -z "${NO_MIRROR:-}" ]]; then
+  export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.ustc.edu.cn/brew.git"
+  export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.ustc.edu.cn/homebrew-core.git"
+  export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles"
+  export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
+fi
 
 # 安全下载并执行脚本（替代 curl | bash）
 _download_and_run() {
@@ -16,17 +19,16 @@ _download_and_run() {
   tmp_file="$(mktemp)"
   trap 'rm -f "${tmp_file}"' EXIT RETURN
 
-  echo "下载脚本: ${url}"
+  printf '下载脚本: %s\n' "${url}"
   if ! curl -fsSL "${url}" -o "${tmp_file}"; then
-    echo "错误: 下载失败 ${url}"
+    printf '错误: 下载失败 %s\n' "${url}"
     return 1
   fi
 
-  echo "执行下载的安装脚本..."
-  bash "${tmp_file}"
-  local rc=$?
+  printf '执行下载的安装脚本...\n'
+  bash "${tmp_file}" || return $?
   rm -f "${tmp_file}"
-  return $rc
+  return 0
 }
 
 # 自动判断系统类型
@@ -58,10 +60,11 @@ fi
 brew update
 
 printf '\n✅ Homebrew 安装完成！\n'
-echo "已配置以下镜像源："
-echo "  brew.git:       $HOMEBREW_BREW_GIT_REMOTE"
-echo "  homebrew-core:  $HOMEBREW_CORE_GIT_REMOTE"
-echo "  Bottles:        $HOMEBREW_BOTTLE_DOMAIN"
-echo ""
-echo "请将以下内容添加到你的 shell 配置文件中以持久化："
-echo '  eval "$(brew shellenv)"'
+printf '已配置以下镜像源：\n'
+printf '  brew.git:       %s\n' "${HOMEBREW_BREW_GIT_REMOTE:-}"
+printf '  homebrew-core:  %s\n' "${HOMEBREW_CORE_GIT_REMOTE:-}"
+printf '  Bottles:        %s\n' "${HOMEBREW_BOTTLE_DOMAIN:-}"
+printf '  API:            %s\n' "${HOMEBREW_API_DOMAIN:-}"
+printf '\n'
+printf '请将以下内容添加到你的 shell 配置文件中以持久化：\n'
+printf '  eval "$(brew shellenv)"\n'

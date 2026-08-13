@@ -107,7 +107,7 @@ docs: clarify cross-platform brew path detection
 - **路径**：Linux 用 `/home/linuxbrew/.linuxbrew`，macOS 用 `/opt/homebrew`（Apple Silicon）或 `/usr/local`（Intel）
 - **包管理器**：检测顺序为 brew → apt → dnf → pacman
 - **字体**：未安装 Nerd Font 时必须有降级方案
-- **镜像**：外部下载支持国内镜像降级（GitHub → ghfast.top → mirror.ghproxy.com）
+- **镜像**：外部下载支持国内镜像降级（GitHub → ghproxy.net → gh-proxy.com）
 
 ## ✅ Review Checklist
 

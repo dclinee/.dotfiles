@@ -78,17 +78,27 @@ _download_and_run() {
   shift
   local tmp_file
   tmp_file="$(mktemp)"
-  # trap 已保证临时文件被清理，函数体内不再手动 rm
-  trap 'rm -f "${tmp_file}"' EXIT RETURN
+  # 双引号烘烤路径，return 前清理 trap 避免污染调用者
+  trap "rm -f '${tmp_file}'" EXIT RETURN
 
   echo_step "下载脚本: ${url}"
   if ! curl -fsSL "${url}" -o "${tmp_file}" 2>>"${LOG_FILE}"; then
     echo_error "下载失败: ${url}"
+    rm -f "${tmp_file}"
+    trap - EXIT RETURN
     return 1
   fi
 
   printf "${BOLD}${CYAN}${ARROW} 执行脚本（参数: %s）...${RESET}\n" "$*"
-  bash "${tmp_file}" "$@" 2>>"${LOG_FILE}"
+  bash "${tmp_file}" "$@" 2>>"${LOG_FILE}" || {
+    local rc=$?
+    rm -f "${tmp_file}"
+    trap - EXIT RETURN
+    return $rc
+  }
+  rm -f "${tmp_file}"
+  trap - EXIT RETURN
+  return 0
 }
 
 # ======================
@@ -126,11 +136,16 @@ _install_zinit_manual() {
   fi
 
   # 镜像源列表（按优先级，GitHub 官方优先，国内镜像降级）
-  local mirrors=(
-    "https://github.com/zdharma-continuum/zinit.git"
-    "https://ghfast.top/https://github.com/zdharma-continuum/zinit.git"
-    "https://mirror.ghproxy.com/https://github.com/zdharma-continuum/zinit.git"
-  )
+  local mirrors
+  if [[ -n "${NO_MIRROR:-}" ]]; then
+    mirrors=("https://github.com/zdharma-continuum/zinit.git")
+  else
+    mirrors=(
+      "https://github.com/zdharma-continuum/zinit.git"
+      "https://ghproxy.net/https://github.com/zdharma-continuum/zinit.git"
+      "https://gh-proxy.com/https://github.com/zdharma-continuum/zinit.git"
+    )
+  fi
 
   local cloned=false
   for url in "${mirrors[@]}"; do
@@ -147,8 +162,8 @@ _install_zinit_manual() {
     # 添加到 ~/.zshrc.local（避免污染仓库内的 .zshrc 软链文件）
     local local_rc="${HOME}/.zshrc.local"
     if ! grep -q 'zinit' "$local_rc" 2>/dev/null; then
-      echo "# zinit 插件管理器（由 install.sh 自动添加）" >> "$local_rc"
-      echo "source ${zinit_dir}/zinit.zsh" >> "$local_rc"
+      printf '# zinit 插件管理器（由 install.sh 自动添加）\n' >> "$local_rc"
+      printf 'source %s/zinit.zsh\n' "${zinit_dir}" >> "$local_rc"
     fi
     echo_success "zinit 安装完成（手动）"
     echo_warning "请重启终端或执行: source ~/.zshrc"
@@ -229,7 +244,7 @@ init_zoxide() {
 # ======================
 main() {
   echo_title "Zsh 配置安装器"
-  echo "安装日志将保存到: ${LOG_FILE}"
+  printf '安装日志将保存到: %s\n' "${LOG_FILE}"
 
   # 创建必要的目录
   echo_step "创建必要目录..."

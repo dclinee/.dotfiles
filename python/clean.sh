@@ -36,15 +36,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# 执行或预览（复用 is_dry_run）
-run_cmd() {
-  if is_dry_run; then
-    echo_detail "[dry-run] $*"
-  else
-    eval "$@" 2>/dev/null || true
-  fi
-}
-
 # ======================
 # 清理 pip 缓存
 # ======================
@@ -56,7 +47,11 @@ clean_pip_cache() {
     local size
     size="$(du -sh "$pip_cache" 2>/dev/null | awk '{print $1}')"
     echo_detail "pip 缓存大小: ${size}"
-    run_cmd "rm -rf ${pip_cache}/*"
+    if is_dry_run; then
+      echo_detail "[dry-run] rm -rf ${pip_cache}/*"
+    else
+      rm -rf "${pip_cache:?}"/* 2>/dev/null || true
+    fi
     echo_success "已清理 pip 缓存"
   else
     echo_skip "pip 缓存目录不存在"
@@ -140,7 +135,7 @@ clean_redundant_tools() {
   # uv 工具列表
   if has_uv; then
     local installed_tools
-    installed_tools="$(uv tool list 2>/dev/null | awk -F'--' '{print $1}' | xargs)"
+    installed_tools="$(uv tool list 2>/dev/null | awk '{print $1}' | xargs)"
     for tool in $installed_tools; do
       [[ -z "$tool" ]] && continue
       local found=false

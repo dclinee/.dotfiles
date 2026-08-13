@@ -160,8 +160,8 @@ Zsh 插件管理有多种方案：oh-my-zsh、antigen、zinit、手动 git clone
 
 - Homebrew: 使用 USTC 镜像
 - Emacs 包: 使用清华镜像（gnu/nongnu/melpa）
-- GitHub 资源: 使用 ghfast.top/ghproxy.com 代理回退
-- 设置超时控制（--connect-timeout 15 --max-time 60）
+- GitHub 资源: 使用 ghproxy.net/gh-proxy.com 代理回退
+- 设置超时控制（--connect-timeout 30 --max-time 60）
 
 ### 后果
 

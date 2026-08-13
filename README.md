@@ -99,7 +99,7 @@ make help       # 查看所有可用命令
 
 ### 使用国内镜像加速
 
-安装脚本已内置国内镜像降级策略（GitHub → ghfast.top → mirror.ghproxy.com），
+安装脚本已内置国内镜像降级策略（GitHub → ghproxy.net → gh-proxy.com），
 无需额外配置。如遇 GitHub 下载缓慢，脚本会自动切换镜像源。
 
 ## 🎯 Zsh 部署详解

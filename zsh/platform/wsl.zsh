@@ -22,13 +22,23 @@ _win_add_path() {
 
 # Windows 系统目录（WSL 自动挂载 Windows C:\ → /mnt/c）
 WSL_WIN_ROOT="${WSL_WIN_ROOT:-/mnt/c}"
+if [[ -z "${WSL_WIN_USER:-}" ]]; then
+  local _wsl_user_cache="${HOME}/.cache/dotfiles_wsl_user"
+  if [[ -f "$_wsl_user_cache" ]]; then
+    WSL_WIN_USER="$(cat "$_wsl_user_cache" 2>/dev/null)"
+  else
+    WSL_WIN_USER="$(powershell.exe -NoProfile -Command 'echo $env:USERNAME' 2>/dev/null | tr -d '\r')"
+    mkdir -p "$(dirname "$_wsl_user_cache")" 2>/dev/null
+    echo "$WSL_WIN_USER" > "$_wsl_user_cache" 2>/dev/null
+  fi
+fi
 if [[ -d "$WSL_WIN_ROOT/Windows/System32" ]]; then
   _win_add_path \
     "$WSL_WIN_ROOT/Windows/System32" \
     "$WSL_WIN_ROOT/Windows" \
     "$WSL_WIN_ROOT/Windows/System32/Wbem" \
     "$WSL_WIN_ROOT/Windows/System32/WindowsPowerShell/v1.0" \
-    "$WSL_WIN_ROOT/Users/${WSL_WIN_USER:-$(powershell.exe -NoProfile -Command '$env:UserName' 2>/dev/null | tr -d '\r')}/AppData/Local/Microsoft/WindowsApps" \
+    "$WSL_WIN_ROOT/Users/${WSL_WIN_USER}/AppData/Local/Microsoft/WindowsApps" \
     "$WSL_WIN_ROOT/Program Files/Git/cmd"
 fi
 

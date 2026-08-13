@@ -17,13 +17,13 @@ if [[ -f "${_COMMON_LIB}" ]]; then
   # shellcheck source=/dev/null
   source "${_COMMON_LIB}"
 else
-  echo "错误: 找不到 ${_COMMON_LIB}" >&2
+  printf '错误: 找不到 %s\n' "${_COMMON_LIB}" >&2
   exit 1
 fi
 
 # 开始安装
 echo_title "Wezterm 配置安装器"
-echo "安装日志将保存到: ${LOG_FILE}"
+printf '安装日志将保存到: %s\n' "${LOG_FILE}"
 
 # 创建必要的目录
 echo_step "创建必要目录..."

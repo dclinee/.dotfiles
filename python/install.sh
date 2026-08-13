@@ -24,7 +24,7 @@ set -euo pipefail
 # shellcheck source=/dev/null
 source "$(dirname "$0")/_common.sh"
 
-LOG_FILE="/tmp/dotfiles_python_install_$(date +%Y%m%d_%H%M%S).log"
+LOG_FILE="$(mktemp -t dotfiles_python_install_XXXXXX.log 2>/dev/null || mktemp)"
 
 # ======================
 # 参数解析
@@ -49,12 +49,10 @@ done
 # ======================
 # 安装 uv
 #
-# 速度优先级（国内环境实测）：
-#   1. pip3 install --user uv --break-system-packages  ← 走 PyPI 镜像（清华），~4 秒完成
-#   2. GitHub Releases 二进制直链（ghproxy 加速）       ← 从国内代理下载二进制
-#   3. 官方脚本 astral.sh                                ← GitHub Releases（fallback）
-#
-# 注意: Homebrew Python 受 PEP 668 限制，pip install 需要 --break-system-packages 标志
+# 优先级（遵循 PEP 668，不使用 --break-system-packages）：
+#   1. 官方脚本 astral.sh（curl 下载 + sh 执行，不触碰系统 Python）  ← 推荐
+#   2. pipx install uv（需 pipx 已安装）                          ← 隔离环境
+#   3. 提示用户安装 pipx                                          ← 不使用 --break-system-packages
 # ======================
 install_uv() {
   if has_uv; then
@@ -64,125 +62,65 @@ install_uv() {
 
   echo_step "安装 uv..."
 
-  # ---------- 方案 1: pip3 --user（最快，走 PyPI 镜像） ----------
-  if has_pip; then
-    echo_detail "方案 1/3: pip3 install --user uv（推荐，走清华镜像）"
-    if is_dry_run; then
-      echo_detail "[dry-run] pip3 install --user uv --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple"
-      _register_uv_path
-      return 0
-    fi
-
-    # --break-system-packages: 绕过 Homebrew Python 的 PEP 668 限制
-    # 优先尝试清华镜像，失败回退到默认源
-    if pip3 install --user uv --break-system-packages \
-        -i https://pypi.tuna.tsinghua.edu.cn/simple \
-        --trusted-host pypi.tuna.tsinghua.edu.cn 2>>"${LOG_FILE}" \
-      || pip3 install --user uv --break-system-packages 2>>"${LOG_FILE}"; then
-      if _register_uv_path; then
-        echo_success "uv 安装完成（pip3 方式）"
-        return 0
-      fi
-    else
-      echo_warning "pip3 安装 uv 失败，切换方案 2"
-    fi
-  else
-    echo_detail "方案 1/3 跳过: pip3 不可用"
-  fi
-
-  # ---------- 方案 2: GitHub Releases 二进制直链（ghproxy 加速） ----------
-  echo_detail "方案 2/3: GitHub Releases 二进制（ghproxy 加速）"
-  local uv_arch uv_os
-  uv_os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-  case "$(uname -m)" in
-    x86_64|amd64)  uv_arch="x86_64" ;;
-    aarch64|arm64) uv_arch="aarch64" ;;
-    *)             echo_warning "不支持的架构: $(uname -m)，跳过方案 2" ;;
-  esac
-
-  if [[ -n "${uv_arch:-}" ]]; then
-    # GitHub Releases 标准命名格式: uv-x86_64-unknown-linux-gnu.tar.gz
-    local uv_filename="uv-${uv_arch}-unknown-${uv_os}-gnu.tar.gz"
-    # ghproxy 加速 GitHub Releases 下载
-    local uv_url="https://ghproxy.com/https://github.com/astral-sh/uv/releases/latest/download/${uv_filename}"
-    local uv_tmp
-    uv_tmp="$(mktemp -d)"
-    local _uv_tmpdir="${uv_tmp}"
-    trap "rm -rf '${_uv_tmpdir}'" EXIT RETURN
-
-    if is_dry_run; then
-      echo_detail "[dry-run] curl -fsSL ${uv_url} | tar -xz"
-      trap - EXIT RETURN
-      rm -rf "${uv_tmp}"
-      _register_uv_path
-      return 0
-    fi
-
-    if curl -fsSL --connect-timeout 10 --max-time 120 "${uv_url}" -o "${uv_tmp}/uv.tar.gz" 2>>"${LOG_FILE}"; then
-      if tar -xzf "${uv_tmp}/uv.tar.gz" -C "${uv_tmp}" 2>>"${LOG_FILE}"; then
-        local uv_bin_path
-        uv_bin_path="$(find "${uv_tmp}" -name uv -type f -executable 2>/dev/null | head -1)"
-        if [[ -n "$uv_bin_path" ]]; then
-          mkdir -p "${HOME}/.local/bin"
-          cp "$uv_bin_path" "${HOME}/.local/bin/uv"
-          chmod +x "${HOME}/.local/bin/uv"
-          ln -sf "${HOME}/.local/bin/uv" "${HOME}/.local/bin/uvx" 2>/dev/null || true
-          if _register_uv_path; then
-            trap - EXIT RETURN
-            rm -rf "${uv_tmp}"
-            echo_success "uv 安装完成（ghproxy 加速）"
-            return 0
-          fi
-        fi
-      fi
-    else
-      echo_warning "ghproxy 下载失败，切换方案 3"
-    fi
-    trap - EXIT RETURN
-    rm -rf "${uv_tmp}"
-  fi
-
-  # ---------- 方案 3: 官方脚本（GitHub Releases，fallback） ----------
-  echo_detail "方案 3/3: 官方安装脚本（astral.sh / GitHub Releases）"
+  # ---------- 方案 1: 官方脚本（不触碰系统 Python，推荐） ----------
+  echo_detail "方案 1/3: curl -LsSf https://astral.sh/uv/install.sh | sh"
   local install_script_url="https://astral.sh/uv/install.sh"
   local tmp_script
   tmp_script="$(mktemp)"
   local _uv_tmp="${tmp_script}"
   trap "rm -f '${_uv_tmp}'" EXIT RETURN
 
-  if ! curl -fsSL --connect-timeout 15 --max-time 300 "${install_script_url}" -o "${tmp_script}" 2>>"${LOG_FILE}"; then
-    echo_error "无法下载 uv 安装脚本"
-    echo "  推荐手动方案 1: pip3 install --user uv --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple"
-    echo "  推荐手动方案 2: curl -fsSL https://ghproxy.com/https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz | tar -xz"
-    echo "  官方脚本方案: curl -LsSf https://astral.sh/uv/install.sh | sh"
-    trap - EXIT RETURN
-    rm -f "${tmp_script}"
-    return 1
-  fi
-
   if is_dry_run; then
-    echo_detail "[dry-run] 将执行: sh ${tmp_script}"
+    echo_detail "[dry-run] curl -LsSf ${install_script_url} | sh"
     trap - EXIT RETURN
     rm -f "${tmp_script}"
-    _register_uv_path
+    _register_uv_path || true
     return 0
   fi
 
-  if sh "${tmp_script}" 2>>"${LOG_FILE}"; then
+  if curl -fsSL --connect-timeout 15 --max-time 300 "${install_script_url}" -o "${tmp_script}" 2>>"${LOG_FILE}" \
+      && sh "${tmp_script}" 2>>"${LOG_FILE}"; then
     trap - EXIT RETURN
     rm -f "${tmp_script}"
-    _register_uv_path
-    echo_success "uv 安装完成（官方脚本）"
-    return 0
+    if _register_uv_path; then
+      echo_success "uv 安装完成（官方脚本）"
+      return 0
+    fi
   else
-    trap - EXIT RETURN
-    rm -f "${tmp_script}"
-    echo_error "uv 安装失败（三种方案均失败）"
-    echo "  推荐手动方案 1: pip3 install --user uv --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple"
-    echo "  推荐手动方案 2: curl -fsSL https://ghproxy.com/https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz | tar -xz"
-    echo "  官方脚本方案: curl -LsSf https://astral.sh/uv/install.sh | sh"
-    return 1
+    echo_warning "官方脚本安装失败，切换方案 2"
   fi
+  trap - EXIT RETURN
+  rm -f "${tmp_script}"
+
+  # ---------- 方案 2: pipx install uv（需 pipx 已安装） ----------
+  if has_pipx; then
+    echo_detail "方案 2/3: pipx install uv"
+    if is_dry_run; then
+      echo_detail "[dry-run] pipx install uv"
+      _register_uv_path || true
+      return 0
+    fi
+
+    if pipx install uv 2>>"${LOG_FILE}"; then
+      if _register_uv_path; then
+        echo_success "uv 安装完成（pipx 方式）"
+        return 0
+      fi
+    else
+      echo_warning "pipx 安装 uv 失败，切换方案 3"
+    fi
+  else
+    echo_detail "方案 2/3 跳过: pipx 不可用"
+  fi
+
+  # ---------- 方案 3: 提示用户安装 pipx ----------
+  echo_error "uv 安装失败（前两种方案均失败）"
+  echo "  建议先安装 pipx，再重试:"
+  echo "    macOS:  brew install pipx"
+  echo "    通用:   python3 -m pip install --user pipx"
+  echo "  安装 pipx 后执行: pipx install uv"
+  echo "  或使用官方脚本: curl -LsSf https://astral.sh/uv/install.sh | sh"
+  return 1
 }
 
 # 辅助: 确保 ~/.local/bin 在 PATH 中，并 has_uv 可识别
@@ -199,6 +137,7 @@ _register_uv_path() {
 # 配置 uv 镜像源
 # ======================
 configure_uv_mirror() {
+  [[ -n "${NO_MIRROR:-}" ]] && { echo_skip "NO_MIRROR 已设置，跳过镜像配置"; return 0; }
   echo_step "配置 uv 镜像源..."
 
   local uv_config_dir="${HOME}/.config/uv"
@@ -217,6 +156,7 @@ configure_uv_mirror() {
 # 配置 pip 镜像源（向后兼容）
 # ======================
 configure_pip_mirror() {
+  [[ -n "${NO_MIRROR:-}" ]] && { echo_skip "NO_MIRROR 已设置，跳过镜像配置"; return 0; }
   echo_step "配置 pip 镜像源..."
 
   local pip_config_dir="${HOME}/.pip"

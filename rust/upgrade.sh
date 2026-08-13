@@ -55,7 +55,7 @@ upgrade_toolchain() {
   local old_version
   old_version="$(rustc --version 2>/dev/null || echo '未安装')"
 
-  rustup update stable 2>/dev/null
+  rustup update stable 2>/dev/null || echo_warning "Rust 工具链更新失败，请手动执行: rustup update stable"
 
   local new_version
   new_version="$(rustc --version 2>/dev/null || echo '未知')"
@@ -91,13 +91,24 @@ upgrade_tools() {
     [[ -z "$name" ]] && continue
     count=$((count + 1))
 
-    printf "${BOLD}${CYAN}${ARROW} 升级 %s...${RESET}\n" "${name}"
-    if cargo install "${name}" --locked --force > /dev/null 2>&1; then
-      echo_success "${name} 已更新"
-      updated=$((updated + 1))
+    if [[ -n "$version" ]]; then
+      printf "${BOLD}${CYAN}${ARROW} 升级 %s@%s...${RESET}\n" "${name}" "${version}"
+      if cargo install "${name}" --version "${version}" --locked --force > /dev/null 2>&1; then
+        echo_success "${name}@${version} 已更新"
+        updated=$((updated + 1))
+      else
+        echo_warning "${name}@${version} 升级失败"
+        skipped=$((skipped + 1))
+      fi
     else
-      echo_warning "${name} 升级失败"
-      skipped=$((skipped + 1))
+      printf "${BOLD}${CYAN}${ARROW} 升级 %s...${RESET}\n" "${name}"
+      if cargo install "${name}" --locked --force > /dev/null 2>&1; then
+        echo_success "${name} 已更新"
+        updated=$((updated + 1))
+      else
+        echo_warning "${name} 升级失败"
+        skipped=$((skipped + 1))
+      fi
     fi
   done < <(read_tools_list)
 

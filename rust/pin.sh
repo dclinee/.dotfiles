@@ -70,7 +70,7 @@ do_pin() {
 
       # 组件列表
       echo "[components]"
-      rustup component list 2>/dev/null | grep 'installed$' | sed 's/ .*//' | while read -r comp; do
+      rustup component list 2>/dev/null | grep '(installed)' | sed 's/ .*//' | while read -r comp; do
         echo "  ${comp}"
       done
       echo ""
@@ -81,8 +81,7 @@ do_pin() {
       echo "[tools]"
       if cargo install --list 2>/dev/null | grep -E '^[a-z]'; then
         cargo install --list 2>/dev/null | awk '
-          /^[a-z]/ { name=$1 }
-          /version:/ { ver=$3; gsub(/"/, "", ver); print "  "name" = "ver }
+          /^[a-z]/ { name=$1; ver=$2; gsub(/^v|:$/, "", ver); print "  "name" = "ver }
         '
       else
         echo "  # 无已安装的 cargo 工具"
@@ -189,7 +188,7 @@ do_diff() {
 
     if $tools_section && [[ -n "$key" ]]; then
       local current_ver
-      current_ver="$(cargo install --list 2>/dev/null | awk -v t="$key" '$1==t {found=1} found && /version:/ {print $3; gsub(/"/,""); exit}' | tr -d '"')"
+      current_ver="$(cargo install --list 2>/dev/null | awk -v t="$key" '$1==t {ver=$2; gsub(/^v|:$/, "", ver); print ver}')"
       if [[ -z "$current_ver" ]]; then
         echo_warning "  ${key}: ${value} → 未安装"
         changed=$((changed + 1))

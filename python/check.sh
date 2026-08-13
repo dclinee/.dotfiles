@@ -153,7 +153,7 @@ check_tools() {
     [[ -z "$name" ]] && continue
     if command -v "$name" > /dev/null 2>&1; then
       check_ok "已安装: ${name}"
-    elif has_uv && uv tool list 2>/dev/null | grep -q "^${name}"; then
+    elif has_uv && uv tool list 2>/dev/null | grep -qw "^${name}"; then
       check_ok "已安装（uv tool）: ${name}"
     elif has_pipx && pipx list 2>/dev/null | grep -q "package ${name}"; then
       check_ok "已安装（pipx）: ${name}"

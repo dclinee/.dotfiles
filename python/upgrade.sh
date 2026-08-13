@@ -86,7 +86,7 @@ upgrade_deps() {
   local pip_cmd="${venv_dir}/bin/pip"
   if has_uv; then
     echo_detail "使用 uv 升级..."
-    if uv pip install --upgrade -r "$req_file" 2>/dev/null; then
+    if uv pip install --python "${venv_dir}/bin/python" --upgrade -r "$req_file" 2>/dev/null; then
       echo_success "venv 依赖已升级"
     else
       echo_warning "uv pip upgrade 失败，尝试 pip"

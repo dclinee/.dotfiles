@@ -136,7 +136,7 @@ check_tools() {
 
   while read -r name version; do
     [[ -z "$name" ]] && continue
-    if command -v "${name}" > /dev/null 2>&1 || cargo install --list 2>/dev/null | grep -q "^${name}"; then
+    if command -v "${name}" > /dev/null 2>&1 || cargo install --list 2>/dev/null | grep -qw "^${name}"; then
       check_ok "已安装: ${name}"
     else
       check_warn "未安装: ${name}"

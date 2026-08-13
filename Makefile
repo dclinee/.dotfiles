@@ -10,6 +10,7 @@
 .DEFAULT_GOAL := help
 
 # 颜色定义（printf 格式串使用，避免 echo -e 跨 shell 不一致）
+RED    := \033[31m
 CYAN   := \033[36m
 GREEN  := \033[32m
 YELLOW := \033[33m

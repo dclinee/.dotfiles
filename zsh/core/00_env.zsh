@@ -59,7 +59,7 @@ if [[ -d "${PYENV_ROOT}/bin" ]]; then
   pyenv() {
     unset -f pyenv
     eval "$(command pyenv init -)" 2>/dev/null || true
-    if command -v pyenv-virtualenv > /dev/null 2>&1; then
+    if pyenv commands 2>/dev/null | grep -q virtualenv; then
       eval "$(pyenv virtualenv-init -)" 2>/dev/null || true
     fi
     pyenv "$@"

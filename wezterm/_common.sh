@@ -13,7 +13,7 @@ DOTFILES_ROOT="${DOTFILES_ROOT:-$(cd "${WEZTERM_DIR}/.." && pwd)}"
 
 # shellcheck source=/dev/null
 source "${DOTFILES_ROOT}/lib/common.sh" || {
-  echo "ERROR: 无法加载 lib/common.sh" >&2
+  printf 'ERROR: 无法加载 lib/common.sh\n' >&2
   exit 1
 }
 

@@ -79,7 +79,7 @@ install_emacs() {
     major_version="$(emacs --version 2>/dev/null | head -1 | grep -o 'GNU Emacs [0-9]*' | grep -o '[0-9]*')"
     if [[ -n "${major_version}" ]] && [[ "${major_version}" -lt 26 ]]; then
       echo_warning "Emacs 版本 ${major_version} 低于 26，部分功能可能不可用"
-      echo "  建议升级: brew install emacs 或从源码编译"
+      printf '%s\n' "  建议升级: brew install emacs 或从源码编译"
     fi
     return 0
   fi
@@ -96,9 +96,9 @@ install_emacs() {
     sudo pacman -S --noconfirm emacs 2>>"${LOG_FILE}" && echo_success "Emacs 安装完成（pacman）"
   else
     echo_error "无法自动安装 Emacs，请手动安装"
-    echo "  macOS:  brew install emacs"
-    echo "  Ubuntu: sudo apt install emacs"
-    echo "  Arch:   sudo pacman -S emacs"
+    printf '%s\n' "  macOS:  brew install emacs"
+    printf '%s\n' "  Ubuntu: sudo apt install emacs"
+    printf '%s\n' "  Arch:   sudo pacman -S emacs"
     return 1
   fi
 }
@@ -222,14 +222,14 @@ bootstrap_packages() {
   fi
 
   echo_step "首次启动 Emacs（更新包索引）..."
-  echo "  日志: ${LOG_FILE}"
+  printf '  日志: %s\n' "${LOG_FILE}"
 
   # 批量模式更新包索引
   if emacs --batch --eval "(package-refresh-contents)" 2>>"${LOG_FILE}"; then
     echo_success "包索引已更新"
   else
     echo_warning "包索引更新失败，Emacs 首次启动时会自动安装"
-    echo "  可手动执行: emacs --batch --eval \"(package-refresh-contents)\""
+    printf '%s\n' "  可手动执行: emacs --batch --eval \"(package-refresh-contents)\""
   fi
 }
 
@@ -238,8 +238,8 @@ bootstrap_packages() {
 # ======================
 main() {
   echo_title "Emacs 配置安装器"
-  echo "安装日志: ${LOG_FILE}"
-  echo ""
+  printf '安装日志: %s\n' "${LOG_FILE}"
+  printf '\n'
 
   # 1. 安装 Emacs
   install_emacs
@@ -261,23 +261,23 @@ main() {
 
   echo_title "Emacs 配置安装完成"
   printf "${GREEN}${CHECK} ${BOLD}Emacs 配置完成！${RESET}\n"
-  echo ""
+  printf '\n'
   printf "${BOLD}验证:${RESET}\n"
-  echo "  emacs --version"
-  echo "  emacs &"
-  echo ""
+  printf '%s\n' "  emacs --version"
+  printf '%s\n' "  emacs &"
+  printf '\n'
   printf "${BOLD}首次启动:${RESET}\n"
-  echo "  Emacs 会自动安装配置中声明的所有包"
-  echo "  可能需要几分钟，请耐心等待"
-  echo ""
+  printf '%s\n' "  Emacs 会自动安装配置中声明的所有包"
+  printf '%s\n' "  可能需要几分钟，请耐心等待"
+  printf '\n'
   printf "${BOLD}配置文件位置:${RESET}\n"
-  echo "  ~/.config/emacs/init.el          # 主入口"
-  echo "  ~/.config/emacs/early-init.el    # 早期初始化"
-  echo "  ~/.config/emacs/lisp/            # 模块化配置（init-*.el）"
-  echo "  ~/.config/emacs/site-lisp/       # 本地扩展"
-  echo "  ~/.config/emacs/lisp/init-local.el  # 本地自定义（可选）"
-  echo ""
-  echo "安装日志: ${LOG_FILE}"
+  printf '%s\n' "  ~/.config/emacs/init.el          # 主入口"
+  printf '%s\n' "  ~/.config/emacs/early-init.el    # 早期初始化"
+  printf '%s\n' "  ~/.config/emacs/lisp/            # 模块化配置（init-*.el）"
+  printf '%s\n' "  ~/.config/emacs/site-lisp/       # 本地扩展"
+  printf '%s\n' "  ~/.config/emacs/lisp/init-local.el  # 本地自定义（可选）"
+  printf '\n'
+  printf '安装日志: %s\n' "${LOG_FILE}"
   echo_separator
 }
 

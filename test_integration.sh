@@ -10,10 +10,10 @@ check() {
   local desc="$1"
   local condition="$2"
   if eval "$condition"; then
-    echo "✓ $desc"
+    printf '✓ %s\n' "$desc"
     PASS=$((PASS + 1))
   else
-    echo "✗ $desc"
+    printf '✗ %s\n' "$desc"
     FAIL=$((FAIL + 1))
   fi
 }
@@ -55,9 +55,13 @@ check "rust ftplugin 存在" "[[ -f ${DOTFILES_DIR}/vim/ftplugin/rust.vim ]]"
 
 # 4. Git 配置验证
 echo "--- Git 配置 ---"
-check "git config 可读取" "git config --global user.name > /dev/null 2>&1 || true"
+check "git config 可读取" "git config --global user.name > /dev/null 2>&1"
 check "hooksPath 配置正确" "git config --global core.hooksPath 2>/dev/null | grep -q 'dotfiles/git/hooks'"
-check "credential.helper 为 cache" "git config --global credential.helper 2>/dev/null | grep -q cache"
+if [[ "$(uname)" == "Darwin" ]]; then
+  check "Git credential helper 使用 osxkeychain" "git config --global credential.helper 2>/dev/null | grep -q osxkeychain"
+else
+  check "Git credential helper 使用 libsecret" "git config --global credential.helper 2>/dev/null | grep -q libsecret"
+fi
 check "pre-commit hook 可执行" "[[ -x ${DOTFILES_DIR}/git/hooks/pre-commit ]]"
 check "commit-msg hook 可执行" "[[ -x ${DOTFILES_DIR}/git/hooks/commit-msg ]]"
 check "pre-push hook 可执行" "[[ -x ${DOTFILES_DIR}/git/hooks/pre-push ]]"
@@ -81,14 +85,14 @@ check "install.sh 存在" "[[ -f ${DOTFILES_DIR}/python/install.sh ]]"
 
 # 7. Rust 配置验证
 echo "--- Rust 配置 ---"
-check "cargo 命令可用" "command -v cargo > /dev/null 2>&1 || true"
+check "cargo 命令可用" "command -v cargo > /dev/null 2>&1"
 check "install.sh 存在" "[[ -f ${DOTFILES_DIR}/rust/install.sh ]]"
 check "rustfmt.toml 存在" "[[ -f ${DOTFILES_DIR}/rust/rustfmt.toml ]]"
 check "clippy.toml 存在" "[[ -f ${DOTFILES_DIR}/rust/clippy.toml ]]"
 
 # 8. WezTerm 配置验证
 echo "--- WezTerm 配置 ---"
-check ".wezterm.lua 语法正确" "wezterm --version > /dev/null 2>&1 || true"
+check ".wezterm.lua 语法正确" "wezterm --version > /dev/null 2>&1"
 check "core 目录存在" "[[ -d ${DOTFILES_DIR}/wezterm/core ]]"
 check "platform 目录存在" "[[ -d ${DOTFILES_DIR}/wezterm/platform ]]"
 check "00_basic.lua 存在" "[[ -f ${DOTFILES_DIR}/wezterm/core/00_basic.lua ]]"
@@ -104,7 +108,7 @@ check "tmux 命令可用" "command -v tmux > /dev/null 2>&1"
 echo "--- Emacs 配置 ---"
 check "init.el 链接存在" "[[ -L ${HOME}/.emacs.d/init.el ]]"
 check "early-init.el 存在" "[[ -f ${HOME}/.emacs.d/early-init.el ]]"
-check "init.el 语法可编译" "emacs --batch -l ${HOME}/.emacs.d/init.el 2>/dev/null || true"
+check "init.el 语法可编译" "emacs --batch -l ${HOME}/.emacs.d/init.el 2>/dev/null"
 
 # 11. lib 库验证
 echo "--- 公共库 ---"
@@ -137,17 +141,17 @@ check "PATH 包含 .local/bin" "zsh -c 'echo \$PATH' 2>/dev/null | grep -q '.loc
 check "EDITOR 已设置" "zsh -ic 'echo \$EDITOR' 2>/dev/null | grep -q '.' || true"
 
 echo ""
-echo "=== 测试结果 ==="
-echo "✓ 通过: $PASS"
-echo "✗ 失败: $FAIL"
-echo "总计: $((PASS + FAIL))"
+printf '=== 测试结果 ===\n'
+printf '✓ 通过: %s\n' "$PASS"
+printf '✗ 失败: %s\n' "$FAIL"
+printf '总计: %s\n' "$((PASS + FAIL))"
 
 if [[ $FAIL -gt 0 ]]; then
   echo ""
-  echo "❌ 有 $FAIL 个测试失败"
+  printf '❌ 有 %s 个测试失败\n' "$FAIL"
   exit 1
 else
   echo ""
-  echo "✅ 所有测试通过"
+  printf '✅ 所有测试通过\n'
   exit 0
 fi

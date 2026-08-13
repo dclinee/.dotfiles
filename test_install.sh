@@ -186,7 +186,7 @@ INNEREOF
     ;;
   *)
     echo "[MOCK] brew $* - success" >&2
-    return 0
+    exit 0
     ;;
 esac
 MOCK_EOF
@@ -196,7 +196,7 @@ MOCK_EOF
   cat > "$TEST_DIR/bin/git" << 'MOCK_EOF'
 #!/usr/bin/env bash
 if [[ "$1" == "clone" ]]; then
-  local repo="" dest=""
+  repo="" dest=""
   for arg in "$@"; do
     if [[ "$arg" =~ ^https?:// ]]; then
       repo="$arg"
@@ -209,7 +209,7 @@ if [[ "$1" == "clone" ]]; then
   if [[ -n "$dest" ]]; then
     mkdir -p "$dest/.git"
     echo "[MOCK] git clone $repo -> $dest" >&2
-    return 0
+    exit 0
   fi
 fi
 echo "[MOCK] git $*" >&2
@@ -221,7 +221,7 @@ MOCK_EOF
 #!/usr/bin/env bash
 echo "[MOCK] zsh $*" >&2
 if [[ "$1" == "-n" ]]; then
-  return 0
+  exit 0
 fi
 MOCK_EOF
   chmod +x "$TEST_DIR/bin/zsh"
@@ -679,10 +679,17 @@ test_install_simulated() {
 
   local install_script="$DOTFILES_DIR/zsh/install.sh"
 
-  # 运行 install.sh (带超时保护)
+  # 运行 install.sh (带超时保护，兼容 macOS 无 timeout 的情况)
   log_info "执行 install.sh..."
-  local output
-  if output=$(HOME="$TEST_DIR/home" PATH="$TEST_DIR/bin:$PATH" timeout 30 bash "$install_script" 2>&1); then
+  local output runner
+  if command -v timeout >/dev/null 2>&1; then
+    runner=(timeout 30)
+  elif command -v gtimeout >/dev/null 2>&1; then
+    runner=(gtimeout 30)
+  else
+    runner=()
+  fi
+  if output=$(HOME="$TEST_DIR/home" PATH="$TEST_DIR/bin:$PATH" "${runner[@]}" bash "$install_script" 2>&1); then
     log_info "install.sh 执行完成"
   else
     local exit_code=$?
@@ -711,14 +718,14 @@ test_install_simulated() {
   fi
 
   # 检查输出中包含 "安装完成"
-  if echo "$output" | grep -q "安装完成"; then
+  if printf '%s\n' "$output" | grep -q "安装完成"; then
     assert_pass "[$ostype] 安装完成信息已输出"
   else
     assert_fail "[$ostype] 安装完成信息未输出"
   fi
 
   # 检查无 zinit 相关错误（注意: 正常输出会包含 "zinit"，只检查错误关键词）
-  if echo "$output" | grep -qiE "zinit.*(失败|错误|error|fail|未安装)"; then
+  if printf '%s\n' "$output" | grep -qiE "zinit.*(失败|错误|error|fail|未安装)"; then
     assert_fail "[$ostype] 输出包含 zinit 错误信息"
   else
     assert_pass "[$ostype] 无 zinit 相关错误"
@@ -845,10 +852,10 @@ case "${1:-all}" in
     run_all_tests "all"
     ;;
   *)
-    echo "用法: $0 {all|static|sim}"
-    echo "  static - 仅静态代码分析"
-    echo "  sim    - 仅动态模拟测试"
-    echo "  all    - 全部测试（默认）"
+    printf '用法: %s {all|static|sim}\n' "$0"
+    printf '%s\n' "  static - 仅静态代码分析"
+    printf '%s\n' "  sim    - 仅动态模拟测试"
+    printf '%s\n' "  all    - 全部测试（默认）"
     exit 1
     ;;
 esac

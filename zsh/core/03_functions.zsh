@@ -48,12 +48,12 @@ z() {
 # ----------------------
 
 # 快速备份文件
-bak() { cp -v "$1"{,.bak}; }
+bak() { command cp -v "$1"{,.bak}; }
 
 # 恢复备份文件
 restore() {
   if [ -f "$1.bak" ]; then
-    cp -v "$1.bak" "$1"
+    command cp -v "$1.bak" "$1"
   else
     echo "Backup not found: $1.bak"
   fi
@@ -71,19 +71,75 @@ extract() {
     *.tar.xz|*.txz)    tar xvJf "$1" ;;
     *.tar)             tar xvf "$1" ;;
     *.zip)
-      command -v unzip > /dev/null 2>&1 && unzip "$1" || echo "未安装 unzip" ;;
+      if ! command -v unzip > /dev/null 2>&1; then
+        echo "未安装 unzip"
+        return 1
+      fi
+      if ! unzip "$1"; then
+        echo "解压失败: $1"
+        return 1
+      fi
+      ;;
     *.rar)
-      command -v unrar > /dev/null 2>&1 && unrar x "$1" || echo "未安装 unrar" ;;
+      if ! command -v unrar > /dev/null 2>&1; then
+        echo "未安装 unrar"
+        return 1
+      fi
+      if ! unrar x "$1"; then
+        echo "解压失败: $1"
+        return 1
+      fi
+      ;;
     *.7z)
-      command -v 7z > /dev/null 2>&1 && 7z x "$1" || echo "未安装 7z" ;;
+      if ! command -v 7z > /dev/null 2>&1; then
+        echo "未安装 7z"
+        return 1
+      fi
+      if ! 7z x "$1"; then
+        echo "解压失败: $1"
+        return 1
+      fi
+      ;;
     *.bz2)
-      command -v bunzip2 > /dev/null 2>&1 && bunzip2 "$1" || echo "未安装 bunzip2" ;;
+      if ! command -v bunzip2 > /dev/null 2>&1; then
+        echo "未安装 bunzip2"
+        return 1
+      fi
+      if ! bunzip2 "$1"; then
+        echo "解压失败: $1"
+        return 1
+      fi
+      ;;
     *.gz)
-      command -v gunzip > /dev/null 2>&1 && gunzip "$1" || echo "未安装 gunzip" ;;
+      if ! command -v gunzip > /dev/null 2>&1; then
+        echo "未安装 gunzip"
+        return 1
+      fi
+      if ! gunzip "$1"; then
+        echo "解压失败: $1"
+        return 1
+      fi
+      ;;
     *.xz)
-      command -v unxz > /dev/null 2>&1 && unxz "$1" || echo "未安装 unxz" ;;
+      if ! command -v unxz > /dev/null 2>&1; then
+        echo "未安装 unxz"
+        return 1
+      fi
+      if ! unxz "$1"; then
+        echo "解压失败: $1"
+        return 1
+      fi
+      ;;
     *.Z)
-      command -v uncompress > /dev/null 2>&1 && uncompress "$1" || echo "未安装 uncompress" ;;
+      if ! command -v uncompress > /dev/null 2>&1; then
+        echo "未安装 uncompress"
+        return 1
+      fi
+      if ! uncompress "$1"; then
+        echo "解压失败: $1"
+        return 1
+      fi
+      ;;
     *)                 echo "不支持的格式: $1" ;;
   esac
 }
@@ -175,7 +231,7 @@ mem() {
 # 显示CPU使用率
 cpu() {
   if command -v top > /dev/null 2>&1; then
-    top -bn1 2>/dev/null | grep "%Cpu" || top -l 1 -n 0 2>/dev/null | grep "CPU"
+    command top -bn1 2>/dev/null | grep "%Cpu" || command top -l 1 -n 0 2>/dev/null | grep "CPU"
   fi
 }
 
@@ -465,11 +521,11 @@ check_env() {
   # PATH 信息
   echo "--- PATH ---"
   echo "当前 PATH:"
-  echo "$PATH" | tr ':' '\n' | while read -r path; do
-    if [[ -d "$path" ]]; then
-      echo "  ✅ $path"
+  echo "$PATH" | tr ':' '\n' | while read -r p; do
+    if [[ -d "$p" ]]; then
+      echo "  ✅ $p"
     else
-      echo "  ⚠️  $path (不存在)"
+      echo "  ⚠️  $p (不存在)"
     fi
   done
   echo ""

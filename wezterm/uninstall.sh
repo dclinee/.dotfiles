@@ -25,11 +25,11 @@ while [[ $# -gt 0 ]]; do
     --purge) PURGE=true; shift ;;
     --dry-run) export DRY_RUN=true; shift ;;
     -h|--help)
-      echo "用法: $(basename "$0") [--purge] [--dry-run]"
-      echo "  --purge   彻底卸载（含 wezterm 本体，需确认）"
-      echo "  --dry-run 预览操作，不实际执行"
+      printf '用法: %s [--purge] [--dry-run]\n' "$(basename "$0")"
+      printf '%s\n' "  --purge   彻底卸载（含 wezterm 本体，需确认）"
+      printf '%s\n' "  --dry-run 预览操作，不实际执行"
       exit 0 ;;
-    *) echo "未知参数: $1"; exit 1 ;;
+    *) printf '未知参数: %s\n' "$1"; exit 1 ;;
   esac
 done
 

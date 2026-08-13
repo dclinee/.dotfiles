@@ -11,12 +11,18 @@ LOG_FILE="/tmp/vim_install_$(date +%Y%m%d_%H%M%S).log"
 DOTFILES_DIR="${HOME}/.dotfiles"
 VIM_DIR="${DOTFILES_DIR}/vim"
 
-# vim-plug 镜像源（国内优先，失败回退官方）
-VIM_PLUG_MIRRORS=(
-  "https://ghfast.top/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
-  "https://ghproxy.com/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
-  "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
-)
+# vim-plug 镜像源（GitHub 官方优先，国内镜像降级）
+if [[ -n "${NO_MIRROR:-}" ]]; then
+  VIM_PLUG_MIRRORS=(
+    "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+  )
+else
+  VIM_PLUG_MIRRORS=(
+    "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+    "https://ghproxy.net/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+    "https://gh-proxy.com/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+  )
+fi
 
 # 颜色定义
 RED="\033[31m"
@@ -224,9 +230,9 @@ install_vim_plug() {
   done
 
   echo_error "vim-plug 安装失败，所有镜像均不可用"
-  echo "  请手动执行以下任一命令:"
-  echo "  curl -fLo ~/.vim/autoload/plug.vim --create-dirs \\"
-  echo "    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+  printf '%s\n' "  请手动执行以下任一命令:"
+  printf '%s\n' "  curl -fLo ~/.vim/autoload/plug.vim --create-dirs \\"
+  printf '%s\n' "    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
 }
 
 # ======================
@@ -234,7 +240,7 @@ install_vim_plug() {
 # ======================
 main() {
   echo_title "Vim 配置安装器"
-  echo "安装日志: ${LOG_FILE}"
+  printf '安装日志: %s\n' "${LOG_FILE}"
 
   ensure_vim_installed
 
