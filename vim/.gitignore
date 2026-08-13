@@ -1,2 +1,12 @@
 # Vim 插件目录（由 vim-plug 管理）
 plugged/
+
+# Neovim 模块 - 用户自定义目录（个人配置不入库，保留 .example 文件）
+lua/user/init.lua
+lua/user/plugins/*.lua
+!lua/user/plugins/example.lua
+!lua/user/init.example.lua
+!lua/user/README.md
+
+# lazy.nvim 缓存（当启用 g:dotfiles_use_lazy_nvim 时生成）
+lazy-lock.json

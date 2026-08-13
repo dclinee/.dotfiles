@@ -202,37 +202,75 @@ create_cache_dirs() {
 }
 
 # ======================
-# 安装 vim-plug（多镜像回退）
+# 下载 vim-plug 到指定路径（多镜像回退）
 # ======================
-install_vim_plug() {
-  echo_step "检查 vim-plug 插件管理器..."
-
-  local plug_file="${HOME}/.vim/autoload/plug.vim"
-
-  if [[ -f "${plug_file}" ]]; then
-    echo_success "vim-plug 已安装"
-    return 0
-  fi
-
-  echo_step "安装 vim-plug（多镜像回退）..."
-  mkdir -p "$(dirname "${plug_file}")"
+_download_vim_plug() {
+  local plug_file="$1"
+  local plug_dir
+  plug_dir="$(dirname "${plug_file}")"
+  mkdir -p "${plug_dir}"
 
   local url
   for url in "${VIM_PLUG_MIRRORS[@]}"; do
-    echo_step "尝试: ${url}"
+    echo_detail "尝试: ${url}"
     if curl -fLo "${plug_file}" --connect-timeout 15 --max-time 60 \
       "${url}" 2>>"${LOG_FILE}"; then
-      echo_success "vim-plug 安装完成（来源: ${url}）"
-      echo_warning "首次打开 Vim 时将自动安装插件"
+      echo_success "vim-plug 安装完成: ${plug_file}（来源: ${url}）"
       return 0
     fi
     echo_warning "此镜像失败，尝试下一个..."
   done
 
-  echo_error "vim-plug 安装失败，所有镜像均不可用"
-  printf '%s\n' "  请手动执行以下任一命令:"
-  printf '%s\n' "  curl -fLo ~/.vim/autoload/plug.vim --create-dirs \\"
-  printf '%s\n' "    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+  return 1
+}
+
+# ======================
+# 安装 vim-plug（Vim + Neovim）
+# ======================
+install_vim_plug() {
+  echo_step "检查 vim-plug 插件管理器..."
+
+  # --- Vim 路径 ---
+  local vim_plug="${HOME}/.vim/autoload/plug.vim"
+  local vim_plug_ok=true
+
+  if [[ -f "${vim_plug}" ]]; then
+    echo_success "vim-plug 已安装 (Vim): ${vim_plug}"
+  else
+    echo_step "安装 vim-plug (Vim)..."
+    if _download_vim_plug "${vim_plug}"; then
+      :
+    else
+      vim_plug_ok=false
+      echo_error "vim-plug 安装失败 (Vim)，所有镜像均不可用"
+      printf '%s\n' "  请手动执行:"
+      printf '%s\n' "  curl -fLo ~/.vim/autoload/plug.vim --create-dirs \\"
+      printf '%s\n' "    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+    fi
+  fi
+
+  # --- Neovim 路径（独立安装，不依赖 Vim 的 autoload）---
+  if command -v nvim > /dev/null 2>&1; then
+    local nvim_plug="${HOME}/.local/share/nvim/site/autoload/plug.vim"
+
+    if [[ -f "${nvim_plug}" ]]; then
+      echo_success "vim-plug 已安装 (Neovim): ${nvim_plug}"
+    else
+      echo_step "安装 vim-plug (Neovim)..."
+      if _download_vim_plug "${nvim_plug}"; then
+        :
+      else
+        echo_error "vim-plug 安装失败 (Neovim)，所有镜像均不可用"
+        printf '%s\n' "  请手动执行:"
+        printf '%s\n' "  curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs \\"
+        printf '%s\n' "    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+      fi
+    fi
+  fi
+
+  if [[ "${vim_plug_ok}" == "true" ]]; then
+    echo_warning "首次打开 Vim 时将自动安装插件"
+  fi
 }
 
 # ======================

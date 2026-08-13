@@ -30,6 +30,7 @@
     attributesfile = ~/.dotfiles/git/.gitattributes
     # Git hooks 目录（可选，集中管理公共 hooks）
     hooksPath = ~/.dotfiles/git/hooks
+	compression = 0
 
 # --- 初始化配置 ---
 [init]
@@ -202,3 +203,6 @@
 # 或在 ~/.gitconfig.local 中添加:
 # [safe]
 #     directory = /path/to/trusted/repo
+[http]
+	postBuffer = 524288000
+	timeout = 300

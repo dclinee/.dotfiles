@@ -2,6 +2,16 @@
 
 Vim 9+ 兼容的模块化配置，聚焦轻量级体验和多语言开发。
 
+## Neovim Lua 模块（LazyVim 风格叠加层）
+
+项目额外提供了基于 **LazyVim 框架设计理念** 的 Neovim Lua 模块（`vim/lua/`），
+作为可选增强层无缝叠加在 Vimscript 基础配置之上。
+
+- **零破坏性**：不修改任何 Vimscript 文件
+- **可一键关闭**：`~/.vimrc.local` 中 `let g:dotfiles_enable_lua_modules = 0`
+- **可切换插件管理**：`g:dotfiles_use_lazy_nvim = 1` 启用 lazy.nvim
+- **完整文档**：见 [MODULES.md](MODULES.md)
+
 ## 目录结构
 
 ```
@@ -19,10 +29,13 @@ vim/
 │   ├── go.vim            # Go (tabs + 4 空格显示宽)
 │   ├── rust.vim          # Rust (4 空格缩进)
 │   └── make.vim          # Makefile (tabs)
-└── platform/             # 平台特定配置
-    ├── linux.vim         # Linux 专属（剪贴板、字体）
-    ├── macos.vim         # macOS 专属（剪贴板：macos_clipboard）
-    └── windows.vim       # Windows 专属（编码兼容、字体）
+├── platform/             # 平台特定配置
+│   ├── linux.vim         # Linux 专属（剪贴板、字体）
+│   ├── macos.vim         # macOS 专属（剪贴板：macos_clipboard）
+│   └── windows.vim       # Windows 专属（编码兼容、字体）
+└── lua/                  # Neovim Lua 模块（LazyVim 风格叠加层）
+    ├── dotfiles_modules/  # 配置层 (options/keymaps/autocmds) + 插件 spec
+    └── user/              # 用户自定义扩展（不入库）
 ```
 
 ## Vim 9+ 兼容性
@@ -104,8 +117,14 @@ vim +PlugInstall +qa
 安装脚本功能：
 1. 检测系统包管理器，安装 Vim / GVim
 2. 自动安装 vim-plug 插件管理器（国内镜像回退）
+   - Vim 路径: `~/.vim/autoload/plug.vim`
+   - Neovim 路径: `~/.local/share/nvim/site/autoload/plug.vim`（独立安装）
 3. 创建 `.vimrc` → `~/.vimrc` 符号链接
-4. 启动 Vim 自动执行 `:PlugInstall`
+4. 检测 Neovim 时生成 `~/.config/nvim/init.vim`（复用 Vim 配置）
+5. 启动 Vim 自动执行 `:PlugInstall`
+
+> **注意**: Vim 和 Neovim 的插件 autoload 路径不同。如果 Neovim 启动时报
+> `E117: Unknown function: plug#begin`，重新执行 `./vim/install.sh` 即可修复。
 
 ## 性能注意
 
