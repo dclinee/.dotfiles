@@ -94,7 +94,10 @@ nnoremap <Leader>t :TagbarToggle<CR>
 " 注意：coc_global_extensions 列表只是声明，coc 不会自动安装
 " 这里通过 VimEnter autocmd 在首次启动时触发安装
 " Vim 9 不支持 \ 行续，全部写在一行内
-let g:coc_global_extensions = split('coc-json coc-pyright coc-java coc-html coc-css coc-tsserver coc-vimlsp coc-go coc-rust-analyzer coc-snippets coc-markdownlint coc-prettier coc-yaml coc-toml coc-sh coc-docker coc-terraform coc-lua coc-spell-checker', ' ')
+" AI 编程扩展（可选，按需启用）
+" coc-copilot: GitHub Copilot 补全（需 :Copilot auth 认证）
+" coc-tabnine: TabNine AI 补全（免费版有限制）
+let g:coc_global_extensions = split('coc-json coc-pyright coc-java coc-html coc-css coc-tsserver coc-vimlsp coc-go coc-rust-analyzer coc-snippets coc-markdownlint coc-prettier coc-yaml coc-toml coc-sh coc-docker coc-terraform coc-lua coc-spell-checker coc-copilot', ' ')
 
 " 首次启动自动安装缺失的 coc 扩展（仅执行一次）
 " 使用持久化标记文件避免重复触发

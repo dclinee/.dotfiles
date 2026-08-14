@@ -153,7 +153,16 @@
 (require 'init-avy)
 (require 'init-helpful)
 (require 'init-helm)
-(require 'init-tabnine)
+;; ---- AI 编程辅助 ----
+;; 三选一或组合使用，按需加载:
+;;   - Copilot: 云端补全，需 GitHub 账号
+;;   - gptel:    ChatGPT/LLM 对话，需 API Key
+;;   - ellama:   Ollama 本地模型，免费离线
+(require 'init-tabnine)          ; TabNine 代码补全
+(require 'init-copilot)          ; GitHub Copilot 补全
+(require 'init-gptel)            ; ChatGPT / LLM 对话
+(require 'init-ellama)           ; Ollama 本地 LLM
+
 (require 'init-vterm)
 (require 'init-icons)
 
