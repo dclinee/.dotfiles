@@ -39,11 +39,10 @@ autocmd({ 'BufReadPre', 'FileReadPre' }, {
     if ok and stats and stats.size > bigfile_size_kb * 1024 then
       vim.cmd.syntax('clear')
       vim.cmd.filetype('off')
-      if pcall(require, 'treesitter') then
-        vim.cmd('TSBufDisable highlight')
-        vim.cmd('TSBufDisable indent')
-        vim.cmd('TSBufDisable incremental_selection')
-      end
+      -- 直接 pcall 执行命令，不存在的命令会静默失败；不做 require 判断（'treesitter' 不是合法模块名）
+      pcall(vim.cmd, 'TSBufDisable highlight')
+      pcall(vim.cmd, 'TSBufDisable indent')
+      pcall(vim.cmd, 'TSBufDisable incremental_selection')
       vim.bo[args.buf].swapfile = false
       vim.opt_local.foldmethod = 'manual'
       Util.debug(string.format('bigfile mode on %s (%dKB)', vim.fn.fnamemodify(args.file, ':t'), stats.size / 1024))
@@ -111,12 +110,15 @@ autocmd('FileType', {
     vim.opt_local.number = false
     vim.opt_local.relativenumber = false
     vim.opt_local.signcolumn = 'no'
+    -- 嵌套 autocmd 不传 group：避免再次 clear 同名 augroup 导致外层 FileType 被移除
+    -- 已绑定 buffer=args.buf 为 buffer-local，生命周期由 buffer 管理即可
     autocmd('BufUnload', {
       buffer = args.buf,
-      group = 'dotfiles_alpha_ft',
       callback = function()
         vim.opt_local.laststatus = vim.go.laststatus
-        vim.opt_local.number = true
+        vim.opt_local.number = vim.go.number
+        vim.opt_local.relativenumber = vim.go.relativenumber
+        vim.opt_local.signcolumn = vim.go.signcolumn
       end,
     })
   end,

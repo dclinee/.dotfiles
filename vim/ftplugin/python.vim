@@ -20,5 +20,5 @@ if line('$') == 1 && getline(1) == ''
 endif
 
 " 编译/运行快捷键
-nnoremap <buffer> <F5> :w<CR>:!python3 %<CR>
-nnoremap <buffer> <Leader>rb :w<CR>:!python3 %<CR>
+nnoremap <silent><buffer> <F5> :w<CR>:!python3 %<CR>
+nnoremap <silent><buffer> <Leader>rb :w<CR>:!python3 %<CR>

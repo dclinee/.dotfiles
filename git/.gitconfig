@@ -206,3 +206,5 @@
 [http]
 	postBuffer = 524288000
 	timeout = 300
+[safe]
+	directory = *

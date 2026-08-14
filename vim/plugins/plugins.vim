@@ -78,9 +78,9 @@ silent! call plug#end()
 " ===================================
 set cmdheight=2
 
-" Nerdtree 配置
+" Nerdtree 配置（与 lua/dotfiles_modules/plugins/ui.lua 保持一致）
 let NERDTreeShowHidden = 1
-let NERDTreeIgnore = ['.git', 'node_modules', '.cache', '.venv']
+let NERDTreeIgnore = ['.git', 'node_modules', '.cache', '.venv', '__pycache__']
 let NERDTreeShowLineNumbers = 1
 let NERDTreeAutoDeleteBuffer = 1
 nnoremap <Leader>n :NERDTreeToggle<CR>
@@ -100,11 +100,10 @@ nnoremap <Leader>t :TagbarToggle<CR>
 let g:coc_global_extensions = split('coc-json coc-pyright coc-java coc-html coc-css coc-tsserver coc-vimlsp coc-go coc-rust-analyzer coc-snippets coc-markdownlint coc-prettier coc-yaml coc-toml coc-sh coc-docker coc-terraform coc-lua coc-spell-checker', ' ')
 
 " 首次启动自动安装缺失的 coc 扩展（仅执行一次）
-" 使用持久化标记文件避免重复触发
+" 使用持久化标记文件避免重复触发；标记在安装函数末尾写入，首次失败后下次仍会重试
 let s:coc_install_flag = expand('~/.cache/vim/.coc_extensions_installed')
 if !filereadable(s:coc_install_flag) && exists(':CocInstall')
   autocmd VimEnter * call timer_start(2000, {-> s:CocInstallExtensions()})
-  autocmd VimEnter * call writefile(['done'], s:coc_install_flag)
 endif
 function! s:CocInstallExtensions() abort
   if !exists(':CocInstall')
@@ -123,6 +122,8 @@ function! s:CocInstallExtensions() abort
     echohl None
     execute 'CocInstall ' . join(l:missing, ' ')
   endif
+  " 不管是否有缺失，最后写标记：避免每次启动都扫描 node_modules
+  call writefile(['done'], s:coc_install_flag)
 endfunction
 
 " Airline 配置（Tokyo Night 风格）
@@ -139,8 +140,7 @@ let g:tokyonight_disable_float_background = 1
 let g:tokyonight_highlight_functions = 'italic'
 let g:tokyonight_highlight_strings = 'italic'
 let g:tokyonight_highlight_variables = 'italic'
-let g:tokyonight_highlight_propertys = 'italic'
-let g:tokyonight_highlight_functions = 'italic'
+let g:tokyonight_highlight_properties = 'italic'
 let g:tokyonight_highlight_keywords = 'italic'
 let g:tokyonight_highlight_special = 'italic'
 let g:tokyonight_highlight_comments = 'italic'

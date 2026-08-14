@@ -25,16 +25,16 @@ return {
   {
     'airblade/vim-gitgutter',
     event = { 'BufReadPost', 'BufNewFile' },
+    keys = {
+      -- LazyVim 风格导航: [h / ]h 跳到上/下一个 hunk
+      { ']h', '<Plug>(GitGutterNextHunk)', desc = 'Next Git hunk' },
+      { '[h', '<Plug>(GitGutterPrevHunk)', desc = 'Prev Git hunk' },
+    },
     init = function()
       vim.g.gitgutter_sign_added = '+'
       vim.g.gitgutter_sign_modified = '~'
       vim.g.gitgutter_sign_removed = '-'
       vim.g.gitgutter_map_keys = 0       -- 不抢默认 [c / ]c 映射
-      -- LazyVim 风格导航: [h / ]h 跳到上/下一个 hunk
-      vim.api.nvim_set_keymap('n', ']h', [[<Plug>(GitGutterNextHunk)]],
-        { silent = true, desc = 'Next Git hunk' })
-      vim.api.nvim_set_keymap('n', '[h', [[<Plug>(GitGutterPrevHunk)]],
-        { silent = true, desc = 'Prev Git hunk' })
     end,
   },
 }

@@ -62,7 +62,7 @@ local function bootstrap()
 end
 
 function M.setup()
-  if not vim.fn.has('nvim-0.9') == 1 then
+  if vim.fn.has('nvim-0.9') ~= 1 then
     -- lazy.nvim 要求 nvim-0.9+
     return
   end
@@ -76,14 +76,8 @@ function M.setup()
   end
 
   -- 收集 plugins/ 目录下所有 *.lua 的 spec（LazyVim 自动按文件加载约定）
-  local plugin_root = Util.mod_root() .. '/lua/dotfiles_modules/plugins'
+  -- 注：{ import = 'dotfiles_modules.plugins' } 已自动递归加载该目录下所有子模块，无需手动循环追加
   local specs = { { import = 'dotfiles_modules.plugins' } }
-  for _, file in ipairs(Util.glob_lua(plugin_root)) do
-    local stem = vim.fn.fnamemodify(file, ':t:r')
-    if stem ~= 'init' then
-      table.insert(specs, { import = 'dotfiles_modules.plugins.' .. stem })
-    end
-  end
 
   -- 同时加载 user/plugins/*.lua（用户自定义）
   if Util.has_module('user.plugins') then

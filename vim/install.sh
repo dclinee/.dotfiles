@@ -149,14 +149,16 @@ create_vimrc_link() {
 }
 
 # ======================
-# 创建 NeoVim 适配链接（可选）
+# 创建 NeoVim 适配入口（可选）
+# 策略：不做符号链接（~/.vimrc 与 nvim init 路径无法直接 ln），
+# 而是生成一个薄包装 init.vim，通过 runtimepath + source 复用 Vim 配置。
 # ======================
 create_nvim_link() {
   if ! command -v nvim > /dev/null 2>&1; then
     return 0
   fi
 
-  echo_step "检测到 NeoVim，配置 init.vim 复用 Vim 配置..."
+  echo_step "检测到 NeoVim，生成 init.vim 包装以复用 Vim 配置..."
 
   local nvim_config_dir="${HOME}/.config/nvim"
   local nvim_init="${nvim_config_dir}/init.vim"
@@ -165,27 +167,22 @@ create_nvim_link() {
   mkdir -p "${nvim_config_dir}"
 
   if [[ -L "${nvim_init}" ]]; then
-    local current_target
-    current_target=$(readlink "${nvim_init}")
-    if [[ "${current_target}" == "${vimrc_src}" ]]; then
-      echo_success "init.vim 链接已存在且指向正确位置"
-      return 0
-    fi
-    echo_warning "更新 init.vim 链接..."
-    rm -f "${nvim_init}"
+    echo_warning "发现 init.vim 为符号链接，备份为 init.vim.bak"
+    mv "${nvim_init}" "${nvim_init}.bak"
   elif [[ -f "${nvim_init}" ]]; then
     echo_warning "发现现有 init.vim，备份为 init.vim.bak"
     mv "${nvim_init}" "${nvim_init}.bak"
   fi
 
-  # NeoVim 兼容：跳过 Vim 专用选项
-  cat > "${nvim_init}" <<EOF
-" NeoVim 入口：复用 Vim 配置
-" 兼容性处理：NeoVim 默认 nocompatible，无 need insecure
-set runtimepath^=${VIM_DIR}
-source ${vimrc_src}
+  # 路径在 Vim 脚本侧用 expand('~')/fnameescape() 求值，确保空格/特殊字符安全，不依赖 bash 引号
+  cat > "${nvim_init}" <<'EOF'
+" NeoVim 入口：复用 dotfiles Vim 配置
+" 兼容性处理：NeoVim 默认 nocompatible
+let s:dotfiles_vim = expand('~/.dotfiles/vim')
+execute 'set runtimepath^=' . fnameescape(s:dotfiles_vim)
+execute 'source ' . fnameescape(s:dotfiles_vim . '/.vimrc')
 EOF
-  echo_success "init.vim 链接已创建"
+  echo_success "init.vim 包装已创建"
 }
 
 # ======================

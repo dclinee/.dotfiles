@@ -93,7 +93,7 @@ return {
   {
     'hrsh7th/vim-vsnip-integ',
     event = 'InsertEnter',
-    after = 'vim-vsnip',
+    dependencies = { 'hrsh7th/vim-vsnip' },
   },
 
   -- Treesitter (Neovim 0.9+ 推荐，LazyVim 默认的语法高亮基础设施)
