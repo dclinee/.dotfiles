@@ -234,6 +234,110 @@ bootstrap_packages() {
 }
 
 # ======================
+# 配置 Emacs daemon 自启动
+# ======================
+_setup_systemd_user_service() {
+  local emacs_path emacsclient_path
+  emacs_path="$(command -v emacs)"
+  emacsclient_path="$(command -v emacsclient)"
+
+  local service_dir="${HOME}/.config/systemd/user"
+  local service_file="${service_dir}/emacs-daemon.service"
+
+  mkdir -p "${service_dir}"
+
+  cat > "${service_file}" << EOF
+[Unit]
+Description=Emacs text editor daemon
+Documentation=info:emacs man:emacs(1) https://www.gnu.org/software/emacs/
+
+[Service]
+Type=forking
+ExecStart=${emacs_path} --daemon
+ExecStop=${emacsclient_path} --eval "(kill-emacs)"
+Environment=SSH_AUTH_SOCK=%t/keyring/ssh
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+EOF
+
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl --user daemon-reload 2>/dev/null || true
+    systemctl --user enable emacs-daemon.service 2>/dev/null || true
+    systemctl --user start emacs-daemon.service 2>/dev/null || true
+    echo_success "systemd user service 已配置: emacs-daemon.service"
+    echo "  管理命令:"
+    echo "    systemctl --user status emacs-daemon.service"
+    echo "    systemctl --user stop emacs-daemon.service"
+    echo "    systemctl --user start emacs-daemon.service"
+  else
+    echo_warning "systemctl 不可用，systemd service 已写入但未启用"
+  fi
+}
+
+_setup_launchd_plist() {
+  local emacs_path
+  emacs_path="$(command -v emacs)"
+
+  local plist_dir="${HOME}/Library/LaunchAgents"
+  local plist_file="${plist_dir}/com.dotfiles.emacs-daemon.plist"
+
+  mkdir -p "${plist_dir}"
+
+  cat > "${plist_file}" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dotfiles.emacs-daemon</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${emacs_path}</string>
+    <string>--daemon</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/emacs-daemon.out</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/emacs-daemon.err</string>
+</dict>
+</plist>
+EOF
+
+  if command -v launchctl >/dev/null 2>&1; then
+    launchctl load -w "${plist_file}" 2>/dev/null || true
+    echo_success "launchd plist 已配置: com.dotfiles.emacs-daemon"
+  else
+    echo_warning "launchctl 不可用，plist 已写入但未加载"
+  fi
+}
+
+_setup_autostart() {
+  if ! command -v emacs >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo_step "配置 Emacs daemon 自启动..."
+
+  case "$(uname -s)" in
+    Linux)
+      _setup_systemd_user_service
+      ;;
+    Darwin)
+      _setup_launchd_plist
+      ;;
+    *)
+      echo_detail "当前平台不支持系统级自启动，已由 zsh 启动时兜底启动"
+      ;;
+  esac
+}
+
+# ======================
 # 主流程
 # ======================
 main() {
@@ -259,6 +363,11 @@ main() {
   # 4. 首次启动安装包
   bootstrap_packages
 
+  echo_separator
+
+  # 5. 配置 daemon 自启动
+  _setup_autostart
+
   echo_title "Emacs 配置安装完成"
   printf "${GREEN}${CHECK} ${BOLD}Emacs 配置完成！${RESET}\n"
   echo ""
@@ -269,6 +378,17 @@ main() {
   printf "${BOLD}首次启动:${RESET}\n"
   echo "  Emacs 会自动安装配置中声明的所有包"
   echo "  可能需要几分钟，请耐心等待"
+  echo ""
+  printf "${BOLD}Emacs daemon 自启动:${RESET}\n"
+  echo "  已配置登录时自动启动 emacs --daemon"
+  echo "  zsh 启动时会兜底检查并启动 daemon"
+  echo "  管理命令:"
+  echo "    emacs_daemon_start   # 手动启动 daemon"
+  echo "    emacs_daemon_stop    # 停止 daemon"
+  echo "    emacs_daemon_restart # 重启 daemon"
+  echo "    ed                   # 用 emacsclient 打开 GUI"
+  echo "    et                   # 用 emacsclient 打开终端版"
+  echo "  禁用自动启动: export EMACS_DAEMON_AUTOSTART=0"
   echo ""
   printf "${BOLD}配置文件位置:${RESET}\n"
   echo "  ~/.config/emacs/init.el          # 主入口"
