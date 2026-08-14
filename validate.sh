@@ -4,7 +4,7 @@ set -euo pipefail
 # 配置变量
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 temp_dir=$(mktemp -d)
-trap 'rm -rf ${temp_dir}' EXIT
+trap 'rm -rf "${temp_dir}"' EXIT
 
 # 颜色定义
 RED="\033[31m"

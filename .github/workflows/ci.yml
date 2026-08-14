@@ -15,11 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
+      - name: Run ShellCheck with PR annotations
+        uses: reviewdog/action-shellcheck@v1
         with:
-          severity: warning
-          format: gcc
+          level: warning
+          reporter: github-pr-review
           ignore_paths: './.git ./emacs/elpa* ./~'
           # 排除被 source 的库文件（无 shebang 执行上下文）和第三方脚本
           ignore_names: '_common.sh'
@@ -42,13 +42,13 @@ jobs:
 
       - name: Bash syntax check
         run: |
-          find . -name "*.sh" -not -path "./.git/*" | while read f; do
+          find . -name "*.sh" -not -path "./.git/*" -print0 | while IFS= read -r -d '' f; do
             bash -n "$f" || exit 1
           done
 
       - name: Zsh syntax check
         run: |
-          find . -name "*.zsh" -not -path "./.git/*" -o -name ".zshrc" -o -name ".zshenv" | while read f; do
+          find . \( -name "*.zsh" -o -name ".zshrc" -o -name ".zshenv" \) -not -path "./.git/*" -print0 | while IFS= read -r -d '' f; do
             zsh -n "$f" || exit 1
           done
 
@@ -102,7 +102,7 @@ jobs:
           mkdir -p coverage
           kcov --include-pattern=.sh,.zsh \
                --exclude-pattern=.git,elpa,~,coverage \
-               coverage ./test_install.sh static 2>&1 || true
+               coverage ./test_install.sh static
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -115,21 +115,21 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           directory: ./coverage
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           verbose: true
 
       - name: Print coverage summary
         run: |
           if [[ -f coverage/test_install.sh/kcov-results.json ]]; then
             python3 -c "
-import json, sys
-with open('coverage/test_install.sh/kcov-results.json') as f:
-    data = json.load(f)
-cov = data.get('percent_covered', 0)
-covered = data.get('covered_lines', 0)
-total = data.get('total_lines', 0)
-print(f'Code Coverage: {cov:.1f}% ({covered}/{total} lines)')
-"
+          import json, sys
+          with open('coverage/test_install.sh/kcov-results.json') as f:
+              data = json.load(f)
+          cov = data.get('percent_covered', 0)
+          covered = data.get('covered_lines', 0)
+          total = data.get('total_lines', 0)
+          print(f'Code Coverage: {cov:.1f}% ({covered}/{total} lines)')
+          "
           else
             echo "Coverage report generated in coverage/"
             ls -la coverage/ || true

@@ -93,10 +93,11 @@ if command -v starship > /dev/null 2>&1; then
     export STARSHIP_CONFIG="${MAIN_CONFIG}"
   else
     # starship_fallback.toml 已作为独立文件提交，无需动态生成
-    [[ -f "${FALLBACK_CONFIG}" ]] || {
+    if [[ -f "${FALLBACK_CONFIG}" ]]; then
+      export STARSHIP_CONFIG="${FALLBACK_CONFIG}"
+    else
       echo "[dotfiles] 警告: ${FALLBACK_CONFIG} 缺失，Starship 将使用默认配置" >&2
-    }
-    export STARSHIP_CONFIG="${FALLBACK_CONFIG}"
+    fi
   fi
   eval "$(starship init zsh)"
 else

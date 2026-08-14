@@ -4,6 +4,9 @@
 # 主入口配置文件
 # ======================
 
+# 确保按数字顺序加载 (00, 01, 02...)
+export LC_COLLATE=C
+
 # 加载核心配置模块
 for file in "${HOME}/.dotfiles/zsh/core"/*.zsh; do
   [ -f "$file" ] && [ ! -d "$file" ] && source "$file"

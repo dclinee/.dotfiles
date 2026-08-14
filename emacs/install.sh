@@ -16,13 +16,11 @@ DOTFILES_ROOT="${HOME}/.dotfiles"
 EMACS_DIR="${DOTFILES_ROOT}/emacs"
 LOG_FILE="/tmp/dotfiles_emacs_install_$(date +%Y%m%d_%H%M%S).log"
 
-# ======================
-# 加载公共输出函数库
-# ======================
-_OUTPUT_LIB="${DOTFILES_ROOT}/lib/output.sh"
-if [[ -f "${_OUTPUT_LIB}" ]]; then
-  source "${_OUTPUT_LIB}"
+# 尝试加载公共库
+if [[ -f "${DOTFILES_ROOT}/lib/common.sh" ]]; then
+  source "${DOTFILES_ROOT}/lib/common.sh"
 else
+  # fallback: 内联定义公共函数
   RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; BLUE="\033[34m"
   CYAN="\033[36m"; RESET="\033[0m"; BOLD="\033[1m"
   CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"; SKIP="⏭️"
@@ -39,30 +37,22 @@ else
     printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
     echo_separator
   }
-fi
 
-# ======================
-# 加载公共符号链接函数库
-# ======================
-_SYMLINK_LIB="${DOTFILES_ROOT}/lib/symlink.sh"
-if [[ -f "${_SYMLINK_LIB}" ]]; then
-  # shellcheck source=/dev/null
-  source "${_SYMLINK_LIB}"
-else
-  # 回退：当 lib/symlink.sh 不存在时使用内联定义
-  safe_symlink() {
-    local src="$1" dst="$2"
-    [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
-    if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
-      echo_skip "链接已存在: $dst"; return 0
-    fi
-    if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
-      local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
-      mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
-    fi
-    mkdir -p "$(dirname "$dst")" 2>/dev/null
-    ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
-  }
+  if ! command -v safe_symlink > /dev/null 2>&1; then
+    safe_symlink() {
+      local src="$1" dst="$2"
+      [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
+      if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
+        echo_skip "链接已存在: $dst"; return 0
+      fi
+      if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
+        local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
+        mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
+      fi
+      mkdir -p "$(dirname "$dst")" 2>/dev/null
+      ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
+    }
+  fi
 fi
 
 # ======================
@@ -124,16 +114,13 @@ link_configs() {
     mkdir -p "${emacs_config_dir}"
   fi
 
-  # 如果是普通目录（非符号链接），备份后替换
-  if [[ -d "${emacs_config_dir}" && ! -L "${emacs_config_dir}" ]]; then
-    # 检查是否已有 init.el（非我们的）
-    if [[ -f "${emacs_config_dir}/init.el" ]] && [[ ! -L "${emacs_config_dir}/init.el" ]]; then
-      local backup_dir="${emacs_config_dir}.bak.$(date +%Y%m%d_%H%M%S)"
-      mv "${emacs_config_dir}" "${backup_dir}"
-      echo_warning "已备份旧配置到: ${backup_dir}"
-      mkdir -p "${emacs_config_dir}"
-    fi
+  if [[ -f "${emacs_config_dir}/init.el" ]] && [[ ! -L "${emacs_config_dir}/init.el" ]]; then
+    local backup_dir="${emacs_config_dir}.bak.$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "${backup_dir}"
+    cp "${emacs_config_dir}/init.el" "${backup_dir}/"
+    echo_warning "已备份现有 init.el 到 ${backup_dir}/"
   fi
+  mkdir -p "${emacs_config_dir}"
 
   # 链接顶层配置文件
   local top_files=(

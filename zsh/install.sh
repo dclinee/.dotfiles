@@ -25,14 +25,14 @@ if [[ -f "${_OUTPUT_LIB}" ]]; then
   # shellcheck source=/dev/null
   source "${_OUTPUT_LIB}"
 else
-  # 回退：当 lib/output.sh 不存在时使用内联定义
+  # 回退：当 lib/output.sh 不存在时使用内联定义（与 lib/output.sh 保持一致：Oh My Zsh 风格）
   RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; BLUE="\033[34m"
   CYAN="\033[36m"; WHITE="\033[37m"; RESET="\033[0m"; BOLD="\033[1m"
-  CHECK="✅"; INFO="ℹ️"; WARN="⚠️"; ERROR="❌"; ARROW="➡️"; SKIP="⏭️"
-  SEPARATOR="${BLUE}=============================================${RESET}"
-  echo_step()      { printf "${BOLD}${BLUE}${INFO} %s${RESET}\n"  "${1}"; }
+  CHECK="✓"; INFO="➜"; WARN="⚠"; ERROR="✗"; ARROW="${INFO}"; SKIP="⊘"
+  SEPARATOR="${BLUE}============================================${RESET}"
+  echo_step()      { printf "${BOLD}${BLUE}${INFO}  %s${RESET}\n"  "${1}"; }
   echo_success()   { printf "${GREEN}${CHECK} %s${RESET}\n"        "${1}"; }
-  echo_warning()   { printf "${YELLOW}${WARN} %s${RESET}\n"        "${1}"; }
+  echo_warning()   { printf "${YELLOW}${WARN}  %s${RESET}\n"        "${1}"; }
   echo_error()     { printf "${RED}${ERROR} %s${RESET}\n"          "${1}"; }
   echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"          "${1}"; }
   echo_detail()    { printf "${BLUE}  %s${RESET}\n"                "${1}"; }

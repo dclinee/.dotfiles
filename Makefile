@@ -4,7 +4,7 @@
 # 统一命令入口，简化操作
 # 设计原则：所有 target 都委托给 per-component install.sh，避免与 bootstrap.sh 逻辑漂移
 
-.PHONY: install update backup test check clean help zsh vim emacs wezterm wezterm-check wezterm-uninstall brew python rust tmux git editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin perf validate
+.PHONY: install update backup test check clean help zsh vim emacs emacs-daemon emacs-daemon-stop emacs-daemon-restart emacs-daemon-status wezterm wezterm-check wezterm-uninstall brew python rust tmux git editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin perf validate doctor
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -55,6 +55,37 @@ emacs: ## 安装 Emacs 配置
 			printf "$(YELLOW)⚠️  Emacs 安装出现警告，请查看日志$(RESET)\n"; \
 	else \
 		printf "$(YELLOW)⚠️  emacs/install.sh 不存在$(RESET)\n"; \
+	fi
+
+emacs-daemon: ## 启动 emacs daemon（systemd 用户服务）
+	@if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active emacs >/dev/null 2>&1; then \
+		printf "$(GREEN)✅ emacs daemon 已在运行$(RESET)\n"; \
+	elif command -v systemctl >/dev/null 2>&1; then \
+		systemctl --user start emacs && printf "$(GREEN)✅ emacs daemon 已启动$(RESET)\n" || printf "$(RED)❌ 启动失败$(RESET)\n"; \
+	else \
+		emacs --daemon && printf "$(GREEN)✅ emacs daemon 已启动$(RESET)\n"; \
+	fi
+
+emacs-daemon-stop: ## 停止 emacs daemon
+	@if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active emacs >/dev/null 2>&1; then \
+		systemctl --user stop emacs && printf "$(GREEN)✅ emacs daemon 已停止$(RESET)\n"; \
+	else \
+		emacsclient -e '(kill-emacs)' 2>/dev/null && printf "$(GREEN)✅ emacs daemon 已停止$(RESET)\n" || printf "$(YELLOW)⚠️  daemon 未运行$(RESET)\n"; \
+	fi
+
+emacs-daemon-restart: ## 重启 emacs daemon
+	@printf "$(CYAN)→ 重启 emacs daemon...$(RESET)\n"
+	@if command -v systemctl >/dev/null 2>&1; then \
+		systemctl --user restart emacs && printf "$(GREEN)✅ emacs daemon 已重启$(RESET)\n" || printf "$(RED)❌ 重启失败$(RESET)\n"; \
+	else \
+		emacsclient -e '(kill-emacs)' 2>/dev/null; sleep 0.3; emacs --daemon && printf "$(GREEN)✅ emacs daemon 已重启$(RESET)\n"; \
+	fi
+
+emacs-daemon-status: ## 查看 emacs daemon 状态
+	@if command -v systemctl >/dev/null 2>&1; then \
+		systemctl --user status emacs --no-pager 2>/dev/null || printf "$(YELLOW)⚠️  emacs daemon 未运行$(RESET)\n"; \
+	else \
+		pgrep -af 'emacs.*--daemon' && printf "$(GREEN)✅ emacs daemon 运行中$(RESET)\n" || printf "$(YELLOW)⚠️  emacs daemon 未运行$(RESET)\n"; \
 	fi
 
 wezterm: ## 安装 WezTerm 配置
@@ -206,6 +237,22 @@ test: ## 运行测试
 check: ## 环境检查
 	@zsh -ic 'check_env' 2>/dev/null || printf "请先安装配置: make install\n"
 
+doctor: ## 综合健康检查（Zsh 环境 + Brew + Python + Rust + 配置验证）
+	@printf "$(CYAN)═══════════════════════════════════════════$(RESET)\n"
+	@printf "$(BOLD)Dotfiles 健康检查$(RESET)\n"
+	@printf "$(CYAN)═══════════════════════════════════════════$(RESET)\n\n"
+	@printf "$(CYAN)▶ [1/5] Zsh 环境检查$(RESET)\n"
+	@zsh -ic 'check_env' 2>/dev/null || printf "$(YELLOW)⚠  Zsh 环境检查失败，请先安装: make zsh$(RESET)\n"
+	@printf "\n$(CYAN)▶ [2/5] Homebrew 体检$(RESET)\n"
+	@command -v brew >/dev/null 2>&1 && brew doctor 2>&1 | head -20 || printf "$(YELLOW)⚠  Homebrew 未安装$(RESET)\n"
+	@printf "\n$(CYAN)▶ [3/5] Python 环境体检$(RESET)\n"
+	@if [ -f python/check.sh ]; then bash python/check.sh; else printf "$(YELLOW)⚠  python/check.sh 不存在$(RESET)\n"; fi
+	@printf "\n$(CYAN)▶ [4/5] Rust 环境体检$(RESET)\n"
+	@if [ -f rust/check.sh ]; then bash rust/check.sh; else printf "$(YELLOW)⚠  rust/check.sh 不存在$(RESET)\n"; fi
+	@printf "\n$(CYAN)▶ [5/5] 配置语法验证$(RESET)\n"
+	@bash validate.sh 2>/dev/null || printf "$(YELLOW)⚠  验证脚本执行失败$(RESET)\n"
+	@printf "\n$(GREEN)✅ 健康检查完成$(RESET)\n"
+
 perf: ## 性能分析
 	@zsh zsh/profile_performance.sh
 
@@ -214,7 +261,13 @@ validate: ## 验证配置语法
 
 clean: ## 清理缓存
 	@printf "$(CYAN)→ 清理缓存...$(RESET)\n"
-	@rm -rf ~/.cache/zsh/zcompdump* 2>/dev/null; true
+	@shopt -s nullglob; rm -rf ~/.cache/zsh/zcompdump* 2>/dev/null; true
 	@brew cleanup 2>/dev/null || true
 	@zsh -ic 'zinit delete --all' 2>/dev/null || true
+	@printf "$(CYAN)→ 清理 Python 缓存...$(RESET)\n"
+	@find ~/.dotfiles -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; true
+	@rm -rf ~/.cache/pip 2>/dev/null; true
+	@rm -rf ~/.cache/uv 2>/dev/null; true
+	@printf "$(CYAN)→ 清理 Rust 缓存...$(RESET)\n"
+	@if command -v cargo >/dev/null 2>&1; then cargo cache -a 2>/dev/null || rm -rf ~/.cargo/registry/cache 2>/dev/null; true; fi
 	@printf "$(GREEN)✅ 清理完成！$(RESET)\n"
