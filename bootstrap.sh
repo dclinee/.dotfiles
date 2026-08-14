@@ -56,28 +56,28 @@ INSTALL_EDITORCONFIG=false
 # ======================
 # 颜色与输出
 # ======================
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-BLUE="\033[34m"
-CYAN="\033[36m"
-RESET="\033[0m"
-BOLD="\033[1m"
-ARROW="➡️"
-SKIP="⏭️"
-
-echo_step()      { printf "${BOLD}${BLUE}➜  %s${RESET}\n"  "${1}"; }
-echo_success()   { printf "${GREEN}✓ %s${RESET}\n"         "${1}"; }
-echo_warning()   { printf "${YELLOW}⚠  %s${RESET}\n"       "${1}"; }
-echo_error()     { printf "${RED}✗ %s${RESET}\n"           "${1}"; }
-echo_skip()      { printf "${CYAN}⊘ %s${RESET}\n"          "${1}"; }
-echo_detail()    { printf "${BLUE}  %s${RESET}\n"           "${1}"; }
-echo_separator() { printf "${BLUE}=============================================${RESET}\n"; }
-echo_title() {
-  echo_separator
-  printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
-  echo_separator
-}
+# 优先加载 lib/output.sh（仓库已克隆时），否则使用内联回退（与 lib/output.sh 保持一致）
+_OUTPUT_LIB="${DOTFILES_DIR}/lib/output.sh"
+if [[ -f "${_OUTPUT_LIB}" ]]; then
+  # shellcheck source=/dev/null
+  source "${_OUTPUT_LIB}"
+else
+  # 回退：仓库未克隆时使用内联定义（克隆后会重新加载 lib/output.sh）
+  RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"
+  BLUE="\033[34m"; CYAN="\033[36m"; RESET="\033[0m"; BOLD="\033[1m"
+  echo_step()      { printf "${BOLD}${BLUE}➜  %s${RESET}\n"  "${1}"; }
+  echo_success()   { printf "${GREEN}✓ %s${RESET}\n"         "${1}"; }
+  echo_warning()   { printf "${YELLOW}⚠  %s${RESET}\n"       "${1}"; }
+  echo_error()     { printf "${RED}✗ %s${RESET}\n"           "${1}"; }
+  echo_skip()      { printf "${CYAN}⊘ %s${RESET}\n"          "${1}"; }
+  echo_detail()    { printf "${BLUE}  %s${RESET}\n"           "${1}"; }
+  echo_separator() { printf "${BLUE}============================================${RESET}\n"; }
+  echo_title() {
+    echo_separator
+    printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
+    echo_separator
+  }
+fi
 
 # ======================
 # 加载公共符号链接函数库
@@ -361,7 +361,7 @@ full_rollback() {
   local saved_manifest="${ROLLBACK_MANIFEST}"
   ROLLBACK_MANIFEST="${rollback_dir}/manifest.txt"
   ROLLBACK_DIR="${rollback_dir}"
-  _rollback_from_manifest "ALL"
+  _rollback_from_manifest "ALL" || true
   ROLLBACK_MANIFEST="${saved_manifest}"
   echo_success "回滚执行完成，可检查回滚目录: ${rollback_dir}"
 }
@@ -495,6 +495,7 @@ install_zsh() {
   # 运行 zsh 安装脚本
   bash "${DOTFILES_DIR}/zsh/install.sh" 2>>"${LOG_FILE}" || {
     echo_warning "Zsh 安装脚本出现错误，请查看日志: ${LOG_FILE}"
+    return 1
   }
 
   # 询问是否设为默认 shell（跨平台：Linux 用 getent，macOS 用 dscl）
@@ -540,6 +541,7 @@ install_emacs() {
   echo_step "安装 Emacs 配置..."
   bash "${DOTFILES_DIR}/emacs/install.sh" 2>>"${LOG_FILE}" || {
     echo_warning "Emacs 安装出现错误，请查看日志: ${LOG_FILE}"
+    return 1
   }
 }
 
@@ -550,6 +552,7 @@ install_wezterm() {
   echo_step "安装 WezTerm 配置..."
   bash "${DOTFILES_DIR}/wezterm/install.sh" 2>>"${LOG_FILE}" || {
     echo_warning "WezTerm 安装出现错误，请查看日志: ${LOG_FILE}"
+    return 1
   }
 }
 
@@ -563,7 +566,7 @@ install_brew() {
     echo_warning "Homebrew 未安装，尝试安装..."
     bash "${DOTFILES_DIR}/brew/install.sh" 2>>"${LOG_FILE}" || {
       echo_warning "Homebrew 安装失败，跳过 brew bundle"
-      return 0
+      return 1
     }
   fi
 
@@ -742,6 +745,7 @@ install_rust() {
   echo_step "配置 Rust 环境..."
   bash "${DOTFILES_DIR}/rust/install.sh" 2>>"${LOG_FILE}" || {
     echo_warning "Rust 安装出现错误，请查看日志: ${LOG_FILE}"
+    return 1
   }
 }
 
@@ -970,6 +974,17 @@ main() {
   cd "${DOTFILES_DIR}"
   echo_success "当前目录: $(pwd)"
   echo ""
+
+  # 仓库克隆后，重新加载规范版 lib/output.sh 和 lib/symlink.sh（覆盖内联回退定义）
+  unset __OUTPUT_SH_LOADED __SYMLINK_SH_LOADED 2>/dev/null || true
+  if [[ -f "${DOTFILES_DIR}/lib/output.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${DOTFILES_DIR}/lib/output.sh"
+  fi
+  if [[ -f "${DOTFILES_DIR}/lib/symlink.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${DOTFILES_DIR}/lib/symlink.sh"
+  fi
 
   # 初始化回滚点
   _init_rollback

@@ -1,0 +1,15 @@
+[Unit]
+Description=Emacs Daemon
+Documentation=info:emacs man:emacs(1) https://gnu.org/software/emacs/
+After=graphical-session.target
+
+[Service]
+Type=forking
+ExecStart=__EMACS_BIN__ --daemon
+ExecStop=__EMACSCLIENT_BIN__ --eval "(kill-emacs)"
+Environment=COLORTERM=truecolor
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

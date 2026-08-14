@@ -78,16 +78,30 @@ install_uv() {
     return 0
   fi
 
-  if curl -fsSL --connect-timeout 15 --max-time 300 "${install_script_url}" -o "${tmp_script}" 2>>"${LOG_FILE}" \
-      && sh "${tmp_script}" 2>>"${LOG_FILE}"; then
-    trap - EXIT RETURN
-    rm -f "${tmp_script}"
-    if _register_uv_path; then
-      echo_success "uv 安装完成（官方脚本）"
-      return 0
+  if curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout 15 --max-time 300 "${install_script_url}" -o "${tmp_script}" 2>>"${LOG_FILE}"; then
+    # 安全检查: 文件非空且以 shebang 开头
+    if [[ -s "${tmp_script}" ]]; then
+      local _uv_first_line
+      _uv_first_line="$(head -1 "${tmp_script}")"
+      if [[ "${_uv_first_line}" =~ ^#! ]]; then
+        if sh "${tmp_script}" 2>>"${LOG_FILE}"; then
+          trap - EXIT RETURN
+          rm -f "${tmp_script}"
+          if _register_uv_path; then
+            echo_success "uv 安装完成（官方脚本）"
+            return 0
+          fi
+        else
+          echo_warning "官方脚本执行失败，切换方案 2"
+        fi
+      else
+        echo_warning "下载的文件不是 shell 脚本（首行: ${_uv_first_line}），切换方案 2"
+      fi
+    else
+      echo_warning "下载的脚本为空，切换方案 2"
     fi
   else
-    echo_warning "官方脚本安装失败，切换方案 2"
+    echo_warning "官方脚本下载失败，切换方案 2"
   fi
   trap - EXIT RETURN
   rm -f "${tmp_script}"

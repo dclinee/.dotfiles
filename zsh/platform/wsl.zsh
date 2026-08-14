@@ -32,11 +32,8 @@ if [[ -z "${WSL_WIN_USER:-}" ]]; then
     echo "$WSL_WIN_USER" > "$_wsl_user_cache" 2>/dev/null
   fi
 fi
-if [[ -d "$WSL_WIN_ROOT/Windows/System32" ]]; then
+if [[ -d "$WSL_WIN_ROOT/Windows/System32/WindowsPowerShell/v1.0" ]]; then
   _win_add_path \
-    "$WSL_WIN_ROOT/Windows/System32" \
-    "$WSL_WIN_ROOT/Windows" \
-    "$WSL_WIN_ROOT/Windows/System32/Wbem" \
     "$WSL_WIN_ROOT/Windows/System32/WindowsPowerShell/v1.0" \
     "$WSL_WIN_ROOT/Users/${WSL_WIN_USER}/AppData/Local/Microsoft/WindowsApps" \
     "$WSL_WIN_ROOT/Program Files/Git/cmd"
@@ -137,7 +134,7 @@ fi
 
 # --- Git 优化（跨 WSL 文件系统）---
 # 如果 Git 仓库在 /mnt/c 上，添加以下可加速 (WSL2 的跨 OS 文件系统较慢)
-export GIT_DISCOVERY_ACROSS_FILESYSTEM=true
+# export GIT_DISCOVERY_ACROSS_FILESYSTEM=true  # 已移除：在 WSL2 中可能导致性能问题
 
 # --- 包管理器 (WSL 通常是 Ubuntu/Debian) ---
 # 继承 linux.zsh，但添加 Winget 支持 (从 WSL 调用 Windows 包管理)

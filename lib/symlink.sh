@@ -64,8 +64,8 @@ safe_symlink() {
     if mv "$dst" "$backup" 2>/dev/null; then
       echo_warning "已备份: $dst → $backup"
     else
-      echo_warning "无法备份，尝试直接删除: $dst"
-      rm -f "$dst" 2>/dev/null
+      echo_error "无法备份 $dst，中止链接操作"
+      return 1
     fi
   fi
 

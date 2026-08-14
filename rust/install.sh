@@ -57,9 +57,23 @@ install_rustup() {
     export RUSTUP_UPDATE_ROOT="https://mirrors.sjtug.sjtu.edu.cn/rust-static/rustup"
   fi
 
-  if ! curl -fsSL "${rustup_url}" -o "${tmp_script}" 2>>"${LOG_FILE}"; then
+  if ! curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout 15 --max-time 120 "${rustup_url}" -o "${tmp_script}" 2>>"${LOG_FILE}"; then
     echo_error "无法下载 rustup 安装脚本"
     echo "  手动安装: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+    rm -f "${tmp_script}"; trap - EXIT RETURN
+    return 1
+  fi
+
+  # 安全检查: 文件非空且以 shebang 开头
+  if [[ ! -s "${tmp_script}" ]]; then
+    echo_error "下载的 rustup 脚本为空"
+    rm -f "${tmp_script}"; trap - EXIT RETURN
+    return 1
+  fi
+  local _rustup_first_line
+  _rustup_first_line="$(head -1 "${tmp_script}")"
+  if [[ ! "${_rustup_first_line}" =~ ^#! ]]; then
+    echo_error "下载的文件不是 shell 脚本（首行: ${_rustup_first_line}）"
     rm -f "${tmp_script}"; trap - EXIT RETURN
     return 1
   fi
@@ -68,6 +82,9 @@ install_rustup() {
     echo_success "rustup 安装完成"
     # shellcheck source=/dev/null
     source "${HOME}/.cargo/env" 2>/dev/null || true
+    if ! command -v cargo > /dev/null 2>&1; then
+      echo_warning "cargo 不在 PATH 中，请手动: source ~/.cargo/env"
+    fi
   else
     echo_error "rustup 安装失败，请查看日志: ${LOG_FILE}"
     rm -f "${tmp_script}"; trap - EXIT RETURN

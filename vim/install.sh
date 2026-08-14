@@ -11,6 +11,52 @@ LOG_FILE="/tmp/vim_install_$(date +%Y%m%d_%H%M%S).log"
 DOTFILES_DIR="${HOME}/.dotfiles"
 VIM_DIR="${DOTFILES_DIR}/vim"
 
+# 尝试加载公共库
+if [[ -f "${DOTFILES_DIR}/lib/common.sh" ]]; then
+  source "${DOTFILES_DIR}/lib/common.sh"
+else
+  # fallback: 内联定义公共函数
+  # 颜色定义
+  RED="\033[31m"
+  GREEN="\033[32m"
+  YELLOW="\033[33m"
+  BLUE="\033[34m"
+  CYAN="\033[36m"
+  RESET="\033[0m"
+  BOLD="\033[1m"
+  ARROW="➡️"
+  SKIP="⏭️"
+
+  echo_step()      { printf "${BOLD}${BLUE}ℹ️  %s${RESET}\n"  "${1}"; }
+  echo_success()   { printf "${GREEN}✅ %s${RESET}\n"         "${1}"; }
+  echo_warning()   { printf "${YELLOW}⚠️  %s${RESET}\n"       "${1}"; }
+  echo_error()     { printf "${RED}❌ %s${RESET}\n"           "${1}"; }
+  echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"     "${1}"; }
+  echo_detail()    { printf "${BLUE}  %s${RESET}\n"           "${1}"; }
+  echo_separator() { printf "${BLUE}=============================================${RESET}\n"; }
+  echo_title() {
+    echo_separator
+    printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
+    echo_separator
+  }
+
+  if ! command -v safe_symlink > /dev/null 2>&1; then
+    safe_symlink() {
+      local src="$1" dst="$2"
+      [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
+      if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
+        echo_skip "链接已存在: $dst"; return 0
+      fi
+      if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
+        local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
+        mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
+      fi
+      mkdir -p "$(dirname "$dst")" 2>/dev/null
+      ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
+    }
+  fi
+fi
+
 # vim-plug 镜像源（GitHub 官方优先，国内镜像降级）
 if [[ -n "${NO_MIRROR:-}" ]]; then
   VIM_PLUG_MIRRORS=(
@@ -22,54 +68,6 @@ else
     "https://ghproxy.net/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
     "https://gh-proxy.com/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
   )
-fi
-
-# 颜色定义
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-BLUE="\033[34m"
-CYAN="\033[36m"
-RESET="\033[0m"
-BOLD="\033[1m"
-ARROW="➡️"
-SKIP="⏭️"
-
-echo_step()      { printf "${BOLD}${BLUE}ℹ️  %s${RESET}\n"  "${1}"; }
-echo_success()   { printf "${GREEN}✅ %s${RESET}\n"         "${1}"; }
-echo_warning()   { printf "${YELLOW}⚠️  %s${RESET}\n"       "${1}"; }
-echo_error()     { printf "${RED}❌ %s${RESET}\n"           "${1}"; }
-echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"     "${1}"; }
-echo_detail()    { printf "${BLUE}  %s${RESET}\n"           "${1}"; }
-echo_separator() { printf "${BLUE}=============================================${RESET}\n"; }
-echo_title() {
-  echo_separator
-  printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
-  echo_separator
-}
-
-# ======================
-# 加载公共符号链接函数库
-# ======================
-_SYMLINK_LIB="${DOTFILES_DIR}/lib/symlink.sh"
-if [[ -f "${_SYMLINK_LIB}" ]]; then
-  # shellcheck source=/dev/null
-  source "${_SYMLINK_LIB}"
-else
-  # 回退：当 lib/symlink.sh 不可用时使用内联定义
-  safe_symlink() {
-    local src="$1" dst="$2"
-    [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
-    if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
-      echo_skip "链接已存在: $dst"; return 0
-    fi
-    if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
-      local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
-      mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
-    fi
-    mkdir -p "$(dirname "$dst")" 2>/dev/null
-    ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
-  }
 fi
 
 # ======================
@@ -215,10 +213,17 @@ _download_vim_plug() {
     echo_detail "尝试: ${url}"
     if curl -fLo "${plug_file}" --connect-timeout 15 --max-time 60 \
       "${url}" 2>>"${LOG_FILE}"; then
-      echo_success "vim-plug 安装完成: ${plug_file}（来源: ${url}）"
-      return 0
+      # 基本完整性校验：非空文件 + 包含 vim-plug shebang
+      if [[ -s "${plug_file}" ]] && grep -q 'plug#' "${plug_file}" 2>/dev/null; then
+        echo_success "vim-plug 安装完成: ${plug_file}（来源: ${url}）"
+        return 0
+      else
+        echo_warning "下载的文件内容异常（空文件或缺少标记），尝试下一个镜像..."
+        rm -f "${plug_file}"
+      fi
+    else
+      echo_warning "此镜像失败，尝试下一个..."
     fi
-    echo_warning "此镜像失败，尝试下一个..."
   done
 
   return 1

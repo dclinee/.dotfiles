@@ -15,10 +15,10 @@
 # 个人 name/email 不在仓库中硬编码，请在 ~/.gitconfig.local 配置
 # bootstrap.sh 安装时会自动创建 .gitconfig.local 模板
 [user]
-    # 以下占位符不会被 git 读取（被 .gitconfig.local 覆盖）
-    # 仅用于提示用户去 .gitconfig.local 中配置
-    name = YOUR_NAME
-    email = YOUR_EMAIL
+    # 占位符已注释：首次使用请在 ~/.gitconfig.local 中配置 name 和 email
+    # 取消注释以下行以使用全局默认值（不推荐，建议使用 .gitconfig.local）
+    # name = YOUR_NAME
+    # email = YOUR_EMAIL
 
 # --- 核心配置 ---
 [core]
@@ -136,7 +136,7 @@
     contribute = shortlog -sne --all
     whoami = config user.name && config user.email
     aliases = config --get-regexp ^alias\\.
-    edit = !git diff --name-only --diff-filter=U | xargs -r ${EDITOR:-vim}
+    edit = !git diff --name-only --diff-filter=U | xargs ${EDITOR:-vim}
 
     # --- GitHub 相关（需安装 GitHub CLI: gh） ---
     ghpr = "!gh pr view --web"
@@ -160,7 +160,7 @@
 # Linux 可改用: helper = /usr/share/doc/git/contrib/credential/libsecret/git-credential-libsecret
 # 保守方案：内存缓存 1 小时
 [credential]
-    helper = cache
+	helper = store
     # 缓存有效期（秒）
     timeout = 3600
     # 以下为备选方案，按需切换:
@@ -206,3 +206,5 @@
 [http]
 	postBuffer = 524288000
 	timeout = 300
+[safe]
+	directory = *

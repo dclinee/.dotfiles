@@ -14,8 +14,10 @@ elif command -v pacman > /dev/null; then
 fi
 
 # X11 转发支持
-if [[ -n "$SSH_CLIENT" ]]; then
-  export DISPLAY="${SSH_CLIENT%% *}:0"
+# 注: SSH X11 转发时 sshd 会自动设置 DISPLAY（如 localhost:10.0）
+# 此处仅在 DISPLAY 未设置且 SSH_CLIENT 存在时作为 fallback
+if [[ -z "${DISPLAY:-}" ]] && [[ -n "${SSH_CLIENT:-}" ]]; then
+  export DISPLAY="localhost:10.0"
 fi
 
 # 系统监控别名

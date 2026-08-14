@@ -241,7 +241,7 @@ cpu() {
 
 # 快速查看公网IP
 publicip() {
-  curl -s https://api.ip.sb/jsonip
+  curl -s --connect-timeout 5 --max-time 10 https://api.ip.sb/jsonip
 }
 
 # 测试网络延迟
@@ -445,7 +445,7 @@ except (ValueError, SyntaxError) as e:
 
 # 显示天气信息
 weather() {
-  curl -s "https://wttr.in/${1:-beijing}?lang=zh"
+  curl -s --connect-timeout 5 --max-time 10 "https://wttr.in/${1:-beijing}?lang=zh"
 }
 
 # ----------------------

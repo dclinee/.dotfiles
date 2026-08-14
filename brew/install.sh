@@ -20,8 +20,20 @@ _download_and_run() {
   trap 'rm -f "${tmp_file}"' EXIT RETURN
 
   printf '下载脚本: %s\n' "${url}"
-  if ! curl -fsSL "${url}" -o "${tmp_file}"; then
+  if ! curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout 15 --max-time 120 "${url}" -o "${tmp_file}"; then
     printf '错误: 下载失败 %s\n' "${url}"
+    return 1
+  fi
+
+  # 安全检查: 文件非空且以 shebang 开头
+  if [[ ! -s "${tmp_file}" ]]; then
+    printf '错误: 下载的脚本为空\n'
+    return 1
+  fi
+  local first_line
+  first_line="$(head -1 "${tmp_file}")"
+  if [[ ! "${first_line}" =~ ^#! ]]; then
+    printf '错误: 下载的文件不是 shell 脚本（首行: %s）\n' "${first_line}"
     return 1
   fi
 

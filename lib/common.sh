@@ -148,7 +148,7 @@ get_version() {
   has_cmd "$cmd" || return 1
   # 优先 --version，失败则 version
   local out
-  out=$("$cmd" --version 2>&1 | head -1 || true) || out=$("$cmd" version 2>&1 | head -1 || true)
+  out=$("$cmd" --version 2>&1 | head -1) || out=$("$cmd" version 2>&1 | head -1)
   echo "$out" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true
 }
 
@@ -219,6 +219,7 @@ check_skip() { echo_skip "$1"; SKIP=$((SKIP + 1)); }
 #       传 --no-exit 可仅打印不退出（用于不想中断的调用场景）
 # 用法: check_summary [--no-exit]
 check_summary() {
+  PASS=${PASS:-0}; WARN=${WARN:-0}; FAIL=${FAIL:-0}; SKIP=${SKIP:-0}
   local _no_exit=false
   [[ "${1:-}" == "--no-exit" ]] && _no_exit=true
 

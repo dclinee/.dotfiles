@@ -37,9 +37,15 @@ alias dir='ls -la'
 # ----------------------
 # 3. 系统与工具别名
 # ----------------------
-alias grep='grep --color=auto'
-alias egrep='egrep --color=auto'
-alias fgrep='fgrep --color=auto'
+if [[ "$(uname)" == "Darwin" ]]; then
+  # macOS BSD grep 不支持 --color 参数，跳过
+  # 如需颜色支持，建议: brew install grep 后使用 ggrep
+  alias ggrep="$(brew --prefix grep 2>/dev/null || echo /usr/local)/bin/grep --color=auto" 2>/dev/null || true
+else
+  alias grep='grep --color=auto'
+  alias egrep='egrep --color=auto'
+  alias fgrep='fgrep --color=auto'
+fi
 alias df='df -h'             # 显示磁盘使用情况
 alias du='du -h'             # 显示目录大小
 alias du1='du -h --max-depth=1'  # 只显示一级目录大小
@@ -163,7 +169,7 @@ alias nano='nano -w'         # 禁用自动换行
 # 注: 已移除 alias which='which -a'，因为 zsh 中 which 是 builtin，alias 会失效或行为异常
 # 如需显示所有匹配，请用 whence -p 或 type -a
 alias path='printf "%s\n" ${PATH//:/ }'  # 分行显示 PATH（用 printf 替代 echo -e）
-kb() { echo $((1024 * $1)) }  # 快速计算字节大小
+kb() { echo $((1024 * ${1:-0})) }  # 快速计算字节大小
 if command -v md5sum > /dev/null 2>&1; then
   alias md5='md5sum'
 fi
@@ -225,20 +231,30 @@ alias bbd='brew bundle dump'     # 生成 Brewfile
 alias bbl='brew bundle list'    # 列出 Brewfile 中的包
 alias bbv='brew bundle --verbose' # 详细输出
 
+#-------------------------------------------------------------------------------------------------------
 # Emacs 相关
 # Emacs Daemon 核心别名
 alias es="emacs --daemon"
-alias ekill="emacsclient -e '(kill-emacs)'"
-alias erestart="ekill && sleep 0.3 && es"
+alias ekill='emacsclient -e "(kill-emacs)"'
+
+# 注意: 由于 setopt aliases 启用后 zsh 会在函数定义时展开 alias
+# 函数体内禁止引用 alias 名称，也避免混合单双引号
+# 使用变量传递命令以彻底规避解析器歧义
+emacs_kill_cmd='emacsclient -e "(kill-emacs)"'
+erestart() {
+  eval "$emacs_kill_cmd" 2>/dev/null || true
+  sleep 0.3 2>/dev/null || sleep 1
+  command emacs --daemon
+}
 
 # GUI 客户端（日常主力）
 alias e="emacsclient -c -n -a emacs"
-alias ec="$e"
-alias emg="$e"
+alias ec="emacsclient -c -n -a emacs"
+alias emg="emacsclient -c -n -a emacs"
 
 # 终端内客户端（git/ssh服务器）
 alias et="emacsclient -t -a emacs"
-alias emt="$et"
+alias emt="emacsclient -t -a emacs"
 
 # 独立进程（干净环境调试）
 alias en="emacs -nw"
@@ -252,9 +268,13 @@ alias emlisp="et ~/.config/emacs/lisp/"
 alias eminstall="et ~/.dotfiles/emacs/install.sh"
 alias emlog="less /tmp/dotfiles_emacs_install_*.log"
 
-# 默认编辑器
-export EDITOR="$et"
-export VISUAL="$e"
+# 默认编辑器（使用 emacsclient，若 emacs 未安装则 00_env.zsh 已设 nvim/vim）
+# 仅在 emacs 已安装时覆盖 00_env.zsh 的设置
+if command -v emacsclient > /dev/null 2>&1; then
+  # 附加参数通过 .emacs 中的 ALTERNATE_EDITOR 变量传递
+  export EDITOR="emacsclient"
+  export VISUAL="emacsclient -c -n -a emacs"
+fi
 
 # 智能替换原生emacs命令
 emacs() {
