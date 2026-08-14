@@ -16,7 +16,7 @@ if !has('python3') && !has('python')
   let g:loaded_python3_provider = 0
 endif
 
-" macOS 终端默认 $TERM=xterm-256color，启用真彩色
+" macOS 终端默认 $TERM=xterm-256color，启用真彩色（在 core 通用判断基础上，针对 macOS 常见终端补保险）
 if $TERM_PROGRAM ==# 'iTerm.app' || $TERM_PROGRAM ==# 'Apple_Terminal'
   set termguicolors
 endif

@@ -35,7 +35,7 @@ for _, d in ipairs({ cache .. '/undo', cache .. '/backup', cache .. '/swap' }) d
   vim.fn.mkdir(d, 'p')
 end
 
--- 真彩色/符号（已有 termguicolors 的再保险）
+-- 真彩色/符号（Neovim 叠加层再次确认 termguicolors；与 Vimscript core + platform 分层设置保持幂等）
 if vim.fn.has('termguicolors') == 1 then
   opt.termguicolors = true
 end

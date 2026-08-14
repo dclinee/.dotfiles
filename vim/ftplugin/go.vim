@@ -16,6 +16,6 @@ let g:go_fmt_command = 'goimports'
 let g:go_imports_autosave = 1
 
 " 运行 / 测试快捷键
-nnoremap <buffer> <F5> :w<CR>:GoRun %<CR>
-nnoremap <buffer> <Leader>rt :w<CR>:GoTest<CR>
-nnoremap <buffer> <Leader>rb :w<CR>:GoBuild<CR>
+nnoremap <silent><buffer> <F5> :w<CR>:GoRun %<CR>
+nnoremap <silent><buffer> <Leader>rt :w<CR>:GoTest<CR>
+nnoremap <silent><buffer> <Leader>rb :w<CR>:GoBuild<CR>

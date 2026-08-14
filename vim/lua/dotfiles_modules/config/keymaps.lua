@@ -11,6 +11,7 @@
 
 local Util = require('dotfiles_modules.util')
 local map = Util.map
+local opt = vim.opt
 
 -- =========================================
 --  基础：保存/退出/清搜索 （与 Vimscript 重复映射安全：noremap 幂等）
@@ -41,55 +42,105 @@ map('n', '<leader><tab>c',     '<cmd>tabclose<cr>',     { desc = 'Close tab' })
 map('n', '<leader><tab>o',     '<cmd>tabonly<cr>',      { desc = 'Close other tabs' })
 
 -- =========================================
+--  LSP / Coc 运行时探测（按键时判断，不因加载时 Neovim 内置模块恒存在而误判）
+-- =========================================
+local function has_coc() return vim.fn.exists('*CocActionAsync') == 1 end
+
+-- =========================================
 --  LazyVim 风格的诊断跳转（映射到 [d / ]d，避免与 coc 的 <leader>[ / ] 冲突）
 -- =========================================
-map('n', ']d', vim.diagnostic and vim.diagnostic.goto_next or '<Plug>(coc-diagnostic-next)',
-    { desc = 'Next diagnostic' })
-map('n', '[d', vim.diagnostic and vim.diagnostic.goto_prev or '<Plug>(coc-diagnostic-prev)',
-    { desc = 'Prev diagnostic' })
-map('n', '<leader>cd', vim.diagnostic and function() vim.diagnostic.open_float() end
-                                  or function() vim.fn.CocActionAsync('diagnosticList') end,
-    { desc = 'Line diagnostics' })
+map('n', ']d', function()
+  if has_coc() then
+    vim.fn['CocActionAsync']('diagnosticNext')
+  elseif vim.diagnostic then
+    vim.diagnostic.goto_next()
+  end
+end, { desc = 'Next diagnostic' })
+
+map('n', '[d', function()
+  if has_coc() then
+    vim.fn['CocActionAsync']('diagnosticPrev')
+  elseif vim.diagnostic then
+    vim.diagnostic.goto_prev()
+  end
+end, { desc = 'Prev diagnostic' })
+
+map('n', '<leader>cd', function()
+  if has_coc() then
+    vim.fn.CocActionAsync('diagnosticList')
+  elseif vim.diagnostic then
+    vim.diagnostic.open_float()
+  end
+end, { desc = 'Line diagnostics' })
 
 -- =========================================
 --  LazyVim 约定的 LSP 键位（在 LSP attach 时会被插件重写，这里放兜底）
 -- =========================================
-local function has_coc() return vim.fn.exists('*CocActionAsync') == 1 end
+map('n', 'K', function()
+  if has_coc() then
+    vim.fn.CocActionAsync('doHover')
+  elseif vim.lsp and vim.lsp.buf.hover then
+    vim.lsp.buf.hover()
+  else
+    vim.api.nvim_feedkeys('K', 'n', false)
+  end
+end, { desc = 'Hover' })
 
-map('n', 'K',
-  has_coc() and '<cmd>call CocActionAsync("doHover")<cr>'
-          or (vim.lsp and vim.lsp.buf.hover or 'K'),
-  { desc = 'Hover' })
+map('n', 'gd', function()
+  if has_coc() then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Plug>(coc-definition)', true, false, true), 'n', false)
+  elseif vim.lsp and vim.lsp.buf.definition then
+    vim.lsp.buf.definition()
+  else
+    vim.api.nvim_feedkeys('gd', 'n', false)
+  end
+end, { desc = 'Goto definition' })
 
-map('n', 'gd',
-  has_coc() and '<Plug>(coc-definition)'
-          or (vim.lsp and vim.lsp.buf.definition or 'gd'),
-  { desc = 'Goto definition' })
+map('n', 'gD', function()
+  if has_coc() then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Plug>(coc-declaration)', true, false, true), 'n', false)
+  elseif vim.lsp and vim.lsp.buf.declaration then
+    vim.lsp.buf.declaration()
+  else
+    vim.api.nvim_feedkeys('gD', 'n', false)
+  end
+end, { desc = 'Goto declaration' })
 
-map('n', 'gD',
-  has_coc() and '<Plug>(coc-declaration)'
-          or (vim.lsp and vim.lsp.buf.declaration or 'gD'),
-  { desc = 'Goto declaration' })
+map('n', 'gi', function()
+  if has_coc() then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Plug>(coc-implementation)', true, false, true), 'n', false)
+  elseif vim.lsp and vim.lsp.buf.implementation then
+    vim.lsp.buf.implementation()
+  else
+    vim.api.nvim_feedkeys('gi', 'n', false)
+  end
+end, { desc = 'Goto implementation' })
 
-map('n', 'gi',
-  has_coc() and '<Plug>(coc-implementation)'
-          or (vim.lsp and vim.lsp.buf.implementation or 'gi'),
-  { desc = 'Goto implementation' })
+map('n', 'gr', function()
+  if has_coc() then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Plug>(coc-references)', true, false, true), 'n', false)
+  elseif vim.lsp and vim.lsp.buf.references then
+    vim.lsp.buf.references()
+  else
+    vim.api.nvim_feedkeys('gr', 'n', false)
+  end
+end, { desc = 'Goto references' })
 
-map('n', 'gr',
-  has_coc() and '<Plug>(coc-references)'
-          or (vim.lsp and vim.lsp.buf.references or 'gr'),
-  { desc = 'Goto references' })
+map('n', '<leader>rn', function()
+  if has_coc() then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Plug>(coc-rename)', true, false, true), 'n', false)
+  elseif vim.lsp and vim.lsp.buf.rename then
+    vim.lsp.buf.rename()
+  end
+end, { desc = 'Rename' })
 
-map('n', '<leader>rn',
-  has_coc() and '<Plug>(coc-rename)'
-          or (vim.lsp and vim.lsp.buf.rename or '<Nop>'),
-  { desc = 'Rename' })
-
-map({ 'n', 'v' }, '<leader>ca',
-  has_coc() and '<Plug>(coc-codeaction-selected)'
-          or (vim.lsp and vim.lsp.buf.code_action or '<Nop>'),
-  { desc = 'Code action' })
+map({ 'n', 'v' }, '<leader>ca', function()
+  if has_coc() then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Plug>(coc-codeaction-selected)', true, false, true), 'n', false)
+  elseif vim.lsp and vim.lsp.buf.code_action then
+    vim.lsp.buf.code_action()
+  end
+end, { desc = 'Code action' })
 
 -- =========================================
 --  缓冲区 (LazyVim <leader>b 分组)

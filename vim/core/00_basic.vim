@@ -89,7 +89,7 @@ silent! call mkdir(expand('~/.cache/vim/swap'), 'p')
 " set spell
 " set spelllang=en_us,zh_cn
 
-" 状态栏显示编码和文件类型
+" 状态栏显示编码和文件类型（当安装了 vim-airline 时，Airline 会完整覆盖 statusline；此处作为插件未就绪时的兜底）
 set statusline+=%F\ %m\ %r\ %y\ %{&fileencoding?&fileencoding:&encoding}\ %=\ %l,%c%V\ %P
 
 " ===================================
@@ -98,6 +98,8 @@ set statusline+=%F\ %m\ %r\ %y\ %{&fileencoding?&fileencoding:&encoding}\ %=\ %l
 set background=dark
 
 " 优先使用 termguicolors（真彩色），需要 +termguicolors 编译支持
+" 注意：platform/macos.vim / platform/linux.vim 会根据终端类型再补强；
+"       Lua options.lua（Neovim 叠加层启用时）也会重复设置一次，均为幂等操作
 if has('termguicolors')
   set termguicolors
 endif

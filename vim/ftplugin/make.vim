@@ -17,5 +17,5 @@ syntax clear
 syntax enable
 
 " 构建快捷键
-nnoremap <buffer> <F5> :w<CR>:make<CR>
-nnoremap <buffer> <Leader>rb :w<CR>:make<CR>
+nnoremap <silent><buffer> <F5> :w<CR>:make<CR>
+nnoremap <silent><buffer> <Leader>rb :w<CR>:make<CR>

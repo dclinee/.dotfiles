@@ -12,7 +12,7 @@ setlocal expandtab
 setlocal endofline
 
 " ESLint 修复快捷键（依赖 coc-prettier / coc-eslint）
-nnoremap <buffer> <Leader>rf :call CocAction('format')<CR>
+nnoremap <silent><buffer> <Leader>rf :call CocAction('format')<CR>
 
 " 运行 Node.js
-nnoremap <buffer> <F5> :w<CR>:!node %<CR>
+nnoremap <silent><buffer> <F5> :w<CR>:!node %<CR>

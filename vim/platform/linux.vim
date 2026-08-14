@@ -13,7 +13,7 @@ if !has('clipboard') && executable('xclip')
   let g:clipboard = {'name': 'xclip', 'copy': {'+': 'xclip -selection clipboard', '*': 'xclip -selection primary'}, 'paste': {'+': 'xclip -selection clipboard -o', '*': 'xclip -selection primary -o'}, 'cache_enabled': 1}
 endif
 
-" GTK GNOME 终端下避免背景色错误
+" GTK GNOME 终端下避免背景色错误（补充 termguicolors：与 core/00_basic.vim、platform/macos.vim 构成分层设置，均幂等）
 if $TERM =~? 'gnome'
   set termguicolors
 endif

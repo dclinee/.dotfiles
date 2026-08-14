@@ -59,8 +59,7 @@ if !exists('g:dotfiles_enable_lua_modules')
 endif
 if g:dotfiles_enable_lua_modules != 0 && has('nvim') && isdirectory(g:dotfiles_vim_dir . '/lua')
   try
-    " 将 lua/ 所在目录加入 &runtimepath，使得 require('dotfiles_modules') 可被找到
-    execute 'set runtimepath^=' . g:dotfiles_vim_dir
+    " 注：&runtimepath 已在 L13 将 g:dotfiles_vim_dir 加入；lua/ 子目录在其下，Neovim 会按标准查找 lua/ 子目录，无需重复插入
     lua << EOF
       local ok, err = pcall(function()
         local m = require('dotfiles_modules')
