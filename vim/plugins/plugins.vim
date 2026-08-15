@@ -62,6 +62,14 @@ Plug 'mbbill/undotree'             " 撤销树
 Plug 'jiangmiao/auto-pairs'        " 自动括号匹配
 Plug 'tpope/vim-surround'          " 环绕字符操作
 
+" Spacemacs 风格的 Which-Key 提示
+" Vim 端用 liuchengxu/vim-which-key；Neovim 端用 folke/which-key.nvim（通过 init.lua 直接加载）
+if !has('nvim')
+  Plug 'liuchengxu/vim-which-key'
+else
+  Plug 'folke/which-key.nvim'
+endif
+
 " 语言特定插件（仅语法，补全交给 coc）
 Plug 'rust-lang/rust.vim'          " Rust 支持
 Plug 'pangloss/vim-javascript'     " JavaScript 支持
@@ -179,3 +187,41 @@ nnoremap <Leader>ff :Files<CR>
 nnoremap <Leader>fg :GFiles<CR>
 nnoremap <Leader>fb :Buffers<CR>
 nnoremap <Leader>fs :Rg<CR>
+
+" ===================================
+"  vim-which-key：Spacemacs 风格分组提示（仅 Vim 端生效；Neovim 使用 folke/which-key.nvim）
+"  与 core/01_keybindings.vim / lua/.../ui.lua 的分组完全对应
+" ===================================
+if !has('nvim') && exists(':WhichKey')
+  let g:which_key_map = {}
+  let g:which_key_map.a = 'Applications'
+  let g:which_key_map.b = 'Buffers'
+  let g:which_key_map.c = 'Code (LSP/Diag/Fmt)'
+  let g:which_key_map.d = 'Dotfiles'
+  let g:which_key_map.e = 'Edit'
+  let g:which_key_map.f = 'Files'
+  let g:which_key_map.g = 'Git + Goto (LSP)'
+  let g:which_key_map.h = 'Help / Highlight'
+  let g:which_key_map.j = 'Jump'
+  let g:which_key_map.k = 'Kustom (User)'
+  let g:which_key_map.m = 'Major Mode (alias ,)'
+  let g:which_key_map.n = 'Narrow & UI'
+  let g:which_key_map.p = 'Project'
+  let g:which_key_map.P = 'Plugins (vim-plug)'
+  let g:which_key_map.q = 'Quit & Session'
+  let g:which_key_map.r = 'Registers / Rings'
+  let g:which_key_map.s = 'Search'
+  let g:which_key_map.t = 'Toggles'
+  let g:which_key_map.T = 'Tabs'
+  let g:which_key_map.v = 'Visual & Block'
+  let g:which_key_map.w = 'Windows'
+  let g:which_key_map.x = 'eXtras / Text'
+  let g:which_key_map.y = 'Yank & Paste (System)'
+  let g:which_key_map.z = 'Fold'
+  let g:which_key_map['<tab>'] = 'Tabs'
+  nnoremap <silent> <Leader> :WhichKey '<Space>'<CR>
+  vnoremap <silent> <Leader> :WhichKeyVisual '<Space>'<CR>
+  " 本地 Leader（逗号）也注册提示入口
+  nnoremap <silent> , :WhichKey ','<CR>
+  vnoremap <silent> , :WhichKeyVisual ','<CR>
+endif

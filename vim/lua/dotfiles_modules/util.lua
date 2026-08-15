@@ -75,4 +75,37 @@ function M.autocmd(event, opts)
   return vim.api.nvim_create_autocmd(event, opts)
 end
 
+--- 当前是否为 macOS
+function M.on_mac()
+  return vim.loop.os_uname().sysname == 'Darwin'
+end
+
+--- 当前是否为 Linux
+function M.on_linux()
+  return vim.loop.os_uname().sysname == 'Linux'
+end
+
+--- 当前是否为 Windows
+function M.on_windows()
+  return vim.loop.os_uname().sysname:find('Windows') ~= nil
+end
+
+--- 优先尝试 Telescope 命令；不可用时回退到 FZF；再不可用回退到 Vim 原生命令
+---@param telescope_cmd string lazy.nvim 的 telescope subcommand，比如 'find_files'
+---@param fzf_cmd       string fallback 命令如 'Files'
+---@param vim_cmd       string fallback 原生命令如 ':find '
+---@return function rhs 可直接作为 vim.keymap.set 的 rhs
+function M.telescope_or(telescope_cmd, fzf_cmd, vim_cmd)
+  return function()
+    local ok, _ = pcall(require, 'telescope')
+    if ok then
+      vim.cmd('Telescope ' .. telescope_cmd)
+    elseif vim.fn.exists(':' .. fzf_cmd) == 2 then
+      vim.cmd(fzf_cmd)
+    else
+      vim.cmd(vim_cmd)
+    end
+  end
+end
+
 return M

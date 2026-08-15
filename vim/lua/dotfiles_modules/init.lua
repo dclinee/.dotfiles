@@ -65,6 +65,16 @@ function M.setup()
   -- 3) 全局键位映射（LazyVim vim.keymap.set 规范）
   safe_require('dotfiles_modules.config.keymaps')
 
+  -- 3.5) Which-Key：独立加载（不依赖 lazy.nvim）
+  --   vim-plug 已通过 plugins.vim 安装 folke/which-key.nvim（仅 Neovim）
+  --   若启用 lazy.nvim，ui.lua spec 的 config 也会调用此模块（幂等，不会重复 setup）
+  if vim.fn.has('nvim') == 1 then
+    local wk_mod = safe_require('dotfiles_modules.config.which-key')
+    if wk_mod and type(wk_mod.setup) == 'function' then
+      wk_mod.setup()
+    end
+  end
+
   -- 4) 可选：启用 lazy.nvim 插件管理
   --    默认为 0（与现有 vim-plug 和平共存，零破坏）
   --    用户在 ~/.vimrc.local 中: let g:dotfiles_use_lazy_nvim = 1 时启用

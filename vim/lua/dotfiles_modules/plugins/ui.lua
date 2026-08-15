@@ -1,7 +1,12 @@
 --[[
   plugins/ui.lua
-  LazyVim 风格插件 spec: UI / 主题 / 状态栏 / 图标
+  LazyVim 风格插件 spec: UI / 主题 / 状态栏 / 图标 / Which-Key
+
+  Spacemacs 分层：<leader> 下所有映射由 which-key 注册分组名，
+  避免在 core/01_keybindings.vim / config/keymaps.lua 间重复描述。
 ]]
+
+local Util = require('dotfiles_modules.util')
 
 --- @type LazySpec[]
 return {
@@ -24,7 +29,6 @@ return {
           floats = 'transparent',
         },
       })
-      -- 仅当 Vimscript 未明确加载主题时才设默认
       if not vim.g.colors_name then
         vim.cmd.colorscheme('tokyonight')
       end
@@ -49,8 +53,19 @@ return {
     end,
   },
 
+  -- ========== Which-Key：Spacemacs 风格分组提示 ==========
+  -- 默认通过 vim-plug 安装 + init.lua 直接加载 config/which-key.lua
+  -- 仅在启用 lazy.nvim 时由 lazy 管理懒加载（cond 控制）
+  {
+    'folke/which-key.nvim',
+    event = 'VeryLazy',
+    cond = vim.g.dotfiles_use_lazy_nvim == 1,
+    config = function(_, opts)
+      require('dotfiles_modules.config.which-key').setup(opts)
+    end,
+  },
+
   -- ========== 状态栏 ==========
-  -- vim-airline（与现有 Vimscript 配置一致）
   {
     'vim-airline/vim-airline',
     event = 'UIEnter',
@@ -60,13 +75,11 @@ return {
       vim.g.airline_theme = 'tokyonight'
       vim.g['airline#extensions#tabline#enabled'] = 1
       vim.g['airline#extensions#tabline#fnamemod'] = ':t'
-      -- 与 LazyVim lualine 风格一致的 sections
       vim.g.airline_section_b = '%{getcwd()}'
     end,
   },
 
   -- ========== 图标与文件浏览器 ==========
-  -- 开发图标（所有 UI 插件的前置）
   {
     'nvim-tree/nvim-web-devicons',
     lazy = true,
@@ -76,16 +89,13 @@ return {
     end,
   },
 
-  -- vim-devicons（Vim/Neovim 都可用，airline/nerdtree 的图标依赖）
-  {
-    'ryanoasis/vim-devicons',
-    event = 'UIEnter',
-  },
+  { 'ryanoasis/vim-devicons', event = 'UIEnter' },
 
-  -- NERDTree 及其增强（LazyVim 等效是 nvim-tree.lua，这里保持与现有配置一致）
+  -- NERDTree 及其增强
   {
     'preservim/nerdtree',
     cmd = { 'NERDTreeToggle', 'NERDTreeFocus', 'NERDTreeFind' },
+    -- 注意：<leader>e / <leader>n / <leader>E 与 Spacemacs 分组无冲突（e=Edit / n=Narrow 下已未占用）
     keys = {
       { '<leader>e', '<cmd>NERDTreeToggle<cr>', desc = 'Toggle NERDTree' },
       { '<leader>n', '<cmd>NERDTreeToggle<cr>', desc = 'Toggle NERDTree (alt)' },
@@ -107,14 +117,18 @@ return {
   {
     'preservim/tagbar',
     cmd = 'TagbarToggle',
-    keys = { { '<leader>t', '<cmd>TagbarToggle<cr>', desc = 'Toggle Tagbar' } },
+    -- 注：Spacemacs 下 T = Tabs；Tagbar 独立命令，保持原入口
+    keys = { { '<leader>oT', '<cmd>TagbarToggle<cr>', desc = 'Toggle Tagbar (outline)' } },
     init = function()
       vim.g.tagbar_autoclose = 1
       vim.g.tagbar_width = 30
     end,
   },
 
-  -- FZF (LazyVim 等效是 telescope.nvim，这里保持与现有配置一致)
+  -- ========== FZF + Telescope 双通道 ==========
+  -- 优先使用 Telescope（如果已安装）；FZF 仅作为兜底。
+  -- 所有键位在 config/keymaps.lua 中声明为 Telescope；FZF 不在此处声明 keys，
+  -- 以免与 Spacemacs 分层中的 <leader>f / <leader>p / <leader>s 描述重复。
   {
     'junegunn/fzf',
     build = function() vim.fn['fzf#install']() end,
@@ -123,23 +137,9 @@ return {
   {
     'junegunn/fzf.vim',
     cmd = { 'Files', 'GFiles', 'Buffers', 'Rg', 'Lines', 'Tags' },
-    keys = {
-      { '<leader>ff', '<cmd>Files<cr>',   desc = 'FZF Files' },
-      { '<leader>fg', '<cmd>GFiles<cr>',  desc = 'FZF Git Files' },
-      { '<leader>fb', '<cmd>Buffers<cr>', desc = 'FZF Buffers' },
-      { '<leader>fs', '<cmd>Rg<cr>',      desc = 'FZF Grep (Rg)' },
-      { '<leader>fl', '<cmd>Lines<cr>',   desc = 'FZF Lines' },
-    },
     config = function()
-      -- 与 LazyVim Telescope 视觉一致：浮动 + 透明 + 圆角边框
       vim.g.fzf_layout = {
-        window = {
-          width = 0.85,
-          height = 0.75,
-          border = 'rounded',
-          xoffset = 0.5,
-          yoffset = 0.5,
-        },
+        window = { width = 0.85, height = 0.75, border = 'rounded', xoffset = 0.5, yoffset = 0.5 },
       }
       vim.g.fzf_colors = {
         fg = { 'fg', 'Normal' },
@@ -158,4 +158,51 @@ return {
       }
     end,
   },
+
+  -- Telescope（优先，未装则由 config/keymaps.lua 中的映射触发 FZF 命令 fallback）
+  {
+    'nvim-telescope/telescope.nvim',
+    version = '*',
+    cmd = 'Telescope',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      {
+        'nvim-telescope/telescope-fzf-native.nvim',
+        build = Util.on_mac() and 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build'
+          or 'make',
+      },
+    },
+    config = function()
+      local t = require('telescope')
+      t.setup({
+        defaults = {
+          prompt_prefix = '❯ ',
+          selection_caret = '❯ ',
+          entry_prefix = '  ',
+          winblend = 0,
+          layout_strategy = 'horizontal',
+          layout_config = {
+            width = 0.9, height = 0.85, preview_cutoff = 120,
+            horizontal = { preview_width = 0.6 },
+          },
+          mappings = {
+            i = {
+              ['<C-j>'] = 'move_selection_next',
+              ['<C-k>'] = 'move_selection_previous',
+              ['<C-q>'] = 'send_to_qflist',
+            },
+            n = { ['q'] = 'close' },
+          },
+          file_ignore_patterns = { '.git/', 'node_modules/', '__pycache__/', '%.o$', '%.a$' },
+          vimgrep_arguments = {
+            'rg', '--color=never', '--no-heading', '--with-filename',
+            '--line-number', '--column', '--smart-case', '--hidden',
+            '-g', '!.git/', '-g', '!node_modules/',
+          },
+        },
+      })
+      pcall(t.load_extension, 'fzf')
+    end,
+  },
+  { 'nvim-lua/plenary.nvim', lazy = true },
 }
