@@ -1,0 +1,143 @@
+# ============================================================
+# YOLOv11 训练预设配置
+# 五档模型: n(轻量) → s(标准) → m(中等) → l(大型) → x(超大)
+# ============================================================
+
+# 共享的超参数
+shared:
+  optimizer: auto           # 自动选择: SGD(小batch) / AdamW(大batch)
+  cos_lr: true              # 余弦学习率调度
+  warmup_epochs: 3          # 预热轮数
+  warmup_momentum: 0.8      # 预热动量
+  weight_decay: 0.0005      # 权重衰减
+  close_mosaic: 10          # 最后10个epoch关闭mosaic
+  pretrained: true          # 使用预训练权重
+  val: true                 # 每轮验证
+  plots: true               # 生成训练曲线
+  save: true                # 保存模型
+  save_period: 10           # 每10轮保存一次
+  exist_ok: true            # 覆盖同名实验
+
+# 五档模型配置
+presets:
+
+  # ===== Nano: 最快, 精度最低, 适合边缘设备 =====
+  n:
+    model: yolo11n.pt
+    imgsz: 640
+    batch: 32               # 需要约 4GB 显存
+    epochs: 100
+    lr0: 0.01
+    lrf: 0.01
+    patience: 50
+    device: "0"
+    description: "轻量级, 适合 Jetson/RK3588 等边缘设备"
+
+  # ===== Small: 速度与精度平衡, 推荐起步 =====
+  s:
+    model: yolo11s.pt
+    imgsz: 640
+    batch: 24               # 需要约 6GB 显存
+    epochs: 150
+    lr0: 0.01
+    lrf: 0.01
+    patience: 50
+    device: "0"
+    description: "标准配置, 推荐首次训练使用"
+
+  # ===== Medium: 精度更高, 适合服务器 =====
+  m:
+    model: yolo11m.pt
+    imgsz: 640
+    batch: 16               # 需要约 8GB 显存
+    epochs: 200
+    lr0: 0.01
+    lrf: 0.01
+    patience: 60
+    device: "0"
+    description: "中等精度, 适合中高端服务器"
+
+  # ===== Large: 高精度, 适合高端GPU =====
+  l:
+    model: yolo11l.pt
+    imgsz: 640
+    batch: 12               # 需要约 12GB 显存
+    epochs: 200
+    lr0: 0.01
+    lrf: 0.01
+    patience: 60
+    device: "0"
+    description: "高精度, 适合 RTX 3080/4080 等"
+
+  # ===== XLarge: 最高精度, 需要大显存 =====
+  x:
+    model: yolo11x.pt
+    imgsz: 640
+    batch: 8                # 需要约 16GB 显存
+    epochs: 200
+    lr0: 0.008
+    lrf: 0.01
+    patience: 60
+    device: "0"
+    description: "最高精度, 适合 RTX 4090/A100 等"
+
+  # ===== 小数据集微调模式 =====
+  finetune:
+    model: yolo11s.pt
+    imgsz: 640
+    batch: 16
+    epochs: 50
+    lr0: 0.001             # 低学习率
+    lrf: 0.01
+    patience: 30
+    freeze: 10              # 冻结前10层
+    augment: true           # 增强数据增强
+    device: "0"
+    description: "小数据集(<500张)微调, 冻结backbone"
+
+  # ===== CPU 模式 (无GPU时) =====
+  cpu:
+    model: yolo11n.pt
+    imgsz: 320              # 降低分辨率
+    batch: 4
+    epochs: 50
+    lr0: 0.01
+    lrf: 0.01
+    patience: 20
+    device: "cpu"
+    description: "CPU模式, 仅用于验证流程, 速度很慢"
+
+
+# ============================================================
+# 数据增强策略
+# ============================================================
+augmentation:
+  # 基础增强 (ultralytics 内置, 默认开启)
+  default:
+    hsv_h: 0.015       # 色调
+    hsv_s: 0.7         # 饱和度
+    hsv_v: 0.4         # 亮度
+    degrees: 0.0       # 旋转角度 (0=关闭)
+    translate: 0.1     # 平移
+    scale: 0.5         # 缩放
+    shear: 0.0         # 剪切
+    perspective: 0.0   # 透视
+    flipud: 0.0        # 上下翻转概率
+    fliplr: 0.5        # 左右翻转概率
+    mosaic: 1.0        # Mosaic 增强
+    mixup: 0.0         # MixUp 增强
+
+  # 强增强 (小数据集用)
+  strong:
+    hsv_h: 0.03
+    hsv_s: 0.9
+    hsv_v: 0.6
+    degrees: 10.0
+    translate: 0.2
+    scale: 0.7
+    shear: 5.0
+    perspective: 0.0005
+    flipud: 0.1
+    fliplr: 0.5
+    mosaic: 1.0
+    mixup: 0.1
