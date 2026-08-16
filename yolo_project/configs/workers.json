@@ -1,0 +1,150 @@
+{
+  "_说明": "工人数据库 - 通过手机号定位确定身份和班组归属",
+  "_规则": "每名工人属于一个班组，通过手机 GPS 定位判断是否在工地范围内",
+
+  "workers": [
+    {
+      "id": "W001",
+      "name": "张三",
+      "phone": "13800001001",
+      "team": "A班组",
+      "role": "worker",
+      "open_id": "ou_xxxxxxxxxxxxx_001",
+      "certificate": "安全员证",
+      "blood_type": "A",
+      "emergency_contact": "13800009999"
+    },
+    {
+      "id": "W002",
+      "name": "李四",
+      "phone": "13800001002",
+      "team": "A班组",
+      "role": "worker",
+      "open_id": "ou_xxxxxxxxxxxxx_002",
+      "certificate": "电焊工证",
+      "blood_type": "B",
+      "emergency_contact": "13800009998"
+    },
+    {
+      "id": "W003",
+      "name": "王五",
+      "phone": "13800001003",
+      "team": "A班组",
+      "role": "worker",
+      "open_id": "ou_xxxxxxxxxxxxx_003",
+      "certificate": "起重工证",
+      "blood_type": "O",
+      "emergency_contact": "13800009997"
+    },
+    {
+      "id": "W004",
+      "name": "赵六",
+      "phone": "13800001004",
+      "team": "A班组",
+      "role": "team_leader",
+      "open_id": "ou_xxxxxxxxxxxxx_004",
+      "certificate": "安全员证",
+      "blood_type": "AB",
+      "emergency_contact": "13800009996"
+    },
+    {
+      "id": "W005",
+      "name": "孙七",
+      "phone": "13800001005",
+      "team": "B班组",
+      "role": "worker",
+      "open_id": "ou_xxxxxxxxxxxxx_005",
+      "certificate": "架子工证",
+      "blood_type": "A",
+      "emergency_contact": "13800009995"
+    },
+    {
+      "id": "W006",
+      "name": "周八",
+      "phone": "13800001006",
+      "team": "B班组",
+      "role": "worker",
+      "open_id": "ou_xxxxxxxxxxxxx_006",
+      "certificate": "电工证",
+      "blood_type": "B",
+      "emergency_contact": "13800009994"
+    },
+    {
+      "id": "W007",
+      "name": "吴九",
+      "phone": "13800001007",
+      "team": "B班组",
+      "role": "team_leader",
+      "open_id": "ou_xxxxxxxxxxxxx_007",
+      "certificate": "安全员证",
+      "blood_type": "O",
+      "emergency_contact": "13800009993"
+    },
+    {
+      "id": "W008",
+      "name": "郑十",
+      "phone": "13800001008",
+      "team": "C班组",
+      "role": "worker",
+      "open_id": "ou_xxxxxxxxxxxxx_008",
+      "certificate": "塔吊操作证",
+      "blood_type": "A",
+      "emergency_contact": "13800009992"
+    },
+    {
+      "id": "W009",
+      "name": "冯十一",
+      "phone": "13800001009",
+      "team": "C班组",
+      "role": "worker",
+      "open_id": "ou_xxxxxxxxxxxxx_009",
+      "certificate": "信号工证",
+      "blood_type": "AB",
+      "emergency_contact": "13800009991"
+    },
+    {
+      "id": "W010",
+      "name": "陈十二",
+      "phone": "13800001010",
+      "team": "C班组",
+      "role": "team_leader",
+      "open_id": "ou_xxxxxxxxxxxxx_010",
+      "certificate": "安全员证",
+      "blood_type": "B",
+      "emergency_contact": "13800009990"
+    }
+  ],
+
+  "teams": {
+    "A班组": {
+      "type": "土建施工",
+      "leader_id": "W004",
+      "leader_name": "赵六",
+      "work_area": "B区",
+      "schedule": "08:00-17:00"
+    },
+    "B班组": {
+      "type": "钢结构安装",
+      "leader_id": "W007",
+      "leader_name": "吴九",
+      "work_area": "A区",
+      "schedule": "08:00-17:00"
+    },
+    "C班组": {
+      "type": "机电安装",
+      "leader_id": "W010",
+      "leader_name": "陈十二",
+      "work_area": "C区",
+      "schedule": "08:00-17:00"
+    }
+  },
+
+  "attendance_rules": {
+    "work_start": "08:00",
+    "work_end": "17:00",
+    "late_threshold_minutes": 30,
+    "early_leave_threshold_minutes": 30,
+    "auto_checkin_distance_meters": 50,
+    "auto_checkout_distance_meters": 100
+  }
+}
