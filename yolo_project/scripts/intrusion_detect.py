@@ -7,17 +7,23 @@
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 from datetime import datetime
 import cv2
 import numpy as np
 from ultralytics import YOLO
 
+# 添加项目根目录到 path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from utils.notify import LarkNotifier, alarm_intrusion
+
 
 class IntrusionDetector:
     """危险区域入侵检测器"""
 
-    def __init__(self, model_path, danger_zones, conf=0.3, device="0"):
+    def __init__(self, model_path, danger_zones, conf=0.3, device="0",
+                 notify=False, personnel_config="configs/personnel.json"):
         """
         Args:
             model_path: YOLO 模型路径
@@ -31,6 +37,10 @@ class IntrusionDetector:
 
         self.alarm_log = []
         self.alarm_cooldown = {}
+
+        # 飞书通知
+        self.notify = notify
+        self.notifier = LarkNotifier(personnel_config) if notify else None
 
     def set_danger_zones(self, zones):
         """设置危险区域 (归一化坐标 0~1)"""
@@ -138,6 +148,19 @@ class IntrusionDetector:
             msg = f"[{timestamp}] Frame {frame_id}: 人员闯入危险区域 #{zone_id}"
             self.alarm_log.append(msg)
             print(f"  [INTRUSION] {msg}")
+
+            # 飞书通知
+            if self.notify:
+                zone_name = f"Zone_{zone_id}"
+                # 尝试从 danger_zones 配置中获取区域名称
+                danger_zones_config = getattr(self, "danger_zones_config", None)
+                if danger_zones_config and zone_id < len(danger_zones_config):
+                    zone_name = danger_zones_config[zone_id].get("name", zone_name)
+                self.notifier.send_alarm(
+                    "intrusion",
+                    camera_id=getattr(self, "camera_id", None),
+                    zone_name=zone_name,
+                )
 
     def save_log(self, path="runs/intrusion/intrusion_log.txt"):
         """保存入侵日志"""
@@ -261,6 +284,10 @@ def main():
     parser.add_argument("--nosave", action="store_true", help="不保存结果")
     parser.add_argument("--show", action="store_true", help="实时显示")
     parser.add_argument("--alarm_interval", type=int, default=5, help="报警间隔(秒)")
+    parser.add_argument("--notify", action="store_true", help="启用飞书告警通知")
+    parser.add_argument("--personnel-config", type=str, default="configs/personnel.json",
+                        help="人员配置文件路径")
+    parser.add_argument("--camera-id", type=str, default=None, help="摄像头编号")
 
     # 交互式标注子命令
     parser.add_argument("--annotate", type=str, default=None,
@@ -291,7 +318,11 @@ def main():
         danger_zones=zones,
         conf=args.conf,
         device=args.device,
+        notify=args.notify,
+        personnel_config=args.personnel_config,
     )
+    detector.camera_id = args.camera_id
+    detector.danger_zones_config = zones  # 保存原始配置用于获取区域名称
 
     source = args.source
     if source.isdigit():

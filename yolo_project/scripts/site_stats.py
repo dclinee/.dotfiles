@@ -8,6 +8,7 @@ import argparse
 import os
 import csv
 import json
+import sys
 from pathlib import Path
 from datetime import datetime, timedelta
 from collections import defaultdict, Counter
@@ -15,11 +16,16 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 
+# 添加项目根目录到 path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from utils.notify import LarkNotifier
+
 
 class SiteStatsCollector:
     """工地数据统计收集器"""
 
-    def __init__(self, model_path, conf=0.3, device="0"):
+    def __init__(self, model_path, conf=0.3, device="0",
+                 notify=False, personnel_config="configs/personnel.json"):
         self.model = YOLO(model_path)
         self.conf = conf
         self.device = device
@@ -40,6 +46,10 @@ class SiteStatsCollector:
             "avg_persons": 0.0,         # 平均在场人数
             "detection_time": "",
         }
+
+        # 飞书通知
+        self.notify = notify
+        self.notifier = LarkNotifier(personnel_config) if notify else None
 
     def collect_from_video(self, source, sample_interval=5):
         """
@@ -242,6 +252,29 @@ class SiteStatsCollector:
         self.save_csv(os.path.join(output_dir, f"stats_{timestamp}.csv"))
         self.save_summary_json(os.path.join(output_dir, f"summary_{timestamp}.json"))
 
+        # 飞书日报通知
+        if self.notify and self.notifier:
+            self.notifier.send_daily_report(
+                self.summary,
+                camera_id=getattr(self, "camera_id", None),
+            )
+
+        # 合规率预警
+        if self.notify and self.notifier:
+            s = self.summary
+            if s["helmet_compliance"] < 80:
+                self.notifier.send_alarm(
+                    "helmet_compliance_low",
+                    camera_id=getattr(self, "camera_id", None),
+                    rate=s["helmet_compliance"],
+                )
+            if s["vest_compliance"] < 80:
+                self.notifier.send_alarm(
+                    "vest_compliance_low",
+                    camera_id=getattr(self, "camera_id", None),
+                    rate=s["vest_compliance"],
+                )
+
 
 def main():
     parser = argparse.ArgumentParser(description="智慧工地 - 人员统计与报表")
@@ -256,13 +289,20 @@ def main():
     parser.add_argument("--mode", type=str, default="auto",
                         choices=["auto", "video", "images"],
                         help="数据源模式: auto/video/images")
+    parser.add_argument("--notify", action="store_true", help="启用飞书日报通知")
+    parser.add_argument("--personnel-config", type=str, default="configs/personnel.json",
+                        help="人员配置文件路径")
+    parser.add_argument("--camera-id", type=str, default=None, help="摄像头编号")
     args = parser.parse_args()
 
     collector = SiteStatsCollector(
         model_path=args.model,
         conf=args.conf,
         device=args.device,
+        notify=args.notify,
+        personnel_config=args.personnel_config,
     )
+    collector.camera_id = args.camera_id
 
     source = args.source
     source_path = Path(source)

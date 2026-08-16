@@ -8,6 +8,7 @@
 import argparse
 import json
 import os
+import sys
 import threading
 import time
 from pathlib import Path
@@ -17,12 +18,17 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 
+# 添加项目根目录到 path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from utils.notify import LarkNotifier
+
 
 class CameraWorker(threading.Thread):
     """单个摄像头工作线程"""
 
     def __init__(self, camera_id, source, model, danger_zones,
-                 conf=0.3, sample_interval=5, alarm_queue=None):
+                 conf=0.3, sample_interval=5, alarm_queue=None,
+                 notifier=None):
         super().__init__(daemon=True)
         self.camera_id = camera_id
         self.source = source
@@ -31,6 +37,7 @@ class CameraWorker(threading.Thread):
         self.conf = conf
         self.sample_interval = sample_interval
         self.alarm_queue = alarm_queue
+        self.notifier = notifier
 
         self.running = False
         self.frame_count = 0
@@ -112,16 +119,23 @@ class CameraWorker(threading.Thread):
             if now - self.last_alarm.get("no_helmet", 0) > 5:
                 self.last_alarm["no_helmet"] = now
                 alarms.append(f"摄像头 {self.camera_id}: 未戴安全帽 x{stats[2]}")
+                if self.notifier:
+                    self.notifier.send_alarm("no_helmet", camera_id=self.camera_id, count=stats[2])
 
         if stats.get(4, 0) > 0:  # no_vest
             if now - self.last_alarm.get("no_vest", 0) > 5:
                 self.last_alarm["no_vest"] = now
                 alarms.append(f"摄像头 {self.camera_id}: 未穿反光衣 x{stats[4]}")
+                if self.notifier:
+                    self.notifier.send_alarm("no_vest", camera_id=self.camera_id, count=stats[4])
 
         for zi in intrusions:
             if now - self.last_alarm.get(f"zone_{zi}", 0) > 5:
                 self.last_alarm[f"zone_{zi}"] = now
                 alarms.append(f"摄像头 {self.camera_id}: 人员闯入危险区域 #{zi}")
+                if self.notifier:
+                    zone_name = f"Zone_{zi}"
+                    self.notifier.send_alarm("intrusion", camera_id=self.camera_id, zone_name=zone_name)
 
         if alarms and self.alarm_queue:
             for alarm in alarms:
@@ -188,7 +202,8 @@ class MultiCameraMonitor:
     """多路摄像头监控管理器"""
 
     def __init__(self, model_path, cameras_config, danger_zones=None,
-                 conf=0.3, sample_interval=5):
+                 conf=0.3, sample_interval=5, notify=False,
+                 personnel_config="configs/personnel.json"):
         """
         Args:
             model_path: YOLO 模型路径
@@ -199,6 +214,10 @@ class MultiCameraMonitor:
         self.model = YOLO(model_path)
         self.conf = conf
         self.sample_interval = sample_interval
+        self.notify = notify
+
+        # 飞书通知器
+        self.notifier = LarkNotifier(personnel_config) if notify else None
 
         # 加载摄像头配置
         if isinstance(cameras_config, str):
@@ -234,6 +253,7 @@ class MultiCameraMonitor:
                 conf=self.conf,
                 sample_interval=self.sample_interval,
                 alarm_queue=self.alarm_monitor.alarm_queue,
+                notifier=self.notifier,
             )
             worker.start()
             self.workers.append(worker)
@@ -273,6 +293,9 @@ def main():
     parser.add_argument("--sample_interval", type=int, default=5,
                         help="推理间隔 (每N帧)")
     parser.add_argument("--device", type=str, default="0", help="推理设备")
+    parser.add_argument("--notify", action="store_true", help="启用飞书告警通知")
+    parser.add_argument("--personnel-config", type=str, default="configs/personnel.json",
+                        help="人员配置文件路径")
 
     args = parser.parse_args()
 
@@ -282,6 +305,8 @@ def main():
         danger_zones=args.zones,
         conf=args.conf,
         sample_interval=args.sample_interval,
+        notify=args.notify,
+        personnel_config=args.personnel_config,
     )
 
     monitor.run_forever()

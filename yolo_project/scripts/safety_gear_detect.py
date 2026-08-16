@@ -6,12 +6,17 @@
 
 import argparse
 import os
+import sys
 import time
 from pathlib import Path
 from datetime import datetime
 import cv2
 import numpy as np
 from ultralytics import YOLO
+
+# 添加项目根目录到 path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from utils.notify import LarkNotifier, alarm_no_helmet, alarm_no_vest
 
 
 # 安全装备类别映射
@@ -27,7 +32,8 @@ SAFETY_CLASSES = {
 class SafetyGearMonitor:
     """安全装备监控器"""
 
-    def __init__(self, model_path, conf=0.3, iou=0.5, device="0"):
+    def __init__(self, model_path, conf=0.3, iou=0.5, device="0",
+                 notify=False, personnel_config="configs/personnel.json"):
         self.model = YOLO(model_path)
         self.conf = conf
         self.iou = iou
@@ -36,6 +42,10 @@ class SafetyGearMonitor:
         # 报警记录
         self.alarm_log = []
         self.alarm_cooldown = {}  # 避免重复报警
+
+        # 飞书通知
+        self.notify = notify
+        self.notifier = LarkNotifier(personnel_config) if notify else None
 
         # 颜色定义
         self.colors = {
@@ -152,6 +162,21 @@ class SafetyGearMonitor:
         self.alarm_log.append(alarm_msg)
         print(f"  [ALARM] {alarm_msg}")
 
+        # 飞书通知
+        if self.notify:
+            if "no_helmet" in violations:
+                self.notifier.send_alarm(
+                    "no_helmet",
+                    camera_id=getattr(self, "camera_id", None),
+                    count=violations["no_helmet"],
+                )
+            if "no_vest" in violations:
+                self.notifier.send_alarm(
+                    "no_vest",
+                    camera_id=getattr(self, "camera_id", None),
+                    count=violations["no_vest"],
+                )
+
     def save_alarm_log(self, path="runs/safety_gear/alarm_log.txt"):
         """保存报警日志"""
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -170,6 +195,10 @@ def main():
     parser.add_argument("--nosave", action="store_true", help="不保存结果")
     parser.add_argument("--show", action="store_true", help="实时显示")
     parser.add_argument("--alarm_interval", type=int, default=5, help="报警间隔(秒)")
+    parser.add_argument("--notify", action="store_true", help="启用飞书告警通知")
+    parser.add_argument("--personnel-config", type=str, default="configs/personnel.json",
+                        help="人员配置文件路径")
+    parser.add_argument("--camera-id", type=str, default=None, help="摄像头编号")
 
     args = parser.parse_args()
 
@@ -178,7 +207,10 @@ def main():
         conf=args.conf,
         iou=args.iou,
         device=args.device,
+        notify=args.notify,
+        personnel_config=args.personnel_config,
     )
+    monitor.camera_id = args.camera_id
 
     source = args.source
     if source.isdigit():

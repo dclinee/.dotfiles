@@ -1,0 +1,84 @@
+{
+  "_说明": "人员配置 - 按角色定义通知对象。open_id 通过 lark-cli contact +search-user 获取",
+  "_获取open_id": "lark-cli contact +search-user --query '张三' --has-chatted --as user",
+
+  "roles": {
+    "project_manager": {
+      "name": "项目经理",
+      "priority": "critical",
+      "members": [
+        {"name": "张经理", "open_id": "ou_xxxxxxxxxxxxx_001"}
+      ]
+    },
+    "safety_officer": {
+      "name": "安全员",
+      "priority": "critical",
+      "members": [
+        {"name": "李安全", "open_id": "ou_xxxxxxxxxxxxx_002"}
+      ]
+    },
+    "team_leader": {
+      "name": "班组长",
+      "priority": "high",
+      "members": [
+        {"name": "王组长", "open_id": "ou_xxxxxxxxxxxxx_003", "team": "A班组"},
+        {"name": "赵组长", "open_id": "ou_xxxxxxxxxxxxx_004", "team": "B班组"}
+      ]
+    },
+    "worker": {
+      "name": "当事人",
+      "priority": "medium",
+      "members": [],
+      "_说明": "当事人通过人脸识别或工牌动态确定，此处为模板"
+    }
+  },
+
+  "alarm_rules": {
+    "no_helmet": {
+      "title": "未佩戴安全帽",
+      "level": "high",
+      "notify_roles": ["worker", "team_leader", "safety_officer"],
+      "template": "【安全违规】检测到 {count} 人未佩戴安全帽！\n时间: {time}\n位置: 摄像头 {camera_id}\n请立即整改！"
+    },
+    "no_vest": {
+      "title": "未穿反光衣",
+      "level": "high",
+      "notify_roles": ["worker", "team_leader", "safety_officer"],
+      "template": "【安全违规】检测到 {count} 人未穿反光衣！\n时间: {time}\n位置: 摄像头 {camera_id}\n请立即整改！"
+    },
+    "intrusion": {
+      "title": "危险区域入侵",
+      "level": "critical",
+      "notify_roles": ["worker", "team_leader", "safety_officer", "project_manager"],
+      "template": "【紧急】人员闯入危险区域！\n区域: {zone_name}\n时间: {time}\n位置: 摄像头 {camera_id}\n请立即处理！"
+    },
+    "helmet_compliance_low": {
+      "title": "安全帽佩戴率过低",
+      "level": "critical",
+      "notify_roles": ["team_leader", "safety_officer", "project_manager"],
+      "template": "【统计预警】安全帽佩戴率仅 {rate:.1f}%，低于80%阈值！\n时间: {time}\n位置: 摄像头 {camera_id}\n请立即组织整改！"
+    },
+    "vest_compliance_low": {
+      "title": "反光衣穿戴率过低",
+      "level": "critical",
+      "notify_roles": ["team_leader", "safety_officer", "project_manager"],
+      "template": "【统计预警】反光衣穿戴率仅 {rate:.1f}%，低于80%阈值！\n时间: {time}\n位置: 摄像头 {camera_id}\n请立即组织整改！"
+    }
+  },
+
+  "notification": {
+    "cooldown_seconds": 300,
+    "max_per_hour": 20,
+    "channels": {
+      "lark_im": {
+        "enabled": true,
+        "message_type": "interactive",
+        "_说明": "消息类型: text / interactive (卡片消息)"
+      },
+      "lark_urgent": {
+        "enabled": false,
+        "_说明": "紧急消息加急，仅对 critical 级别使用"
+      }
+    }
+  }
+}
