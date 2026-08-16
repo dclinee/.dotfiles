@@ -113,6 +113,8 @@ class IntegrationTester:
             "scripts/gps_server.py",
             "scripts/gps_test.py",
             "scripts/deploy.sh",
+            "scripts/auto_label.py",
+            "scripts/auto_retrain.py",
             "scripts/health_monitor.py",
             "scripts/dashboard.py",
             "scripts/worker_tracker.py",
