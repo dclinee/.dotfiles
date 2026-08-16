@@ -33,39 +33,17 @@ import numpy as np
 from ultralytics import YOLO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from utils.common import point_in_polygon, CLASS_NAMES, CLASS_COLORS, SAFETY_VIOLATION_CLASSES
+from utils.logger import get_logger
 
 
 # ============================================================
 # 配置
 # ============================================================
 
-# 类别定义
-CLASS_NAMES = {
-    0: "person",
-    1: "helmet",
-    2: "no_helmet",
-    3: "vest",
-    4: "no_vest",
-    5: "vehicle",
-    6: "smoke_fire",
-}
-
-# 安全相关类别
-SAFETY_VIOLATIONS = {
-    2: "no_helmet",    # 未戴安全帽
-    4: "no_vest",       # 未穿反光衣
-}
-
-# 颜色
-COLORS = {
-    0: (0, 255, 0),       # person - 绿
-    1: (255, 255, 0),     # helmet - 青
-    2: (0, 0, 255),       # no_helmet - 红
-    3: (0, 255, 255),     # vest - 黄
-    4: (255, 0, 255),     # no_vest - 紫
-    5: (255, 128, 0),     # vehicle - 橙
-    6: (128, 128, 128),   # smoke_fire - 灰
-}
+# 使用 common 模块中的统一常量
+SAFETY_VIOLATIONS = SAFETY_VIOLATION_CLASSES
+COLORS = CLASS_COLORS
 
 
 # ============================================================
@@ -510,18 +488,8 @@ class VideoVerifier:
     # ============================================================
 
     def _point_in_polygon(self, x, y, polygon):
-        """射线法判断点是否在多边形内"""
-        n = len(polygon)
-        inside = False
-        j = n - 1
-        for i in range(n):
-            xi, yi = polygon[i]
-            xj, yj = polygon[j]
-            if ((yi > y) != (yj > y)) and \
-               (x < (xj - xi) * (y - yi) / (yj - yi) + xi):
-                inside = not inside
-            j = i
-        return inside
+        """射线法判断点是否在多边形内 (委托给 common 模块)"""
+        return point_in_polygon(x, y, polygon)
 
     def _save_violation_capture(self, frame, vtype, frame_idx):
         """保存违规截图"""

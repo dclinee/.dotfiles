@@ -119,6 +119,10 @@ class IntegrationTester:
             "utils/notify.py",
             "utils/positioning.py",
             "utils/visualize.py",
+            "utils/common.py",
+            "utils/logger.py",
+            "utils/storage.py",
+            "tests/test_core.py",
             "requirements.txt",
         ]
 

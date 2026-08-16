@@ -21,6 +21,8 @@ from ultralytics import YOLO
 # 添加项目根目录到 path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from utils.notify import LarkNotifier
+from utils.common import point_in_polygon, CLASS_NAMES, CLASS_COLORS, SAFETY_VIOLATION_CLASSES
+from utils.logger import get_logger
 
 
 class CameraWorker(threading.Thread):
@@ -143,20 +145,8 @@ class CameraWorker(threading.Thread):
 
     @staticmethod
     def _point_in_polygon(point, polygon):
-        """射线法判断点是否在多边形内"""
-        x, y = point
-        n = len(polygon)
-        inside = False
-        j = n - 1
-        for i in range(n):
-            xi, yi = polygon[i]
-            xj, yj = polygon[j]
-            if ((yi > y) != (yj > y)) and (
-                x < (xj - xi) * (y - yi) / (yj - yi) + xi
-            ):
-                inside = not inside
-            j = i
-        return inside
+        """射线法判断点是否在多边形内 (委托给 common 模块)"""
+        return point_in_polygon(point[0], point[1], polygon)
 
 
 class AlarmMonitor:
