@@ -154,10 +154,14 @@ class LarkNotifier:
 
         return success_count > 0
 
-    def _send_lark_message(self, open_id, name, title, message, level="medium"):
+    def _send_lark_message(self, open_id, name, title, message, level="medium",
+                           use_card=False):
         """通过飞书发送消息"""
         level_emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
         emoji = level_emoji.get(level, "🟡")
+
+        if use_card and self.notify_cfg.get("channels", {}).get("lark_im", {}).get("message_type") == "interactive":
+            return self._send_card_message(open_id, name, title, message, level, emoji)
 
         # 构建消息内容
         full_text = f"{emoji} **{title}**\n\n{message}"
@@ -188,7 +192,78 @@ class LarkNotifier:
             return False
         except FileNotFoundError:
             # lark-cli 未安装，打印消息到控制台模拟
-            print(f"\n  === 飞书消息模拟 ===\n  收件人: {name} ({open_id})\n{full_text}\n  ====================\n")
+            print(f"\n  === 飞书消息模拟 ===\n  "
+                  f"收件人: {name} ({open_id})\n{full_text}\n  "
+                  f"====================\n")
+            return True
+
+    def _send_card_message(self, open_id, name, title, message, level, emoji):
+        """发送飞书卡片消息 (交互式)"""
+        level_colors = {
+            "critical": "red",
+            "high": "orange",
+            "medium": "yellow",
+            "low": "blue",
+        }
+        color = level_colors.get(level, "blue")
+
+        # 构建卡片 JSON
+        card = {
+            "config": {"wide_screen_mode": True},
+            "header": {
+                "title": {"tag": "plain_text", "content": f"{emoji} {title}"},
+                "template": color,
+            },
+            "elements": [
+                {
+                    "tag": "markdown",
+                    "content": message.replace("\n", "\\n"),
+                },
+                {
+                    "tag": "hr",
+                },
+                {
+                    "tag": "note",
+                    "elements": [
+                        {
+                            "tag": "plain_text",
+                            "content": f"智慧工地安全监控系统 | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                        }
+                    ],
+                },
+            ],
+        }
+
+        card_json = json.dumps(card, ensure_ascii=False)
+
+        cmd = [
+            "lark-cli", "im", "+messages-send",
+            "--user-id", open_id,
+            "--card", card_json,
+            "--as", "bot",
+        ]
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=15,
+                env={**os.environ, "LARK_CLI_NO_COLOR": "1"},
+            )
+            if result.returncode == 0:
+                return True
+            else:
+                # 卡片发送失败, 降级为文本消息
+                print(f"  [Notify] 卡片发送失败, 降级为文本: {result.stderr.strip()[:50]}")
+                return self._send_lark_message(open_id, name, title, message, level, use_card=False)
+        except subprocess.TimeoutExpired:
+            return False
+        except FileNotFoundError:
+            print(f"\n  === 飞书卡片消息模拟 ===\n  "
+                  f"收件人: {name} ({open_id})\n"
+                  f"标题: {emoji} {title}\n{message}\n  "
+                  f"====================\n")
             return True
 
     def _send_urgent(self, message):
