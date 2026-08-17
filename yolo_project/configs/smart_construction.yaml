@@ -3,7 +3,7 @@
 # 目标检测类别: 安全帽、反光衣、人员、车辆、烟雾/火焰
 # ============================================================
 
-path: ../datasets
+path: datasets
 
 train: images/train
 val: images/val
