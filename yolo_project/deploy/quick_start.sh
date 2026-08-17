@@ -85,6 +85,18 @@ for svc in deploy/*.service; do
   echo "   + $dest"
 done
 
+# 同样处理 .timer 文件 (P5: site-daily-brief.timer)
+for tmr in deploy/*.timer; do
+  [ -f "$tmr" ] || continue
+  name="$(basename "$tmr")"
+  dest="$SYSD_USER_DIR/$name"
+  sed -e "s#%h/yolo_project#$PROJECT_ROOT#g" \
+      -e "s#%h/.pyenv/versions/[^[:space:]]*/bin/python#$PY_ABS#g" \
+      "$tmr" > "$dest.tmp"
+  mv "$dest.tmp" "$dest"
+  echo "   + $dest"
+done
+
 # 没有 systemd 的环境 (比如容器/macOS) 只是静默跳过 reload
 if command -v systemctl >/dev/null 2>&1; then
   if systemctl --user --version >/dev/null 2>&1; then
@@ -125,7 +137,15 @@ echo "# 4) 开机自启 (user 模式需要先开启 linger)"
 echo "   sudo loginctl enable-linger \$USER   # 需要 sudo, 只执行一次"
 echo "   systemctl --user enable site-gps site-dashboard site-auto-train site-multi-cam"
 echo
-echo "# 5) 实时看日志"
+echo "# 5) P5 每日简报定时任务 (每天 08:00 自动发飞书简报)"
+echo "   systemctl --user enable --now site-daily-brief.timer"
+echo "   # 查看 timer 下次触发时间"
+echo "   systemctl --user list-timers site-daily-brief.timer"
+echo "   # 手动跑一次 (测试用)"
+echo "   systemctl --user start site-daily-brief.service"
+echo "   journalctl --user -u site-daily-brief.service -f"
+echo
+echo "# 6) 实时看日志"
 echo "   journalctl --user -u site-gps         -f"
 echo "   journalctl --user -u site-dashboard   -f"
 echo "   journalctl --user -u site-auto-train  -f"
@@ -133,7 +153,7 @@ echo "   journalctl --user -u site-multi-cam   -f"
 echo "   # 单路摄像头的子进程日志另写文件:"
 echo "   tail -f $PROJECT_ROOT/runs/logs/cam_entrance.log"
 echo
-echo "# 6) 打开 Dashboard"
+echo "# 7) 打开 Dashboard"
 echo "   http://<服务器IP>:5001/"
 echo
-echo -e "${GREEN}完成 ✅  先跑第 2 步，再开 4 个服务，第 6 步去浏览器看效果吧。${RESET}"
+echo -e "${GREEN}完成 ✅  先跑第 2 步，再开 4 个服务，第 5 步配定时简报，第 7 步去浏览器看效果吧。${RESET}"

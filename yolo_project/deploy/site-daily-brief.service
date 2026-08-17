@@ -1,0 +1,19 @@
+[Unit]
+Description=智慧工地 · 每日早会安全简报 (一次性任务, 由 .timer 拉起)
+After=network-online.target
+Wants=network-online.target
+
+# Type=oneshot: 跑完就退, 由 timer 控制定时
+Type=oneshot
+
+WorkingDirectory=%h/yolo_project
+Environment=PYTHONUNBUFFERED=1
+
+# 默认窗口: 昨日 20:00 → 今早 08:00 (run_brief 内部计算)
+ExecStart=%h/.pyenv/versions/3.14.7/bin/python scripts/daily_brief.py \
+    --db runs/data/site.db \
+    --personnel configs/personnel.json
+
+# 一次性任务, 失败不重启 (下个 08:00 自然再跑)
+# 但记录失败状态给 timer
+SuccessExitStatus=0

@@ -1,0 +1,13 @@
+[Unit]
+Description=智慧工地 · 每日 08:00 拉起 daily-brief 一次性任务
+Requires=site-daily-brief.service
+
+# 每天 08:00 触发一次, 服务器开机后若错过会立即补跑一次
+[Timer]
+OnCalendar=*-*-* 08:00:00
+Persistent=true
+AccuracySec=1min
+Unit=site-daily-brief.service
+
+[Install]
+WantedBy=timers.target

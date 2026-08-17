@@ -39,6 +39,7 @@ import uuid
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
+from typing import Dict, Any, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -376,15 +377,26 @@ class AutoRetrainManager:
 
     def __init__(self, model_path: str, device: str = "cpu",
                  min_new_images: int = MIN_NEW_IMAGES,
-                 storage=None):
+                 storage=None,
+                 notifier=None,
+                 review_threshold: int = 20,
+                 review_notify_cooldown: int = 1800):
         """
         Args:
             storage: SiteDatabase 实例 (None 时不启用 SQLite 持久化)
+            notifier: P5 可选 — LarkNotifier 实例, 注入后 need_review 达阈值会推飞书卡片
+            review_threshold: 待审照片达到多少张就推一次汇总卡片 (默认 20)
+            review_notify_cooldown: 两次审核卡片推送之间最小间隔秒数 (默认 30 分钟)
         """
         self.model_path = Path(model_path)
         self.device = device
         self.min_new_images = min_new_images
         self.storage = storage
+        # P5: 飞书审核汇总卡片
+        self.notifier = notifier
+        self.review_threshold = review_threshold
+        self.review_notify_cooldown = review_notify_cooldown
+        self._last_review_notify_ts = 0.0  # 上次推送时间戳
 
         ensure_dir(UPLOAD_DIR)
         ensure_dir(REVIEWED_DIR)
@@ -579,6 +591,14 @@ class AutoRetrainManager:
             f"low_ratio={low_conf_ratio:.0%} → status={final_status}"
             + (" [DUPLICATE]" if duplicate else "")
         )
+
+        # P5: 上传后异步检查是否需要推审核汇总卡片 (不阻塞上传返回)
+        if final_status == "need_review":
+            try:
+                self._maybe_notify_review_pending()
+            except Exception as e:
+                logger.debug("审核汇总卡片检查异常: %s", e)
+
         return record
 
     # ============================================================
@@ -627,6 +647,12 @@ class AutoRetrainManager:
                 photo_id, status, labels_count=labels_count,
                 avg_confidence=avg_conf, low_conf_ratio=low_ratio,
             )
+            # P5: 重标后若进入 need_review, 触发一次审核汇总检查
+            if status == "need_review":
+                try:
+                    self._maybe_notify_review_pending()
+                except Exception as e:
+                    logger.debug("审核汇总卡片检查异常: %s", e)
             return {"ok": True, "photo_id": photo_id, "labels_count": labels_count,
                     "status": status, "avg_confidence": avg_conf,
                     "low_conf_ratio": low_ratio}
@@ -726,6 +752,90 @@ class AutoRetrainManager:
 
     def _count_pending_review(self) -> int:
         return self.get_status()["pending_review"]
+
+    # ============================================================
+    # P5: 审核汇总卡片 (need_review 达阈时推送, 带冷却)
+    # ============================================================
+
+    def _build_review_sample(self, limit: int = 5) -> list:
+        """从前 N 张 need_review 照片构造样例数据 (含类别分布)."""
+        if self.storage is None:
+            return []
+        samples: list = []
+        try:
+            photos = self.storage.query_photos(status="need_review", limit=limit)
+        except Exception:
+            photos = []
+        for p in photos:
+            cls_dist: Dict[str, int] = {}
+            try:
+                labels = self.storage.query_photo_labels(p["id"])
+                for lb in labels:
+                    name = lb.get("cls_name") or str(lb.get("cls_id", "?"))
+                    cls_dist[name] = cls_dist.get(name, 0) + 1
+            except Exception:
+                pass
+            samples.append({
+                "id": p.get("id"),
+                "filename": p.get("filename", ""),
+                "avg_confidence": p.get("avg_confidence") or 0,
+                "low_conf_ratio": p.get("low_conf_ratio") or 0,
+                "labels_count": p.get("labels_count") or 0,
+                "cls_distribution": cls_dist,
+            })
+        return samples
+
+    def _maybe_notify_review_pending(self) -> dict:
+        """检查待审照片数量, 达到阈值且满足冷却时推送审核汇总卡片.
+        - 任一条件不满足时返回 {"skipped": True, "reason": "..."} 不报错
+        - 推送后更新 _last_review_notify_ts
+        """
+        if self.notifier is None:
+            return {"skipped": True, "reason": "notifier 未配置"}
+        if self.storage is None:
+            return {"skipped": True, "reason": "storage 未启用"}
+
+        try:
+            pending = self._count_pending_review()
+        except Exception as e:
+            logger.debug("查询待审数量失败: %s", e)
+            return {"skipped": True, "reason": f"查询失败: {e}"}
+
+        if pending < self.review_threshold:
+            return {"skipped": True, "reason": f"未达阈值 ({pending}<{self.review_threshold})"}
+
+        now_ts = time.time()
+        elapsed = now_ts - self._last_review_notify_ts
+        if elapsed < self.review_notify_cooldown:
+            remain = int(self.review_notify_cooldown - elapsed)
+            return {"skipped": True, "reason": f"冷却中 (剩 {remain}s)",
+                    "pending": pending}
+
+        # 构造样例 + 推送
+        samples = self._build_review_sample(limit=5)
+        try:
+            r = self.notifier.send_review_summary_card(
+                pending_count=pending,
+                sample_photos=samples,
+                threshold=self.review_threshold,
+            )
+        except Exception as e:
+            logger.exception("审核汇总卡片推送异常")
+            return {"skipped": True, "reason": f"推送异常: {e}", "pending": pending}
+
+        # 推送成功 (至少有一条送达) 才更新冷却
+        if r.get("ok"):
+            self._last_review_notify_ts = now_ts
+            logger.info(
+                "审核汇总卡片已推送: 待审 %d 张 → 送达 %d 人",
+                pending, len(r.get("sent_to", [])),
+            )
+        else:
+            logger.warning(
+                "审核汇总卡片推送失败: pending=%d errors=%s",
+                pending, r.get("errors"),
+            )
+        return {"skipped": False, "pending": pending, "result": r}
 
     def trigger_retrain(self, force: bool = False) -> dict:
         """触发重训练。
@@ -1375,6 +1485,12 @@ def main():
                         help="强制训练 (忽略 --min-images 门槛)")
     parser.add_argument("--auto-approve-high-quality", action="store_true",
                         help="[--pipeline-run 专用] 高质量(status=labeled)的图自动晋升 reviewed")
+    parser.add_argument("--no-lark-notify", action="store_true",
+                        help="禁用飞书审核汇总卡片推送 (默认启用, 需配置 personnel.json)")
+    parser.add_argument("--review-threshold", type=int, default=20,
+                        help="待审照片达到多少张推一次审核汇总卡片 (默认 20)")
+    parser.add_argument("--review-cooldown", type=int, default=1800,
+                        help="两次审核卡片推送之间最小间隔秒数 (默认 1800)")
 
     args = parser.parse_args()
 
@@ -1384,11 +1500,26 @@ def main():
         from utils.storage import SiteDatabase
         storage = SiteDatabase(args.db)
 
+    # ---- P5: LarkNotifier (审核汇总卡片) ----
+    notifier = None
+    if not args.no_lark_notify and storage is not None:
+        try:
+            from utils.notify import LarkNotifier
+            notifier = LarkNotifier(storage=storage)
+            logger.info("飞书审核汇总卡片已启用 (threshold=%d, cooldown=%ds)",
+                        args.review_threshold, args.review_cooldown)
+        except Exception as e:
+            logger.warning("LarkNotifier 初始化失败, 审核汇总卡片功能禁用: %s", e)
+            notifier = None
+
     manager = AutoRetrainManager(
         model_path=args.model,
         device=args.device,
         min_new_images=args.min_images,
         storage=storage,
+        notifier=notifier,
+        review_threshold=args.review_threshold,
+        review_notify_cooldown=args.review_cooldown,
     )
 
     # ---- Pipeline 批处理模式 ----

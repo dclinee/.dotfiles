@@ -22,7 +22,7 @@ import json
 import threading
 import hashlib
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Tuple
 from contextlib import contextmanager
 
@@ -203,11 +203,16 @@ class SiteDatabase:
         # ---- alarms 表新列 ----
         cols = self._columns_of(conn, "alarms")
         for col, decl in [
-            ("source",   "TEXT"),
-            ("worker_id","TEXT"),
-            ("resolved", "INTEGER DEFAULT 0"),
-            ("ack_at",   "TEXT"),
-            ("ack_by",   "TEXT"),
+            ("source",            "TEXT"),
+            ("worker_id",         "TEXT"),
+            ("resolved",          "INTEGER DEFAULT 0"),
+            ("ack_at",            "TEXT"),
+            ("ack_by",            "TEXT"),
+            # P5: 飞书交互卡片相关
+            ("ack_status",        "TEXT DEFAULT 'pending'"),  # pending/acknowledged/dismissed/snoozed
+            ("snapshot_path",     "TEXT"),                    # 告警时帧截图 (jpg, 可选)
+            ("snooze_until",      "TEXT"),                    # 再提醒到期时间 ISO
+            ("card_message_id",   "TEXT"),                    # 飞书卡片消息 id (回调时定位)
         ]:
             if col not in cols:
                 conn.execute(f"ALTER TABLE alarms ADD COLUMN {col} {decl}")
@@ -215,6 +220,8 @@ class SiteDatabase:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_alarms_source ON alarms(source)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_alarms_worker ON alarms(worker_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_alarms_resolved ON alarms(resolved)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_alarms_ack_status ON alarms(ack_status)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_alarms_snooze ON alarms(snooze_until)")
 
         # ---- locations 表新列 ----
         cols = self._columns_of(conn, "locations")
@@ -250,10 +257,13 @@ class SiteDatabase:
     def log_alarm(self, alarm_type: str, message: str = "",
                   camera_id: str = "", level: str = "high",
                   details: dict = None, source: str = "",
-                  worker_id: str = "") -> int:
+                  worker_id: str = "",
+                  snapshot_path: str = None) -> int:
         """记录一条告警
         - source: 来源标识 (如 cam_entrance / gps:W005)
         - worker_id: 关联工人 (视频场景可空)
+        - snapshot_path: P5 新增 — 告警时帧截图路径, 会随飞书卡片一起推送
+        返回: alarm_id (主键)
         """
         if details is None:
             details = {}
@@ -264,10 +274,11 @@ class SiteDatabase:
         with self._get_conn() as conn:
             cur = conn.execute(
                 "INSERT INTO alarms (alarm_type, level, camera_id, message, "
-                "details, source, worker_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "details, source, worker_id, snapshot_path) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (alarm_type, level, camera_id or None, message,
                  json.dumps(details, ensure_ascii=False) if details else None,
-                 source or None, worker_id or None),
+                 source or None, worker_id or None, snapshot_path or None),
             )
             conn.commit()
             return cur.lastrowid
@@ -302,6 +313,98 @@ class SiteDatabase:
 
         with self._get_conn() as conn:
             rows = conn.execute(sql, params).fetchall()
+            return [dict(r) for r in rows]
+
+    # ============================================================
+    # P5: 飞书交互卡片 — 告警 ack / snooze / 查询未处理
+    # ============================================================
+    def ack_alarm(self, alarm_id: int, status: str,
+                  ack_by: str = "", note: str = "") -> bool:
+        """更新告警 ack 状态.
+        status: acknowledged / dismissed / snoozed / pending
+        ack_by:  操作人 (飞书 open_id 或姓名)
+        note:    可选备注, 写入 details.ack_note
+        返回: 是否成功 (alarm_id 不存在返回 False)
+        """
+        valid = {"acknowledged", "dismissed", "snoozed", "pending"}
+        if status not in valid:
+            raise ValueError(f"ack_status 非法: {status} (合法: {valid})")
+        now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self._get_conn() as conn:
+            # 同时把 ack_note 追加到 details JSON
+            row = conn.execute(
+                "SELECT details FROM alarms WHERE id=?", (alarm_id,)
+            ).fetchone()
+            details = {}
+            if row and row["details"]:
+                try: details = json.loads(row["details"])
+                except Exception: details = {}
+            if note:
+                details.setdefault("ack_history", []).append({
+                    "at": now_iso, "by": ack_by, "status": status, "note": note,
+                })
+            if status == "snoozed":
+                # 默认 15 分钟后再提醒 (具体分钟由调用方在 note 里写或单独 API)
+                snooze_minutes = 15
+                try:
+                    if isinstance(note, str) and note.isdigit():
+                        snooze_minutes = int(note)
+                except Exception:
+                    pass
+                snooze_until = (datetime.now() + timedelta(minutes=snooze_minutes)).strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                snooze_until = None
+            cur = conn.execute(
+                "UPDATE alarms SET ack_status=?, ack_by=?, ack_at=?, "
+                "snooze_until=?, resolved=1, details=? WHERE id=?",
+                (status, ack_by or None, now_iso if status != "snoozed" else None,
+                 snooze_until,
+                 json.dumps(details, ensure_ascii=False) if details else None,
+                 alarm_id),
+            )
+            conn.commit()
+            return cur.rowcount > 0
+
+    def update_alarm_card_message_id(self, alarm_id: int, card_message_id: str) -> bool:
+        """记录飞书卡片消息 id, 用于回调时定位"""
+        with self._get_conn() as conn:
+            cur = conn.execute(
+                "UPDATE alarms SET card_message_id=? WHERE id=?",
+                (card_message_id, alarm_id),
+            )
+            conn.commit()
+            return cur.rowcount > 0
+
+    def get_alarm(self, alarm_id: int) -> Optional[Dict]:
+        """按主键取一条告警"""
+        with self._get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM alarms WHERE id=?", (alarm_id,)
+            ).fetchone()
+            return dict(row) if row else None
+
+    def query_pending_alarms(self, hours: int = 24,
+                             ack_status: str = "pending") -> List[Dict]:
+        """查未处理 (或指定状态) 的告警, 默认最近 24h"""
+        cutoff = (datetime.now() - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM alarms WHERE created_at >= ? AND ack_status=? "
+                "ORDER BY created_at DESC LIMIT 500",
+                (cutoff, ack_status),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def query_alarms_due_for_reminder(self) -> List[Dict]:
+        """查 snoozed 且 snooze_until <= now 的告警 — 该再次提醒了"""
+        now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM alarms WHERE ack_status='snoozed' "
+                "AND snooze_until IS NOT NULL AND snooze_until <= ? "
+                "ORDER BY snooze_until ASC LIMIT 100",
+                (now_iso,),
+            ).fetchall()
             return [dict(r) for r in rows]
 
     def count_alarms_today(self) -> Dict[str, int]:
