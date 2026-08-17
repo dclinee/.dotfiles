@@ -34,6 +34,7 @@ except ImportError:
 
 from utils.positioning import WorkerTracker, get_tracker
 from utils.notify import LarkNotifier
+from utils.storage import SiteDatabase
 
 # ============================================================
 # H5 手机端定位页面
@@ -259,40 +260,168 @@ setInterval(() => {
 class PositioningServer:
     """GPS 定位 API 服务器"""
 
+    # 同一 worker 的 GPS 写入 DB 的最小间隔 (秒)，避免 DB 被密集上报打爆
+    LOCATION_DB_MIN_INTERVAL = 15
+    # 同一 worker 的同一类告警的最小间隔 (秒)
+    ALARM_COOLDOWN_SECONDS = {
+        "geofence_intrusion": 180,  # 3 分钟
+        "geofence_leave": 600,       # 10 分钟
+        "geofence_late": 1800,       # 30 分钟
+    }
+
     def __init__(self, workers_config="configs/workers.json",
                  geofence_config="configs/site_geofence.json",
                  personnel_config="configs/personnel.json",
-                 notify_enabled=False):
+                 notify_enabled=False,
+                 storage_enabled=False,
+                 db_path="runs/data/site.db"):
         self.tracker = WorkerTracker(workers_config, geofence_config)
         self.notifier = LarkNotifier(personnel_config) if notify_enabled else None
         self.notify_enabled = notify_enabled
+        self.storage_enabled = storage_enabled
+        self.db_path = db_path
+        self.storage = SiteDatabase(db_path) if storage_enabled else None
 
-        # 事件日志
+        # 事件日志 (内存，用于 /api/events; 同时落库 storage)
         self.event_log = []  # 最近 200 条
+
+        # 冷却追踪: { (worker_id, alarm_type): last_alarm_ts }
+        self._last_alarm_ts = {}
+        # 每个 worker 上次写 locations 表的时间戳: { worker_id: ts }
+        self._last_location_db_ts = {}
 
         # 注册通知回调
         if self.notifier:
             self.tracker.on("enter_danger", self._on_enter_danger)
             self.tracker.on("leave_site", self._on_leave_site)
+        else:
+            # 即使没 notifier，也要把事件写入 storage / event_log
+            self.tracker.on("enter_danger", self._on_enter_danger)
+            self.tracker.on("leave_site", self._on_leave_site)
 
-    def _on_enter_danger(self, worker, status, zone_name, **kwargs):
-        self._log_event("danger", worker["name"], worker["team"],
-                        f"进入危险区: {zone_name}")
-        if self.notifier:
-            self.notifier.send_alarm("intrusion", zone_name=zone_name)
+    # ============================================================
+    #  内部工具
+    # ============================================================
+    def _alarm_allowed(self, worker_id: str, alarm_type: str) -> bool:
+        key = (worker_id, alarm_type)
+        now = time.time()
+        cd = self.ALARM_COOLDOWN_SECONDS.get(alarm_type, 300)
+        prev = self._last_alarm_ts.get(key, 0)
+        if now - prev < cd:
+            return False
+        self._last_alarm_ts[key] = now
+        return True
+
+    def _persist_event(self, etype: str, worker: dict, message: str,
+                       details: dict = None):
+        """同时写内存事件日志 + storage.events（如果启用）"""
+        entry = {
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "type": etype,
+            "name": worker.get("name", ""),
+            "team": worker.get("team", ""),
+            "worker_id": worker.get("id", ""),
+            "message": message,
+            "details": details or {},
+        }
+        self.event_log.append(entry)
+        if len(self.event_log) > 200:
+            self.event_log = self.event_log[-200:]
+        if self.storage:
+            self.storage.log_event(
+                source=f"gps:{worker.get('id','')}",
+                event_type=etype,
+                message=f"[{worker.get('team','')}] {worker.get('name','')} {message}",
+                details=details or {},
+            )
+
+    # ============================================================
+    #  电子栅栏回调
+    # ============================================================
+    def _on_enter_danger(self, worker, status, zone_name, zone_id=None, **kwargs):
+        msg = f"进入危险区域: {zone_name}"
+        worker_id = worker.get("id", "")
+        self._persist_event("geofence_intrusion", worker, msg,
+                            details={
+                                "worker_id": worker_id,
+                                "zone_id": zone_id or "",
+                                "zone_name": zone_name,
+                                "latitude": getattr(status, "latitude", None),
+                                "longitude": getattr(status, "longitude", None),
+                            })
+        alarm_kwargs = {
+            "zone_name": zone_name,
+            "zone_id": zone_id or "",
+            "worker_name": worker.get("name", ""),
+            "team": worker.get("team", ""),
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        # SQLite 告警
+        if self.storage and self._alarm_allowed(worker_id, "geofence_intrusion"):
+            self.storage.log_alarm(
+                alarm_type="geofence_intrusion",
+                level="critical",
+                source=f"gps:{worker_id}",
+                message=f"[{worker.get('team','')}] {worker.get('name','')} 进入危险区域: {zone_name}",
+                details=alarm_kwargs,
+                camera_id=None,
+                worker_id=worker_id,
+            )
+        # 飞书通知
+        if self.notifier and self._alarm_allowed(worker_id, "_lark_geofence_intrusion"):
+            self.notifier.send_alarm(
+                alarm_type="geofence_intrusion",
+                camera_id=None,
+                worker_name=worker.get("name", ""),
+                **alarm_kwargs,
+            )
 
     def _on_leave_site(self, worker, status, dist_to_site, **kwargs):
-        self._log_event("leave", worker["name"], worker["team"],
-                        f"离开工地 ({dist_to_site:.0f}m)")
+        msg = f"离开工地范围 (距离边界约 {dist_to_site:.0f} m)"
+        worker_id = worker.get("id", "")
+        self._persist_event("geofence_leave", worker, msg,
+                            details={
+                                "worker_id": worker_id,
+                                "distance_meters": round(float(dist_to_site), 1),
+                                "latitude": getattr(status, "latitude", None),
+                                "longitude": getattr(status, "longitude", None),
+                            })
+        alarm_kwargs = {
+            "worker_name": worker.get("name", ""),
+            "team": worker.get("team", ""),
+            "distance": f"{dist_to_site:.0f}m",
+            "dist_meters": round(float(dist_to_site), 1),
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        if self.storage and self._alarm_allowed(worker_id, "geofence_leave"):
+            self.storage.log_alarm(
+                alarm_type="geofence_leave",
+                level="mid",
+                source=f"gps:{worker_id}",
+                message=f"[{worker.get('team','')}] {worker.get('name','')} 离开工地 ({dist_to_site:.0f}m)",
+                details=alarm_kwargs,
+                camera_id=None,
+                worker_id=worker_id,
+            )
+        if self.notifier and self._alarm_allowed(worker_id, "_lark_geofence_leave"):
+            self.notifier.send_alarm(
+                alarm_type="geofence_leave",
+                camera_id=None,
+                **alarm_kwargs,
+            )
 
     def _log_event(self, etype, name, team, msg):
-        self.event_log.append({
+        """兼容老的简单事件日志接口 (未提供 worker 对象时用)"""
+        entry = {
             "time": datetime.now().strftime("%H:%M:%S"),
             "type": etype,
             "name": name,
             "team": team,
             "message": msg,
-        })
+            "worker_id": "",
+            "details": {},
+        }
+        self.event_log.append(entry)
         if len(self.event_log) > 200:
             self.event_log = self.event_log[-200:]
 
@@ -333,10 +462,34 @@ class PositioningServer:
             except Exception as e:
                 return jsonify({"ok": False, "error": str(e)}), 500
 
+            # ---------- 实时定位追踪落库 (限频) ----------
+            if self.storage:
+                wid = worker["id"]
+                now_ts = time.time()
+                prev = self._last_location_db_ts.get(wid, 0)
+                if now_ts - prev >= self.LOCATION_DB_MIN_INTERVAL:
+                    self._last_location_db_ts[wid] = now_ts
+                    self.storage.log_location(
+                        worker_id=wid,
+                        worker_name=worker.get("name", ""),
+                        team=worker.get("team", ""),
+                        latitude=lat,
+                        longitude=lon,
+                        accuracy=float(accuracy or 0),
+                        on_site=bool(getattr(status, "on_site", False)),
+                        current_zone=getattr(status, "current_zone", None) or "",
+                        in_danger=bool(getattr(status, "in_danger_zone", False)),
+                        zone_type=getattr(status, "zone_type", None) or "",
+                        speed=float(speed or 0),
+                        battery=int(battery or 0),
+                    )
+
             return jsonify({
                 "ok": True,
+                "worker_id": worker["id"],
                 "name": worker["name"],
                 "team": worker["team"],
+                "role": worker.get("role", ""),
                 "on_site": status.on_site,
                 "zone": status.current_zone,
                 "zone_type": status.zone_type,
@@ -450,21 +603,98 @@ class PositioningServer:
         # ===== 班组统计 =====
         @app.route("/api/stats/teams")
         def get_team_stats():
-            """班组统计"""
-            return jsonify(self.tracker.get_team_stats())
+            """班组统计：补全出勤率/迟到/危险区等关键字段"""
+            raw = self.tracker.get_team_stats()
+            # 原始 raw["total_workers"] 只统计有状态的, 这里替换成花名册总人数更准确
+            roster_total = len(self.tracker.workers_db.get("workers", []))
+            teams_cfg = self.tracker.workers_db.get("teams", {})
+
+            # 每个 team 先按花名册计算 should_attend (应到人数)
+            team_roster = {}
+            for w in self.tracker.workers_db.get("workers", []):
+                tm = w.get("team") or "未分组"
+                team_roster.setdefault(tm, 0)
+                team_roster[tm] += 1
+
+            total_on_site = 0
+            total_off_site = 0
+            total_in_danger = 0
+            total_late = 0
+            for tm_name, tm in raw.get("teams", {}).items():
+                should = team_roster.get(tm_name, 0)
+                on_s = int(tm.get("on_site", 0))
+                off_s = int(tm.get("off_site", 0))
+                rate = round(on_s / should * 100, 1) if should > 0 else 0.0
+                # 迟到/危险区 细项统计 (该 team 的所有工人遍历)
+                late_n = 0
+                danger_n = 0
+                not_reported = max(0, should - (on_s + off_s))
+                for w in self.tracker.workers_db.get("workers", []):
+                    if (w.get("team") or "未分组") != tm_name:
+                        continue
+                    st = self.tracker.get_worker_status(w["id"])
+                    if st and getattr(st, "is_late", False):
+                        late_n += 1
+                    if st and getattr(st, "in_danger_zone", False):
+                        danger_n += 1
+                total_on_site += on_s
+                total_off_site += off_s
+                total_late += late_n
+                total_in_danger += danger_n
+                tm["should_attend"] = should
+                tm["attendance_rate"] = rate
+                tm["late"] = late_n
+                tm["in_danger"] = danger_n
+                tm["not_reported_yet"] = not_reported  # 应到但还未上报过定位的人
+                # 附加 teams 配置 (工作区/类型/班长)
+                if tm_name in teams_cfg:
+                    cfg = teams_cfg[tm_name]
+                    tm.setdefault("type", cfg.get("type", ""))
+                    tm.setdefault("leader", cfg.get("leader_name", ""))
+                    tm.setdefault("work_area", cfg.get("work_area", ""))
+                    tm["schedule"] = cfg.get("schedule", "")
+
+            raw["total_workers"] = roster_total
+            raw["on_site"] = total_on_site
+            raw["off_site"] = total_off_site
+            raw["in_danger_total"] = total_in_danger
+            raw["late_total"] = total_late
+            raw["attendance_rate_total"] = (
+                round(total_on_site / roster_total * 100, 1) if roster_total > 0 else 0.0
+            )
+            return jsonify(raw)
 
         # ===== 总览统计 =====
         @app.route("/api/stats/summary")
         def get_summary():
-            """总览统计"""
-            stats = self.tracker.get_team_stats()
+            """总览统计：出勤/危险区一览"""
+            import copy
+            teams = get_team_stats().get_json() if False else None
+            raw = self.tracker.get_team_stats()  # 不走上面包装，避免双重包装
+            # 重算与班组统计一致的字段
+            roster_total = len(self.tracker.workers_db.get("workers", []))
+            on_s = raw.get("on_site", 0)
+            off_s = raw.get("off_site", 0)
+            in_danger = 0
+            late_n = 0
+            for w in self.tracker.workers_db.get("workers", []):
+                st = self.tracker.get_worker_status(w["id"])
+                if st and getattr(st, "in_danger_zone", False):
+                    in_danger += 1
+                if st and getattr(st, "is_late", False):
+                    late_n += 1
             return jsonify({
-                "total_workers": stats["total_workers"],
-                "on_site": stats["on_site"],
-                "off_site": stats["off_site"],
-                "updated_at": stats["updated_at"],
-                "on_site_rate": round(stats["on_site"] / stats["total_workers"] * 100, 1)
-                    if stats["total_workers"] > 0 else 0,
+                "total_workers": roster_total,
+                "on_site": on_s,
+                "off_site": off_s,
+                "not_reported_yet": max(0, roster_total - on_s - off_s),
+                "attendance_rate": round(on_s / roster_total * 100, 1) if roster_total > 0 else 0.0,
+                "in_danger": in_danger,
+                "late": late_n,
+                "updated_at": raw.get("updated_at") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "db_storage": self.storage_enabled,
+                "notify": self.notify_enabled,
+                "db_path": self.db_path if self.storage_enabled else None,
             })
 
         # ===== 电子栅栏配置 =====
@@ -492,8 +722,12 @@ class PositioningServer:
             return jsonify({
                 "ok": True,
                 "uptime": time.time(),
-                "workers": len(self.tracker.worker_statuses),
+                "workers_registered": len(self.tracker.workers_db.get("workers", [])),
+                "workers_with_status": len(self.tracker.worker_statuses),
                 "notify": self.notify_enabled,
+                "storage": self.storage_enabled,
+                "db_path": self.db_path if self.storage_enabled else None,
+                "teams": len(self.tracker.workers_db.get("teams", {})),
             })
 
 
@@ -510,11 +744,17 @@ def main():
   # 启动服务器 (默认端口 8090)
   python scripts/gps_server.py
 
+  # ★ 生产模式: 持久化 + 飞书通知 + 班组考勤API
+  python scripts/gps_server.py --storage --notify --port 8090
+
   # 指定端口 + 启用通知
   python scripts/gps_server.py --port 8080 --notify
 
   # 仅内网访问
   python scripts/gps_server.py --host 127.0.0.1 --port 8090
+
+  # 自定义数据库路径
+  python scripts/gps_server.py --storage --db runs/data/gps_live.db
 
 手机端使用:
   1. 工地 WiFi 下, 手机浏览器打开 http://服务器IP:8090
@@ -535,10 +775,14 @@ def main():
                         default="configs/site_geofence.json",
                         help="电子栅栏配置文件")
     parser.add_argument("--notify", action="store_true",
-                        help="启用飞书通知")
+                        help="启用飞书通知 (电子栅栏告警自动逐级推送)")
     parser.add_argument("--personnel-config", type=str,
                         default="configs/personnel.json",
-                        help="飞书人员配置")
+                        help="飞书人员/告警规则配置")
+    parser.add_argument("--storage", action="store_true",
+                        help="启用 SQLite 持久化 (定位历史/事件/告警落库)")
+    parser.add_argument("--db", type=str, default="runs/data/site.db",
+                        help="SQLite 数据库路径 (配合 --storage 使用)")
     parser.add_argument("--debug", action="store_true",
                         help="调试模式")
 
@@ -550,6 +794,8 @@ def main():
         geofence_config=args.geofence_config,
         personnel_config=args.personnel_config,
         notify_enabled=args.notify,
+        storage_enabled=args.storage,
+        db_path=args.db,
     )
     server.register_routes(app)
 
@@ -557,14 +803,19 @@ def main():
     print(f"  智慧工地 - 手机定位 API 服务器")
     print(f"{'='*60}")
     print(f"  监听地址: http://{args.host}:{args.port}")
-    print(f"  飞书通知: {'开启' if args.notify else '关闭'}")
+    print(f"  工人花名册: {args.workers_config}  "
+          f"({len(server.tracker.workers_db.get('workers',[]))} 人 / "
+          f"{len(server.tracker.workers_db.get('teams',{}))} 个班组)")
+    print(f"  电子栅栏:   {args.geofence_config}")
+    print(f"  飞书通知:   {'✅ 开启' if args.notify else '关闭'}")
+    print(f"  SQLite存储: {'✅ 开启 → ' + args.db if args.storage else '关闭'}")
     print(f"")
     print(f"  API 接口:")
     print(f"    POST /api/location/report      手机GPS上报")
     print(f"    GET  /api/location/status      所有工人状态")
     print(f"    GET  /api/location/worker/:id  单个工人状态")
-    print(f"    GET  /api/stats/teams          班组统计")
-    print(f"    GET  /api/stats/summary        总览")
+    print(f"    GET  /api/stats/teams          班组统计 (含出勤率/迟到/危险区)")
+    print(f"    GET  /api/stats/summary        项目总览 (含各班组人数与总工人数)")
     print(f"    GET  /api/geofence             电子栅栏")
     print(f"    GET  /api/workers              工人列表")
     print(f"    GET  /api/events               事件日志")

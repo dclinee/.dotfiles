@@ -1,0 +1,22 @@
+# 多路摄像头调度器 (每路一个 video_verify 子进程, 自带崩溃重启)
+# 直接当普通服务用, 不用 @ 模板
+[Unit]
+Description=智慧工地 · 多路摄像头检测 (video_verify supervisor)
+After=network-online.target site-gps.service
+Wants=network-online.target
+
+WorkingDirectory=%h/yolo_project
+Environment=PYTHONUNBUFFERED=1
+Environment=OPENCV_FFMPEG_CAPTURE_OPTIONS="rtsp_transport;tcp"
+
+ExecStart=%h/.pyenv/versions/3.14.7/bin/python scripts/multi_cam_dispatch.py \
+    --cameras configs/cameras.json \
+    --db runs/data/site.db \
+    --python-path .
+
+# 重启过快会导致日志刷屏; 给 15s 缓冲
+Restart=on-failure
+RestartSec=15s
+
+[Install]
+WantedBy=default.target

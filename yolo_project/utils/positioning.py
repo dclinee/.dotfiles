@@ -156,17 +156,21 @@ class GeofenceEngine:
 
     def __init__(self, geofence_config_path: str = "configs/site_geofence.json"):
         self.config = self._load_config(geofence_config_path)
-        self.site_boundary = self.config["site_geofence"]["boundary"]
-        self.site_center = self.config["site_geofence"]["center"]
-        self.site_radius = self.config["site_geofence"]["radius_meters"]
+        # JSON 存 [lon, lat]；统一转成内部 (lat, lon) 顺序
+        site_geo = self.config["site_geofence"]
+        self.site_boundary = [(pt[1], pt[0]) for pt in site_geo["boundary"]]
+        self.site_center = (site_geo["center"][1], site_geo["center"][0])
+        self.site_radius = site_geo["radius_meters"]
 
-        # 子区域
+        # 子区域 (注意原地修改 boundary 顺序)
         self.sub_zones = {}
         self.danger_zones = {}
         for zone in self.config.get("sub_zones", []):
-            self.sub_zones[zone["id"]] = zone
-            if zone["type"] == "danger":
-                self.danger_zones[zone["id"]] = zone
+            z = dict(zone)
+            z["boundary"] = [(pt[1], pt[0]) for pt in zone["boundary"]]
+            self.sub_zones[z["id"]] = z
+            if z["type"] == "danger":
+                self.danger_zones[z["id"]] = z
 
         # 告警配置
         self.alerts = self.config.get("alerts", {})
@@ -183,7 +187,7 @@ class GeofenceEngine:
         return point_in_polygon(lat, lon, self.site_boundary)
 
     def distance_to_site(self, lat: float, lon: float) -> float:
-        """计算到工地中心的距离"""
+        """计算到工地中心的距离 (米)"""
         return haversine_distance(
             lat, lon, self.site_center[0], self.site_center[1]
         )

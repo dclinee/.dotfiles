@@ -1,0 +1,41 @@
+{
+  "source": "runs/_tmp_val_video.mp4",
+  "camera_id": "cam_e2e",
+  "model": "runs/syn_train/syn_exp1/weights/best.pt",
+  "mode": "all",
+  "storage_enabled": true,
+  "notify_enabled": true,
+  "stats": {
+    "total_frames": 20,
+    "processed_frames": 20,
+    "elapsed_s": 2.0,
+    "actual_fps": 10.1,
+    "total_persons": 73,
+    "total_helmets": 2,
+    "total_no_helmets": 0,
+    "total_vests": 0,
+    "total_no_vests": 0,
+    "total_vehicles": 0,
+    "helmet_compliance_rate_raw": 100.0,
+    "vest_compliance_rate_raw": 0,
+    "person_level": {
+      "helmet": {
+        "ok": 2,
+        "bad": 0,
+        "unknown": 71,
+        "compliance_rate_known": 100.0
+      },
+      "vest": {
+        "ok": 0,
+        "bad": 0,
+        "unknown": 73,
+        "compliance_rate_known": 0.0
+      }
+    },
+    "violations": {},
+    "intrusions": 0
+  },
+  "violations": [],
+  "intrusions": [],
+  "generated_at": "2026-08-17 01:08:11"
+}

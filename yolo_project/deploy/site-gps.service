@@ -1,0 +1,26 @@
+[Unit]
+Description=智慧工地 · GPS 定位上报 & 电子栅栏 (Flask)
+After=network-online.target
+Wants=network-online.target
+
+# --- system-wide (copy to /etc/systemd/system/, 改 User) ---
+# User=smart_sites
+# WorkingDirectory=/opt/smart_sites/yolo_project
+
+# --- user mode (推荐，放到 ~/.config/systemd/user/) 不需要改这行 ---
+WorkingDirectory=%h/yolo_project
+
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=%h/.pyenv/versions/3.14.7/bin/python scripts/gps_server.py \
+    --db runs/data/site.db \
+    --config configs/site_geofence.json \
+    --personnel configs/personnel.json \
+    --host 0.0.0.0 --port 5002
+
+Restart=on-failure
+RestartSec=5s
+
+# user-only 模式日志可以用 journalctl --user -u site-gps -f
+[Install]
+WantedBy=default.target

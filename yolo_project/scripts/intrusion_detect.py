@@ -190,17 +190,91 @@ class IntrusionDetector:
 
 
 def load_zones_from_file(path):
-    """从 JSON 文件加载危险区域"""
-    with open(path, "r") as f:
-        data = json.load(f)
-    return data.get("zones", [])
+    """
+    **升级版**: 使用统一加载器识别 danger_zones.json / site_geofence.json / 纯数组
+    返回 (zones_legacy, zones_config) 双元组：
+      - zones_legacy : 纯多边形坐标列表  [[(x,y),...], [...]]  (给 self.danger_zones 用)
+      - zones_config : 带 name/id 的 dict 列表  (给 self.danger_zones_config 用)
+    会自动过滤掉非视频坐标(GPS)的区域，并给出提示。
+    """
+    from utils.common import (
+        load_unified_zones, print_zones_summary,
+        ZoneCoords, ZoneType,
+    )
+    import os
+    all_zones = load_unified_zones(path)
+    if not all_zones:
+        return [], []
+    # 只取视频坐标系 (pixel_norm / pixel_abs)
+    video_zones = [z for z in all_zones
+                   if z["coords"] in (ZoneCoords.PIXEL_NORM.value, ZoneCoords.PIXEL_ABS.value)]
+    gps_zones = [z for z in all_zones if z["coords"] == ZoneCoords.GPS_WGS84.value]
+    if gps_zones:
+        print(f"[Zones] ⚠️  跳过 {len(gps_zones)} 个 GPS 区域 (入侵检测仅支持视频像素坐标, "
+              f"请用 zones_tool extract 从 geofence 中提取后再使用): "
+              f"{[z['id'] for z in gps_zones]}")
+    # 对 pixel_abs 转成 pixel_norm (粗略按 1920×1080 归一化; 更精确需 reference_resolution 提供)
+    def to_norm_points(z):
+        pts = z["points"]
+        if z["coords"] == ZoneCoords.PIXEL_NORM.value:
+            return [(float(p[0]), float(p[1])) for p in pts]
+        # pixel_abs: 用 reference_resolution=[W,H] 换算; 无则假设 1920×1080
+        w, h = z.get("reference_resolution") or (1920, 1080)
+        return [(float(p[0]) / w, float(p[1]) / h) for p in pts]
+
+    print_zones_summary(video_zones,
+                        title=f"video入侵检测 加载 {os.path.basename(path)}")
+    if not video_zones:
+        return [], []
+    zones_legacy = [to_norm_points(z) for z in video_zones]
+    zones_config = [
+        {"id": z["id"], "name": z["name"], "type": z["type"],
+         "alert_level": z.get("alert_level", "high"),
+         "description": z.get("description", "")}
+        for z in video_zones
+    ]
+    return zones_legacy, zones_config
 
 
 def save_zones_to_file(zones, path):
-    """保存危险区域到 JSON 文件"""
-    with open(path, "w") as f:
-        json.dump({"zones": zones}, f, indent=2)
-    print(f"危险区域已保存: {path}")
+    """保存危险区域到 JSON 文件 (输出 standard-zones 统一格式 v1.0)"""
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    out_zones = []
+    for i, z in enumerate(zones):
+        # zones 元素可能是纯点列表，也可能是带 name 的 dict
+        if isinstance(z, dict):
+            name = z.get("name", f"区域_{i+1}")
+            pts = z.get("points", z.get("boundary", []))
+            zid = z.get("id", f"zone_{i+1:02d}_danger")
+            ztype = z.get("type", ZoneType.DANGER.value)
+            coords = z.get("coords", ZoneCoords.PIXEL_NORM.value)
+        else:
+            name = f"区域_{i+1}"
+            pts = list(z)
+            zid = f"zone_{i+1:02d}_danger"
+            ztype = ZoneType.DANGER.value
+            coords = ZoneCoords.PIXEL_NORM.value
+        out_zones.append({
+            "id": zid,
+            "name": name,
+            "type": ztype,
+            "coords": coords,
+            "alert_level": "high" if ztype == ZoneType.DANGER.value else "mid",
+            "points": [[float(p[0]), float(p[1])] for p in pts],
+        })
+    data = {
+        "_version": "1.0",
+        "_schema": "standard-zones",
+        "zones": out_zones,
+    }
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    print(f"✅ 危险区域已保存 (standard-zones v1.0): {path}  (共 {len(out_zones)} 个)")
+
+
+# ---- 兼容旧调用: save_zones_to_file 需要 ZoneType/ZoneCoords ----
+from utils.common import ZoneType, ZoneCoords  # noqa: E402
 
 
 def interactive_zone_selector(image_path, output_path):
@@ -303,12 +377,17 @@ def main():
 
     # 加载危险区域
     if args.zones:
-        zones = load_zones_from_file(args.zones)
+        zones_tuple, zones_config = load_zones_from_file(args.zones)
+        zones = zones_tuple  # 传给 detector.danger_zones: [[(x,y),...], ...]
     else:
         # 默认危险区域 (示例, 需要根据实际场景调整)
         print("未指定危险区域, 使用默认示例区域")
         zones = [
             [(0.1, 0.1), (0.3, 0.1), (0.3, 0.4), (0.1, 0.4)],  # 左上区域
+        ]
+        zones_config = [
+            {"id": "zone_default_01", "name": "示例区域_左上", "type": "danger",
+             "alert_level": "high", "description": ""}
         ]
 
     print(f"已加载 {len(zones)} 个危险区域")
@@ -322,7 +401,7 @@ def main():
         personnel_config=args.personnel_config,
     )
     detector.camera_id = args.camera_id
-    detector.danger_zones_config = zones  # 保存原始配置用于获取区域名称
+    detector.danger_zones_config = zones_config  # 保存带 name 的区域配置 (含 id/type/alert_level)
 
     source = args.source
     if source.isdigit():

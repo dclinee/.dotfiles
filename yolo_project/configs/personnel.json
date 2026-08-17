@@ -63,6 +63,24 @@
       "level": "critical",
       "notify_roles": ["team_leader", "safety_officer", "project_manager"],
       "template": "【统计预警】反光衣穿戴率仅 {rate:.1f}%，低于80%阈值！\n时间: {time}\n位置: 摄像头 {camera_id}\n请立即组织整改！"
+    },
+    "geofence_intrusion": {
+      "title": "电子栅栏 - 进入危险区域",
+      "level": "critical",
+      "notify_roles": ["worker", "team_leader", "safety_officer", "project_manager"],
+      "template": "【栅栏告警】工人 {worker_name} ({team}) 进入危险区域\n区域: {zone_name} (zone_id={zone_id})\n时间: {time}\n请立即前往处置，确保人员安全撤离！"
+    },
+    "geofence_leave": {
+      "title": "电子栅栏 - 人员离场",
+      "level": "mid",
+      "notify_roles": ["team_leader", "safety_officer"],
+      "template": "【离场提醒】工人 {worker_name} ({team}) 已离开工地范围\n距离边界: {distance}\n时间: {time}\n请班组长联系确认是否正常下班。"
+    },
+    "geofence_late": {
+      "title": "电子栅栏 - 迟到预警",
+      "level": "low",
+      "notify_roles": ["team_leader"],
+      "template": "【考勤提醒】{count} 名工人还未到达工地\n班组: {team}\n时间: {time}\n请班组长提醒出勤。"
     }
   },
 

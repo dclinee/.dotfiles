@@ -1,0 +1,23 @@
+[Unit]
+Description=智慧工地 · 照片上传 / 自动标注 / 自动训练 流水线 (Flask)
+After=network-online.target
+Wants=network-online.target
+
+WorkingDirectory=%h/yolo_project
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=4
+Environment=MKL_NUM_THREADS=4
+
+ExecStart=%h/.pyenv/versions/3.14.7/bin/python scripts/auto_retrain.py \
+    --model runs/syn_train/syn_exp1/weights/best.pt \
+    --data-yml configs/dataset.yaml \
+    --db runs/data/site.db \
+    --host 0.0.0.0 --port 5003 \
+    --device cpu --min-new-images 5
+
+# 训练进程会吃 CPU/内存, 给个合理的重启缓冲
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=default.target

@@ -1,6 +1,57 @@
 {
-  "camera_1": "rtsp://admin:password@192.168.1.100:554/stream1",
-  "camera_2": "rtsp://admin:password@192.168.1.101:554/stream1",
-  "camera_3": 0,
-  "camera_4": "videos/site_video.mp4"
+  "_comment": "多路摄像头配置. 每个摄像头一项. 字段说明:",
+  "_fields": {
+    "id": "唯一ID (英数字+下划线). 会写入 storage 的 camera_id 字段, 在告警/检测/看板过滤用",
+    "name": "显示名, 如 '东门入口'",
+    "source": "RTSP / 本地视频 / 0 本地摄像头. RTSP 格式示例: rtsp://user:pass@192.168.1.64:554/Streaming/Channels/101",
+    "zone_config": "危险区域JSON路径, 默认 configs/site_geofence.json",
+    "model": "模型权重, 默认 runs/syn_train/syn_exp1/weights/best.pt",
+    "device": "cpu / cuda:0",
+    "conf": "推理置信度阈值",
+    "iou": "NMS IoU 阈值",
+    "frame_interval": "每 N 帧推理一次 (1=全帧, 数字越大CPU占用越低, 实时性越差)",
+    "show_window": "false=不弹cv2窗口(服务器); true=桌面弹窗口",
+    "record_video": "是否保存带叠加框的视频到 runs/recordings/{id}/",
+    "alarms": {
+      "alarm_cooldown_seconds": "同类告警冷却秒数, 防止刷屏",
+      "notify_lark": "是否尝试飞书通知 (需 lark-cli config init 已完成)"
+    }
+  },
+
+  "cameras": [
+    {
+      "id": "cam_entrance",
+      "name": "东门入口",
+      "source": "datasets/raw_videos/entrance.mp4",
+      "zone_config": "configs/site_geofence.json",
+      "model": "runs/syn_train/syn_exp1/weights/best.pt",
+      "device": "cpu",
+      "conf": 0.35,
+      "iou": 0.45,
+      "frame_interval": 2,
+      "show_window": false,
+      "record_video": false,
+      "alarms": {
+        "alarm_cooldown_seconds": 30,
+        "notify_lark": false
+      }
+    },
+    {
+      "id": "cam_tower_crane",
+      "name": "塔吊区俯视",
+      "source": "rtsp://admin:ChangeMe@192.168.1.64:554/Streaming/Channels/101",
+      "zone_config": "configs/site_geofence.json",
+      "model": "runs/syn_train/syn_exp1/weights/best.pt",
+      "device": "cuda:0",
+      "conf": 0.35,
+      "iou": 0.45,
+      "frame_interval": 4,
+      "show_window": false,
+      "record_video": true,
+      "alarms": {
+        "alarm_cooldown_seconds": 45,
+        "notify_lark": true
+      }
+    }
+  ]
 }

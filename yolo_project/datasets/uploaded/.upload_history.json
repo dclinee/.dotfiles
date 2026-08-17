@@ -1,1 +1,182 @@
-[]
+[
+  {
+    "photo_id": 1,
+    "uuid": "b75acd7cc6c8",
+    "filename": "20260817_013839_13810000001_b75acd7cc6c8_0001_test_syn_scene_val_0000.jpg",
+    "phone": "13810000001",
+    "location": "zone_a",
+    "tags": [
+      "person",
+      "helmet"
+    ],
+    "remark": "场景 #1",
+    "time": "2026-08-17 01:38:43",
+    "labels_count": 2,
+    "status": "need_review",
+    "avg_confidence": 0.5443,
+    "low_conf_ratio": 0.0,
+    "duplicate": false
+  },
+  {
+    "photo_id": 2,
+    "uuid": "c36d60648da4",
+    "filename": "20260817_013843_13810000002_c36d60648da4_0002_test_syn_scene_val_0001.jpg",
+    "phone": "13810000002",
+    "location": "zone_b",
+    "tags": [
+      "person",
+      "helmet"
+    ],
+    "remark": "场景 #2",
+    "time": "2026-08-17 01:38:43",
+    "labels_count": 5,
+    "status": "need_review",
+    "avg_confidence": 0.4488,
+    "low_conf_ratio": 0.8,
+    "duplicate": false
+  },
+  {
+    "photo_id": 3,
+    "uuid": "86f529a90616",
+    "filename": "20260817_013843_13810000003_86f529a90616_0003_test_syn_scene_val_0002.jpg",
+    "phone": "13810000003",
+    "location": "entrance",
+    "tags": [
+      "person",
+      "helmet"
+    ],
+    "remark": "场景 #3",
+    "time": "2026-08-17 01:38:43",
+    "labels_count": 3,
+    "status": "need_review",
+    "avg_confidence": 0.5589,
+    "low_conf_ratio": 0.667,
+    "duplicate": false
+  },
+  {
+    "photo_id": 4,
+    "uuid": "ead7bc7be89b",
+    "filename": "20260817_013843_13810000004_ead7bc7be89b_0004_test_syn_scene_val_0003.jpg",
+    "phone": "13810000004",
+    "location": "zone_a",
+    "tags": [
+      "person",
+      "helmet"
+    ],
+    "remark": "场景 #4",
+    "time": "2026-08-17 01:38:43",
+    "labels_count": 2,
+    "status": "need_review",
+    "avg_confidence": 0.4475,
+    "low_conf_ratio": 0.5,
+    "duplicate": false
+  },
+  {
+    "photo_id": 5,
+    "uuid": "b45500f4130d",
+    "filename": "20260817_013843_13810000005_b45500f4130d_0005_test_syn_scene_val_0004.jpg",
+    "phone": "13810000005",
+    "location": "zone_b",
+    "tags": [
+      "person",
+      "helmet"
+    ],
+    "remark": "场景 #5",
+    "time": "2026-08-17 01:38:43",
+    "labels_count": 4,
+    "status": "need_review",
+    "avg_confidence": 0.504,
+    "low_conf_ratio": 0.5,
+    "duplicate": false
+  },
+  {
+    "photo_id": 6,
+    "uuid": "02e3cb7e5539",
+    "filename": "20260817_013843_13810000006_02e3cb7e5539_0006_test_syn_scene_val_0005.jpg",
+    "phone": "13810000006",
+    "location": "entrance",
+    "tags": [
+      "person",
+      "helmet"
+    ],
+    "remark": "场景 #6",
+    "time": "2026-08-17 01:38:43",
+    "labels_count": 5,
+    "status": "training",
+    "avg_confidence": 0.5546,
+    "low_conf_ratio": 0.6,
+    "duplicate": false
+  },
+  {
+    "photo_id": 7,
+    "uuid": "0ab7e98a6c3b",
+    "filename": "20260817_013843_13810000007_0ab7e98a6c3b_0007_test_syn_scene_val_0006.jpg",
+    "phone": "13810000007",
+    "location": "zone_a",
+    "tags": [
+      "person",
+      "helmet"
+    ],
+    "remark": "场景 #7",
+    "time": "2026-08-17 01:38:43",
+    "labels_count": 5,
+    "status": "training",
+    "avg_confidence": 0.4267,
+    "low_conf_ratio": 0.8,
+    "duplicate": false
+  },
+  {
+    "photo_id": 8,
+    "uuid": "9eef8e46b5f8",
+    "filename": "20260817_013843_13810000008_9eef8e46b5f8_0008_test_syn_scene_val_0007.jpg",
+    "phone": "13810000008",
+    "location": "zone_b",
+    "tags": [
+      "person",
+      "helmet"
+    ],
+    "remark": "场景 #8",
+    "time": "2026-08-17 01:38:43",
+    "labels_count": 3,
+    "status": "training",
+    "avg_confidence": 0.4703,
+    "low_conf_ratio": 0.667,
+    "duplicate": false
+  },
+  {
+    "photo_id": 9,
+    "uuid": "cb2af0532900",
+    "filename": "20260817_013843_13810000009_cb2af0532900_0009_test_syn_scene_val_0008.jpg",
+    "phone": "13810000009",
+    "location": "entrance",
+    "tags": [
+      "person",
+      "helmet"
+    ],
+    "remark": "场景 #9",
+    "time": "2026-08-17 01:38:43",
+    "labels_count": 7,
+    "status": "training",
+    "avg_confidence": 0.4922,
+    "low_conf_ratio": 0.714,
+    "duplicate": false
+  },
+  {
+    "photo_id": 10,
+    "uuid": "0ad7b5e2d24b",
+    "filename": "20260817_013843_13810000010_0ad7b5e2d24b_0010_test_syn_scene_val_0009.jpg",
+    "phone": "13810000010",
+    "location": "zone_a",
+    "tags": [
+      "person",
+      "helmet"
+    ],
+    "remark": "场景 #10",
+    "time": "2026-08-17 01:38:43",
+    "labels_count": 3,
+    "status": "training",
+    "avg_confidence": 0.3791,
+    "low_conf_ratio": 1.0,
+    "duplicate": false
+  }
+]

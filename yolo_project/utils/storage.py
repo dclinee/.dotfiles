@@ -20,9 +20,10 @@
 import sqlite3
 import json
 import threading
+import hashlib
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from contextlib import contextmanager
 
 from utils.common import ensure_dir, format_timestamp, now_str
@@ -84,6 +85,76 @@ CREATE TABLE IF NOT EXISTS events (
     created_at  TEXT DEFAULT (datetime('now', 'localtime'))
 );
 
+-- ========== P2: 照片上传 / 自动标注 / 自动重训练 ==========
+
+CREATE TABLE IF NOT EXISTS photos (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    photo_uuid      TEXT UNIQUE NOT NULL,        -- 业务侧唯一ID (hash或uuid)
+    content_hash    TEXT,                        -- 图片内容SHA256 (用于去重)
+    filename        TEXT NOT NULL,
+    file_path       TEXT NOT NULL,
+    file_size       INTEGER DEFAULT 0,
+    image_w         INTEGER,
+    image_h         INTEGER,
+    uploader_phone  TEXT,
+    uploader_name   TEXT,
+    uploader_team   TEXT,
+    location_tag    TEXT,                        -- 上传时选的地点标签 (zone_a/...)
+    user_tags       TEXT,                        -- JSON: 工人选的类别标签
+    remark          TEXT,
+    -- 状态机: uploaded → labeling → labeled → need_review → reviewed
+    --                  ↘ rejected           ↓
+    --                                     training → trained
+    status          TEXT DEFAULT 'uploaded',
+    labels_count    INTEGER DEFAULT 0,           -- 伪标签框数
+    avg_confidence  REAL DEFAULT 0,              -- 伪标签平均置信度
+    low_conf_ratio  REAL DEFAULT 0,              -- 低置信度(<0.5)框占比
+    review_by       TEXT,
+    review_at       TEXT,
+    training_run_id INTEGER,                     -- 参与过的训练ID
+    model_version   TEXT,                        -- 用于标注的模型版本
+    details         TEXT,                        -- JSON
+    created_at      TEXT DEFAULT (datetime('now', 'localtime')),
+    updated_at      TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS photo_labels (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    photo_id        INTEGER NOT NULL,
+    cls_id          INTEGER NOT NULL,
+    cls_name        TEXT,
+    confidence      REAL DEFAULT 0,
+    -- 归一化 YOLO 格式 (cx, cy, w, h) 0~1
+    cx              REAL,
+    cy              REAL,
+    bw              REAL,
+    bh              REAL,
+    -- 绝对像素坐标 (可选)
+    x1              INTEGER,
+    y1              INTEGER,
+    x2              INTEGER,
+    y2              INTEGER,
+    reviewed        INTEGER DEFAULT 0,           -- 1=人工已复核/修正
+    created_at      TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS training_runs (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_uuid        TEXT UNIQUE,
+    trigger_type    TEXT DEFAULT 'auto',         -- auto / manual
+    base_model      TEXT,                        -- 训练起点模型路径
+    output_model    TEXT,                        -- 产物模型 (best.pt)
+    epochs          INTEGER DEFAULT 0,
+    new_images      INTEGER DEFAULT 0,           -- 本批次新增图片数
+    total_images    INTEGER DEFAULT 0,
+    map50           REAL,                        -- 评估指标
+    status          TEXT DEFAULT 'running',      -- running / success / failed / timeout
+    error_msg       TEXT,
+    metrics         TEXT,                        -- JSON 完整指标
+    started_at      TEXT DEFAULT (datetime('now', 'localtime')),
+    finished_at     TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_alarms_camera ON alarms(camera_id);
 CREATE INDEX IF NOT EXISTS idx_alarms_time ON alarms(created_at);
 CREATE INDEX IF NOT EXISTS idx_alarms_type ON alarms(alarm_type);
@@ -93,6 +164,12 @@ CREATE INDEX IF NOT EXISTS idx_detections_camera ON detections(camera_id);
 CREATE INDEX IF NOT EXISTS idx_detections_hour ON detections(hour);
 CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
 CREATE INDEX IF NOT EXISTS idx_events_time ON events(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_photos_status ON photos(status);
+CREATE INDEX IF NOT EXISTS idx_photos_hash ON photos(content_hash);
+CREATE INDEX IF NOT EXISTS idx_photos_uploader ON photos(uploader_phone);
+CREATE INDEX IF NOT EXISTS idx_photo_labels_photo ON photo_labels(photo_id);
+CREATE INDEX IF NOT EXISTS idx_training_runs_status ON training_runs(status);
 """
 
 
@@ -110,10 +187,45 @@ class SiteDatabase:
         self._init_db()
 
     def _init_db(self):
-        """初始化数据库"""
+        """初始化数据库 + 列迁移 (向后兼容：老库增加新列)"""
         with self._get_conn() as conn:
             conn.executescript(SCHEMA)
+            self._migrate_columns(conn)
             conn.commit()
+
+    @staticmethod
+    def _columns_of(conn, table: str) -> set:
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        return {r[1] for r in rows}
+
+    def _migrate_columns(self, conn):
+        """对已存在的老表，安全地追加新列 (ALTER TABLE ADD COLUMN)"""
+        # ---- alarms 表新列 ----
+        cols = self._columns_of(conn, "alarms")
+        for col, decl in [
+            ("source",   "TEXT"),
+            ("worker_id","TEXT"),
+            ("resolved", "INTEGER DEFAULT 0"),
+            ("ack_at",   "TEXT"),
+            ("ack_by",   "TEXT"),
+        ]:
+            if col not in cols:
+                conn.execute(f"ALTER TABLE alarms ADD COLUMN {col} {decl}")
+        # 建索引 (CREATE INDEX IF NOT EXISTS 天然幂等)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_alarms_source ON alarms(source)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_alarms_worker ON alarms(worker_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_alarms_resolved ON alarms(resolved)")
+
+        # ---- locations 表新列 ----
+        cols = self._columns_of(conn, "locations")
+        for col, decl in [
+            ("zone_type", "TEXT"),
+            ("speed",     "REAL DEFAULT 0"),
+        ]:
+            if col not in cols:
+                conn.execute(f"ALTER TABLE locations ADD COLUMN {col} {decl}")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_locations_team ON locations(team)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_locations_onsite ON locations(on_site)")
 
     @contextmanager
     def _get_conn(self):
@@ -137,14 +249,25 @@ class SiteDatabase:
 
     def log_alarm(self, alarm_type: str, message: str = "",
                   camera_id: str = "", level: str = "high",
-                  details: dict = None) -> int:
-        """记录一条告警"""
+                  details: dict = None, source: str = "",
+                  worker_id: str = "") -> int:
+        """记录一条告警
+        - source: 来源标识 (如 cam_entrance / gps:W005)
+        - worker_id: 关联工人 (视频场景可空)
+        """
+        if details is None:
+            details = {}
+        # 把 source/worker_id 也兜底写进 details，保证老代码也能查到
+        details.setdefault("source", source)
+        if worker_id:
+            details.setdefault("worker_id", worker_id)
         with self._get_conn() as conn:
             cur = conn.execute(
-                "INSERT INTO alarms (alarm_type, level, camera_id, message, details) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (alarm_type, level, camera_id, message,
-                 json.dumps(details, ensure_ascii=False) if details else None),
+                "INSERT INTO alarms (alarm_type, level, camera_id, message, "
+                "details, source, worker_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (alarm_type, level, camera_id or None, message,
+                 json.dumps(details, ensure_ascii=False) if details else None,
+                 source or None, worker_id or None),
             )
             conn.commit()
             return cur.lastrowid
@@ -213,18 +336,23 @@ class SiteDatabase:
                      team: str = "", latitude: float = 0, longitude: float = 0,
                      accuracy: float = 0, on_site: bool = False,
                      current_zone: str = "", in_danger: bool = False,
-                     battery: int = 100) -> int:
-        """记录一条定位"""
+                     battery: int = 100, zone_type: str = "",
+                     speed: float = 0) -> int:
+        """记录一条定位
+        - zone_type: work/safe/danger/restricted 等 (对应 StandardZone.type)
+        - speed: 移动速度 m/s (GPS 提供)
+        """
         with self._get_conn() as conn:
             cur = conn.execute(
                 "INSERT INTO locations (worker_id, worker_name, team, "
                 "latitude, longitude, accuracy, on_site, current_zone, "
-                "in_danger, battery) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "in_danger, battery, zone_type, speed) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (worker_id, worker_name, team,
                  round(latitude, 6), round(longitude, 6), round(accuracy, 1),
                  1 if on_site else 0, current_zone,
-                 1 if in_danger else 0, battery),
+                 1 if in_danger else 0, battery,
+                 zone_type or None, round(float(speed), 2)),
             )
             conn.commit()
             return cur.lastrowid
@@ -417,15 +545,276 @@ class SiteDatabase:
     def get_db_stats(self) -> Dict:
         """获取数据库统计"""
         with self._get_conn() as conn:
-            tables = ["alarms", "locations", "detections", "events"]
+            tables = ["alarms", "locations", "detections", "events",
+                      "photos", "photo_labels", "training_runs"]
             stats = {}
             for table in tables:
-                row = conn.execute(f"SELECT COUNT(*) as cnt FROM {table}").fetchone()
-                stats[table] = row["cnt"] if row else 0
+                try:
+                    row = conn.execute(f"SELECT COUNT(*) as cnt FROM {table}").fetchone()
+                    stats[table] = row["cnt"] if row else 0
+                except sqlite3.OperationalError:
+                    stats[table] = 0  # 老库表可能不存在
             stats["db_size_mb"] = round(
                 self.db_path.stat().st_size / (1024 * 1024), 2
             ) if self.db_path.exists() else 0
             return stats
+
+    # ============================================================
+    # 工具: 内容 hash 去重
+    # ============================================================
+
+    @staticmethod
+    def compute_content_hash(data: bytes) -> str:
+        """计算图片内容的 SHA256 (用于去重)"""
+        return hashlib.sha256(data).hexdigest()
+
+    def find_photo_by_hash(self, content_hash: str) -> Optional[Dict]:
+        """根据内容 hash 查找已存在的照片 (去重命中)"""
+        if not content_hash:
+            return None
+        with self._get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM photos WHERE content_hash = ? ORDER BY id DESC LIMIT 1",
+                (content_hash,),
+            ).fetchone()
+            return dict(row) if row else None
+
+    # ============================================================
+    # 照片 (photos) 管理
+    # ============================================================
+
+    def add_photo(self, photo_uuid: str, *,
+                  filename: str, file_path: str,
+                  content_hash: str = "",
+                  file_size: int = 0,
+                  image_w: int = None, image_h: int = None,
+                  uploader_phone: str = "", uploader_name: str = "",
+                  uploader_team: str = "",
+                  location_tag: str = "", user_tags: list = None,
+                  remark: str = "", model_version: str = "",
+                  status: str = "uploaded", details: dict = None) -> int:
+        """登记一条新上传照片，返回 photo_id。
+        若 content_hash 命中已存在的照片，则返回已有 id (负重复制文件行为由调用方决定)。
+        """
+        existing = self.find_photo_by_hash(content_hash) if content_hash else None
+        if existing:
+            return existing["id"]
+
+        with self._get_conn() as conn:
+            cur = conn.execute(
+                "INSERT INTO photos (photo_uuid, content_hash, filename, file_path,"
+                " file_size, image_w, image_h, uploader_phone, uploader_name,"
+                " uploader_team, location_tag, user_tags, remark, model_version,"
+                " status, details, updated_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, datetime('now','localtime'))",
+                (
+                    photo_uuid, content_hash or None, filename, file_path,
+                    int(file_size), image_w, image_h,
+                    uploader_phone or None, uploader_name or None,
+                    uploader_team or None, location_tag or None,
+                    json.dumps(user_tags, ensure_ascii=False) if user_tags else None,
+                    remark or None, model_version or None,
+                    status,
+                    json.dumps(details, ensure_ascii=False) if details else None,
+                ),
+            )
+            conn.commit()
+            return cur.lastrowid
+
+    def update_photo_status(self, photo_id: int, status: str, *,
+                            labels_count: int = None,
+                            avg_confidence: float = None,
+                            low_conf_ratio: float = None,
+                            review_by: str = "", review_at: str = "",
+                            training_run_id: int = None,
+                            details: dict = None) -> bool:
+        """更新照片状态 & 可附带元数据"""
+        fields = ["status = ?", "updated_at = datetime('now','localtime')"]
+        params: list = [status]
+        if labels_count is not None:
+            fields.append("labels_count = ?")
+            params.append(int(labels_count))
+        if avg_confidence is not None:
+            fields.append("avg_confidence = ?")
+            params.append(float(avg_confidence))
+        if low_conf_ratio is not None:
+            fields.append("low_conf_ratio = ?")
+            params.append(float(low_conf_ratio))
+        if review_by:
+            fields.append("review_by = ?")
+            params.append(review_by)
+        if review_at:
+            fields.append("review_at = ?")
+            params.append(review_at)
+        elif review_by:
+            fields.append("review_at = datetime('now','localtime')")
+        if training_run_id is not None:
+            fields.append("training_run_id = ?")
+            params.append(int(training_run_id))
+        if details:
+            fields.append("details = COALESCE(details,'{}') || ?")
+            params.append(json.dumps(details, ensure_ascii=False))
+
+        params.append(int(photo_id))
+        with self._get_conn() as conn:
+            cur = conn.execute(f"UPDATE photos SET {', '.join(fields)} WHERE id = ?", params)
+            conn.commit()
+            return cur.rowcount > 0
+
+    def get_photo(self, photo_id: int) -> Optional[Dict]:
+        with self._get_conn() as conn:
+            row = conn.execute("SELECT * FROM photos WHERE id = ?", (int(photo_id),)).fetchone()
+            return dict(row) if row else None
+
+    def query_photos(self, status: str = None,
+                     location_tag: str = None,
+                     uploader_phone: str = None,
+                     need_review: bool = None,
+                     limit: int = 100, offset: int = 0) -> List[Dict]:
+        """查询照片列表
+        - need_review=True → status in ('labeled','need_review') 未review过
+        - need_review=False → status in ('reviewed','rejected','training','trained')
+        """
+        sql = "SELECT * FROM photos WHERE 1=1"
+        params: list = []
+        if status:
+            sql += " AND status = ?"
+            params.append(status)
+        if location_tag:
+            sql += " AND location_tag = ?"
+            params.append(location_tag)
+        if uploader_phone:
+            sql += " AND uploader_phone = ?"
+            params.append(uploader_phone)
+        if need_review is True:
+            sql += " AND status IN ('uploaded','labeling','labeled','need_review')"
+        elif need_review is False:
+            sql += " AND status IN ('reviewed','rejected','training','trained')"
+        sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+        params.extend([int(limit), int(offset)])
+        with self._get_conn() as conn:
+            rows = conn.execute(sql, params).fetchall()
+            return [dict(r) for r in rows]
+
+    def count_photos_by_status(self) -> Dict[str, int]:
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT status, COUNT(*) AS cnt FROM photos GROUP BY status"
+            ).fetchall()
+            return {r["status"]: r["cnt"] for r in rows}
+
+    # ============================================================
+    # 照片标注 (photo_labels)
+    # ============================================================
+
+    def add_photo_label(self, photo_id: int, *,
+                        cls_id: int, cls_name: str = "",
+                        confidence: float = 0,
+                        cx: float = None, cy: float = None,
+                        bw: float = None, bh: float = None,
+                        x1: int = None, y1: int = None,
+                        x2: int = None, y2: int = None,
+                        reviewed: bool = False) -> int:
+        """写入一条伪标签框"""
+        with self._get_conn() as conn:
+            cur = conn.execute(
+                "INSERT INTO photo_labels (photo_id, cls_id, cls_name, confidence,"
+                " cx, cy, bw, bh, x1, y1, x2, y2, reviewed) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (int(photo_id), int(cls_id), cls_name or None, float(confidence),
+                 cx, cy, bw, bh, x1, y1, x2, y2, 1 if reviewed else 0),
+            )
+            conn.commit()
+            return cur.lastrowid
+
+    def add_photo_labels_batch(self, photo_id: int, detections: List[Dict]) -> int:
+        """批量写入伪标签 (detections 格式来自 AutoLabeler.predict)"""
+        if not detections:
+            return 0
+        rows = []
+        for d in detections:
+            bbox_abs = d.get("bbox_abs") or (None, None, None, None)
+            bbox_yolo = d.get("bbox_yolo") or (None, None, None, None)
+            rows.append((
+                int(photo_id), int(d.get("cls_id", -1)), d.get("cls_name", ""),
+                float(d.get("conf", 0)),
+                bbox_yolo[0], bbox_yolo[1], bbox_yolo[2], bbox_yolo[3],
+                bbox_abs[0], bbox_abs[1], bbox_abs[2], bbox_abs[3],
+                1 if d.get("reviewed") else 0,
+            ))
+        with self._get_conn() as conn:
+            conn.executemany(
+                "INSERT INTO photo_labels (photo_id, cls_id, cls_name, confidence,"
+                " cx, cy, bw, bh, x1, y1, x2, y2, reviewed) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", rows,
+            )
+            conn.commit()
+        return len(rows)
+
+    def query_photo_labels(self, photo_id: int) -> List[Dict]:
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM photo_labels WHERE photo_id = ? ORDER BY id",
+                (int(photo_id),),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def delete_photo_labels(self, photo_id: int) -> int:
+        """清除某张图的所有旧标注 (重标时用)"""
+        with self._get_conn() as conn:
+            cur = conn.execute("DELETE FROM photo_labels WHERE photo_id = ?", (int(photo_id),))
+            conn.commit()
+            return cur.rowcount or 0
+
+    # ============================================================
+    # 训练运行 (training_runs)
+    # ============================================================
+
+    def start_training_run(self, *, trigger_type: str = "auto",
+                           base_model: str = "", new_images: int = 0,
+                           total_images: int = 0, epochs: int = 0,
+                           run_uuid: str = "") -> int:
+        """登记一次训练开始，返回 run_id"""
+        with self._get_conn() as conn:
+            cur = conn.execute(
+                "INSERT INTO training_runs (run_uuid, trigger_type, base_model,"
+                " epochs, new_images, total_images, status) VALUES (?,?,?,?,?,?, 'running')",
+                (run_uuid or None, trigger_type, base_model or None,
+                 int(epochs or 0), int(new_images or 0), int(total_images or 0)),
+            )
+            conn.commit()
+            return cur.lastrowid
+
+    def finish_training_run(self, run_id: int, *,
+                            status: str = "success",
+                            output_model: str = "", map50: float = None,
+                            error_msg: str = "", metrics: dict = None):
+        with self._get_conn() as conn:
+            conn.execute(
+                "UPDATE training_runs SET status=?, output_model=?, map50=?,"
+                " error_msg=?, metrics=?, finished_at=datetime('now','localtime') "
+                "WHERE id=?",
+                (status, output_model or None,
+                 float(map50) if map50 is not None else None,
+                 error_msg or None,
+                 json.dumps(metrics, ensure_ascii=False) if metrics else None,
+                 int(run_id)),
+            )
+            conn.commit()
+
+    def query_training_runs(self, limit: int = 20) -> List[Dict]:
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM training_runs ORDER BY id DESC LIMIT ?", (int(limit),)
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_latest_training_run(self) -> Optional[Dict]:
+        with self._get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM training_runs ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            return dict(row) if row else None
 
 
 # ============================================================

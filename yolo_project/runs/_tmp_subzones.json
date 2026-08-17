@@ -1,0 +1,104 @@
+{
+  "sub_zones": [
+    {
+      "id": "zone_danger_tower_crane",
+      "name": "塔吊下方",
+      "type": "danger",
+      "boundary": [
+        [
+          0.3,
+          0.3
+        ],
+        [
+          0.7,
+          0.3
+        ],
+        [
+          0.7,
+          0.7
+        ],
+        [
+          0.3,
+          0.7
+        ]
+      ],
+      "alert_level": "high",
+      "description": "塔吊吊装作业半径范围，非授权人员禁止进入"
+    },
+    {
+      "id": "zone_danger_pit_edge",
+      "name": "基坑边缘",
+      "type": "danger",
+      "boundary": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.5,
+          0.0
+        ],
+        [
+          0.5,
+          0.2
+        ],
+        [
+          0.0,
+          0.2
+        ]
+      ],
+      "alert_level": "high",
+      "description": "深基坑临边 1.5m 范围，有坠落风险"
+    },
+    {
+      "id": "zone_danger_high_voltage",
+      "name": "高压线区域",
+      "type": "danger",
+      "boundary": [
+        [
+          0.6,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.3
+        ],
+        [
+          0.6,
+          0.3
+        ]
+      ],
+      "alert_level": "high",
+      "description": "高压架空线路下方 6m 范围，严禁登高作业和堆放物料"
+    },
+    {
+      "id": "zone_restricted_material",
+      "name": "物料堆放区(受限)",
+      "type": "restricted",
+      "boundary": [
+        [
+          0.0,
+          0.8
+        ],
+        [
+          0.25,
+          0.8
+        ],
+        [
+          0.25,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "alert_level": "mid",
+      "description": "仅授权装卸人员可进入，严禁逗留"
+    }
+  ]
+}

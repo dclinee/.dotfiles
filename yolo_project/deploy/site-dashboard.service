@@ -1,0 +1,18 @@
+[Unit]
+Description=智慧工地 · Dashboard 看板 + 聚合 API (Flask)
+After=network-online.target site-gps.service
+Wants=network-online.target
+
+WorkingDirectory=%h/yolo_project
+Environment=PYTHONUNBUFFERED=1
+
+# DB 路径与其他服务统一为 runs/data/site.db
+ExecStart=%h/.pyenv/versions/3.14.7/bin/python scripts/dashboard_api.py \
+    --db runs/data/site.db \
+    --host 0.0.0.0 --port 5001
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target
