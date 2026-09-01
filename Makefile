@@ -4,7 +4,7 @@
 # 统一命令入口，简化操作
 # 设计原则：所有 target 都委托给 per-component install.sh，避免与 bootstrap.sh 逻辑漂移
 
-.PHONY: install update backup test check clean help zsh vim emacs wezterm wezterm-check wezterm-uninstall brew python rust tmux git editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin perf validate
+.PHONY: install update backup test check clean help zsh vim emacs wezterm wezterm-check wezterm-uninstall brew python rust tmux git ssh ssh-check ssh-uninstall editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin perf validate
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -33,7 +33,7 @@ help: ## 显示帮助信息
 	@printf "  make check        # 检查环境状态\n"
 	@printf "  make update       # 更新配置和插件\n"
 
-install: editorconfig git brew zsh vim emacs wezterm python rust tmux ## 一键安装所有配置（推荐）
+install: editorconfig git ssh brew zsh vim emacs wezterm python rust tmux ## 一键安装所有配置（推荐）
 	@printf "\n"
 	@printf "$(GREEN)✅ 所有配置安装完成！$(RESET)\n"
 	@printf "$(YELLOW)请执行: source ~/.zshrc 或重启终端$(RESET)\n"
@@ -176,6 +176,20 @@ git: ## 安装 Git 配置
 editorconfig: ## 安装 EditorConfig
 	@printf "$(CYAN)→ 安装 EditorConfig...$(RESET)\n"
 	@bash bootstrap.sh --editorconfig
+
+ssh: ## 安装 SSH 配置
+	@printf "$(CYAN)→ 安装 SSH 配置...$(RESET)\n"
+	@bash ssh/install.sh
+
+ssh-check: ## SSH 环境体检
+	@printf "$(CYAN)→ SSH 环境体检...$(RESET)\n"
+	@if [ -f ssh/check.sh ]; then bash ssh/check.sh; \
+	else printf "$(YELLOW)⚠️  ssh/check.sh 不存在$(RESET)\n"; fi
+
+ssh-uninstall: ## 卸载 SSH 配置（保留密钥与 config.local）
+	@printf "$(CYAN)→ 卸载 SSH 配置...$(RESET)\n"
+	@if [ -f ssh/uninstall.sh ]; then bash ssh/uninstall.sh; \
+	else printf "$(YELLOW)⚠️  ssh/uninstall.sh 不存在$(RESET)\n"; fi
 
 ##@ 维护
 

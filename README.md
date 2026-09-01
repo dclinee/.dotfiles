@@ -85,6 +85,7 @@ make zsh        # 仅安装 Zsh
 make vim        # 仅安装 Vim
 make tmux       # 仅安装 Tmux
 make git        # 仅安装 Git 配置
+make ssh        # 仅安装 SSH 配置
 make brew       # 执行 brew bundle
 make help       # 查看所有可用命令
 ```
@@ -95,6 +96,7 @@ make help       # 查看所有可用命令
 ./zsh/install.sh        # Zsh + Homebrew + zinit + starship + zoxide
 ./vim/install.sh        # Vim + vim-plug
 ./wezterm/install.sh    # WezTerm 配置
+./ssh/install.sh        # SSH 配置（--gen-key 可生成本机密钥）
 ```
 
 ### 使用国内镜像加速
@@ -391,6 +393,10 @@ ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 │   ├── requirements.txt  # Python 依赖
 │   └── requirements-*.txt # 按需依赖（dev/data/web）
 ├── wezterm/              # WezTerm 终端配置
+├── ssh/                  # SSH 配置（Include 分片，多机通用）
+│   ├── config            # 主入口（软链到 ~/.ssh/config）
+│   ├── config.d/         # 通用片段（core/github 加速/共享主机）
+│   └── platform/         # 平台片段（macOS/Linux）
 ├── test_install.sh       # 静态与动态测试脚本
 ├── validate.sh           # 配置验证脚本
 └── README.md             # 项目文档

@@ -25,6 +25,7 @@
 #   ./bootstrap.sh --rust     仅配置 Rust 环境
 #   ./bootstrap.sh --tmux     仅安装 Tmux
 #   ./bootstrap.sh --git      仅安装 Git 配置
+#   ./bootstrap.sh --ssh      仅安装 SSH 配置
 #   ./bootstrap.sh --editorconfig  仅安装 EditorConfig
 #   ./bootstrap.sh --rollback [dir]  回滚最近/指定失败的安装
 #   DOTFILES_AUTO_ROLLBACK=false ./bootstrap.sh  禁用失败模块的自动回滚
@@ -51,6 +52,7 @@ INSTALL_PYTHON=false
 INSTALL_RUST=false
 INSTALL_TMUX=false
 INSTALL_GIT=false
+INSTALL_SSH=false
 INSTALL_EDITORCONFIG=false
 
 # ======================
@@ -279,6 +281,8 @@ _run_with_rollback() {
     Git)            _snapshot_paths \
                       "${HOME}/.gitconfig" "${HOME}/.gitconfig.local" \
                       "${HOME}/.gitignore_global" "${HOME}/.gitattributes" ;;
+    SSH)            _snapshot_paths \
+                      "${HOME}/.ssh/config" "${HOME}/.ssh/config.local" ;;
     Brew)           _snapshot_paths \
                       "${HOME}/.cache/Homebrew" ;;
     Zsh)            _snapshot_paths \
@@ -399,6 +403,7 @@ parse_args() {
       --rust)     INSTALL_RUST=true ;;
       --tmux)     INSTALL_TMUX=true ;;
       --git)      INSTALL_GIT=true ;;
+      --ssh)      INSTALL_SSH=true ;;
       --editorconfig) INSTALL_EDITORCONFIG=true ;;
       --rollback)
         shift
@@ -411,7 +416,7 @@ parse_args() {
         ;;
       *)
         echo_error "未知参数: $arg"
-        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--editorconfig|--rollback [dir]]"
+        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--ssh|--editorconfig|--rollback [dir]]"
         exit 1
         ;;
     esac
@@ -854,6 +859,16 @@ GITLOCAL_EOF
 }
 
 # ======================
+# 安装 SSH 配置
+# ======================
+install_ssh() {
+  echo_step "安装 SSH 配置..."
+  bash "${DOTFILES_DIR}/ssh/install.sh" 2>>"${LOG_FILE}" || {
+    echo_warning "SSH 安装出现错误，请查看日志: ${LOG_FILE}"
+  }
+}
+
+# ======================
 # 创建 .editorconfig 链接
 # ======================
 install_editorconfig() {
@@ -912,6 +927,13 @@ final_check() {
   else
     echo_error "Tmux: .tmux.conf 未链接"
     all_good=false
+  fi
+
+  # 检查 SSH
+  if [[ -L "${HOME}/.ssh/config" ]]; then
+    echo_success "SSH: ~/.ssh/config 已链接"
+  else
+    echo_warning "SSH: ~/.ssh/config 未链接（可能未安装）"
   fi
 
   # 检查 WezTerm
@@ -994,7 +1016,16 @@ main() {
     fi
   fi
 
-  # 3. Brew（提前安装，后续所有模块可复用）
+  # 3. SSH 配置（早期安装，后续 git 远端操作可走 SSH 通道）
+  if $INSTALL_ALL || $INSTALL_SSH; then
+    if _run_with_rollback "SSH" install_ssh; then
+      COMPLETED_STEPS+=("SSH")
+    else
+      FAILED_STEPS+=("SSH")
+    fi
+  fi
+
+  # 4. Brew（提前安装，后续所有模块可复用）
   if $INSTALL_ALL || $INSTALL_BREW; then
     if _run_with_rollback "Brew" install_brew; then
       COMPLETED_STEPS+=("Brew")
@@ -1021,7 +1052,7 @@ main() {
     fi
   fi
 
-  # 6. Emacs（依赖 EditorConfig + 核心工具就绪）
+  # 7. Emacs（依赖 EditorConfig + 核心工具就绪）
   if $INSTALL_ALL || $INSTALL_EMACS; then
     if _run_with_rollback "Emacs" install_emacs; then
       COMPLETED_STEPS+=("Emacs")
@@ -1048,7 +1079,7 @@ main() {
     fi
   fi
 
-  # 9. Rust（依赖 Brew 包管理器）
+  # 10. Rust（依赖 Brew 包管理器）
   if $INSTALL_ALL || $INSTALL_RUST; then
     if _run_with_rollback "Rust" install_rust; then
       COMPLETED_STEPS+=("Rust")

@@ -204,15 +204,16 @@ read_tools_list() {
 #   check_summary        # 打印汇总并根据 FAIL 返回退出码
 
 # 初始化体检计数器（调用 check_ok 等之前必须先调用）
+# 注意: 计数器使用 CHECK_ 前缀命名，避免与 output.sh 的图标变量（WARN/SKIP）冲突
 check_init() {
-  PASS=0; WARN=0; FAIL=0; SKIP=0
+  CHECK_PASS=0; CHECK_WARN=0; CHECK_FAIL=0; CHECK_SKIP=0
 }
 
 # 单条检查：通过 / 警告 / 失败 / 跳过
-check_ok()   { echo_success "$1"; PASS=$((PASS + 1)); }
-check_warn() { echo_warning "$1"; WARN=$((WARN + 1)); }
-check_fail() { echo_error   "$1"; FAIL=$((FAIL + 1)); }
-check_skip() { echo_skip "$1"; SKIP=$((SKIP + 1)); }
+check_ok()   { echo_success "$1"; CHECK_PASS=$((CHECK_PASS + 1)); }
+check_warn() { echo_warning "$1"; CHECK_WARN=$((CHECK_WARN + 1)); }
+check_fail() { echo_error   "$1"; CHECK_FAIL=$((CHECK_FAIL + 1)); }
+check_skip() { echo_skip "$1"; CHECK_SKIP=$((CHECK_SKIP + 1)); }
 
 # 打印体检汇总并退出（FAIL > 0 时 exit 1）
 # 注意: 默认行为是 exit 1（在 set -euo pipefail 下会终止整个脚本）
@@ -223,15 +224,15 @@ check_summary() {
   [[ "${1:-}" == "--no-exit" ]] && _no_exit=true
 
   echo_title "体检结果"
-  printf "${GREEN}✓ 通过: ${PASS}${RESET}  ${YELLOW}⚠ 警告: ${WARN}${RESET}  ${RED}✗ 失败: ${FAIL}${RESET}  ${CYAN}⊘ 跳过: ${SKIP}${RESET}\n"
+  printf "${GREEN}✓ 通过: ${CHECK_PASS}${RESET}  ${YELLOW}⚠ 警告: ${CHECK_WARN}${RESET}  ${RED}✗ 失败: ${CHECK_FAIL}${RESET}  ${CYAN}⊘ 跳过: ${CHECK_SKIP}${RESET}\n"
 
-  if [[ $FAIL -gt 0 ]]; then
+  if [[ $CHECK_FAIL -gt 0 ]]; then
     echo ""
-    echo_error "存在 ${FAIL} 项失败，建议修复"
+    echo_error "存在 ${CHECK_FAIL} 项失败，建议修复"
     $_no_exit || exit 1
-  elif [[ $WARN -gt 0 ]]; then
+  elif [[ $CHECK_WARN -gt 0 ]]; then
     echo ""
-    echo_warning "存在 ${WARN} 项警告，建议检查"
+    echo_warning "存在 ${CHECK_WARN} 项警告，建议检查"
   else
     echo ""
     echo_success "所有检查项通过"
