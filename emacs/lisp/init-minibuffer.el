@@ -20,7 +20,7 @@
      consult-ripgrep
      consult-git-grep consult-grep
      consult-bookmark consult-recent-file consult-xref
-     consult--source-recent-file consult--source-project-recent-file consult--source-bookmark)
+     consult-source-recent-file consult-source-project-recent-file consult-source-bookmark)
 
     (when (maybe-require-package 'projectile)
       (setq-default consult-project-root-function 'projectile-project-root))

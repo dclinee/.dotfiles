@@ -7,9 +7,9 @@
 set -euo pipefail
 LOG_FILE="/tmp/vim_install_$(date +%Y%m%d_%H%M%S).log"
 
-# 确定配置目录
-DOTFILES_DIR="${HOME}/.dotfiles"
-VIM_DIR="${DOTFILES_DIR}/vim"
+# 加载公共库（lib/common.sh 自带 output + symlink 的自动加载和 fallback）
+# shellcheck source=/dev/null
+source "$(dirname "$0")/_common.sh"
 
 # vim-plug 镜像源（GitHub 官方优先，国内镜像降级）
 if [[ -n "${NO_MIRROR:-}" ]]; then
@@ -23,64 +23,6 @@ else
     "https://gh-proxy.com/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
   )
 fi
-
-# 颜色定义
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-BLUE="\033[34m"
-CYAN="\033[36m"
-RESET="\033[0m"
-BOLD="\033[1m"
-ARROW="➡️"
-SKIP="⏭️"
-
-echo_step()      { printf "${BOLD}${BLUE}ℹ️  %s${RESET}\n"  "${1}"; }
-echo_success()   { printf "${GREEN}✅ %s${RESET}\n"         "${1}"; }
-echo_warning()   { printf "${YELLOW}⚠️  %s${RESET}\n"       "${1}"; }
-echo_error()     { printf "${RED}❌ %s${RESET}\n"           "${1}"; }
-echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"     "${1}"; }
-echo_detail()    { printf "${BLUE}  %s${RESET}\n"           "${1}"; }
-echo_separator() { printf "${BLUE}=============================================${RESET}\n"; }
-echo_title() {
-  echo_separator
-  printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
-  echo_separator
-}
-
-# ======================
-# 加载公共符号链接函数库
-# ======================
-_SYMLINK_LIB="${DOTFILES_DIR}/lib/symlink.sh"
-if [[ -f "${_SYMLINK_LIB}" ]]; then
-  # shellcheck source=/dev/null
-  source "${_SYMLINK_LIB}"
-else
-  # 回退：当 lib/symlink.sh 不可用时使用内联定义
-  safe_symlink() {
-    local src="$1" dst="$2"
-    [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
-    if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
-      echo_skip "链接已存在: $dst"; return 0
-    fi
-    if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
-      local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
-      mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
-    fi
-    mkdir -p "$(dirname "$dst")" 2>/dev/null
-    ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
-  }
-fi
-
-# ======================
-# 检测 sudo 可用性
-# ======================
-have_sudo() {
-  if [[ $EUID -eq 0 ]]; then
-    return 0
-  fi
-  sudo -n true 2>/dev/null
-}
 
 # ======================
 # 安装 Vim（含 sudo 检测）
@@ -287,7 +229,7 @@ main() {
   install_vim_plug
 
   echo_separator
-  printf "${GREEN}✅ ${BOLD}Vim 配置安装完成！${RESET}\n"
+  printf "${GREEN}${CHECK} ${BOLD}Vim 配置安装完成！${RESET}\n"
   printf "${YELLOW}首次打开 Vim 将自动安装插件${RESET}\n"
   printf "${YELLOW}或手动执行: vim +PlugInstall +qa${RESET}\n"
 }

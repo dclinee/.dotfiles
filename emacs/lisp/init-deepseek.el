@@ -1355,13 +1355,12 @@ Keyword OPTS override: :key, :base-url, :chat-model, :temperature."
                 (chat-model deepseek-chat-model)
                 (temperature deepseek-temperature))
           opts
-        (require 'llm-openai)
+        (require 'llm-openai nil t)
         (make-llm-openai-compatible
          :key key
-         :url (concat (string-trim-right base-url "/") "/chat/completions")
-         :default-chat-model chat-model
-         :chat-names '("deepseek-chat" "deepseek-reasoner" "deepseek-coder")
-         :temperature temperature)))))
+         :url (concat (string-trim-right base-url "/") "/")
+         :chat-model chat-model
+         :default-chat-temperature temperature)))))
 
 (when (maybe-require-package 'ellama)
   (with-eval-after-load 'ellama
