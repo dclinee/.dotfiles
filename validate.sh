@@ -122,9 +122,38 @@ validate_functionality() {
     return 1
   fi
 
-  # 验证Vim配置 - 跳过语法检查以避免交互式编辑器
-  log INFO "跳过Vim配置语法检查..."
-  log SUCCESS "Vim配置验证跳过"
+  # 验证Vim配置 - 用 vim --headless 做语法检查（不进入交互模式）
+  log INFO "验证Vim配置..."
+  if ! command -v vim > /dev/null 2>&1 && ! command -v nvim > /dev/null 2>&1; then
+    log WARN "vim/nvim 命令不可用，跳过 Vim 语法检查"
+  else
+    local vim_bin
+    vim_bin="$(command -v nvim 2>/dev/null || command -v vim 2>/dev/null)"
+    local all_valid_vim=true
+    local vim_files=(
+      "${temp_dir}/vim/.vimrc"
+    )
+    for file in "${vim_files[@]}"; do
+      if [[ -f "${file}" ]]; then
+        # --headless 模式 + -es 静默执行 + -c 'q!' 退出
+        # 若 .vimrc 有语法错误，vim 会在 stderr 输出错误信息
+        local vim_out
+        vim_out=$("${vim_bin}" --headless -es -u NONE -U NONE \
+                  -c "source ${file}" -c 'q!' 2>&1) || true
+        if echo "${vim_out}" | grep -qiE "E\d+:|Error detected"; then
+          log ERROR "$(basename "${file}") Vim 语法错误"
+          echo "${vim_out}" | grep -iE "E\d+:|Error detected" | head -3 || true
+          all_valid_vim=false
+        fi
+      fi
+    done
+    if $all_valid_vim; then
+      log SUCCESS "Vim 配置语法检查通过"
+    else
+      log ERROR "Vim 配置语法检查失败"
+      return 1
+    fi
+  fi
 
   # 验证Wezterm配置 - 只检查语法错误
   log INFO "验证Wezterm配置..."
@@ -156,6 +185,124 @@ validate_functionality() {
   else
     log ERROR "Wezterm配置验证失败"
     return 1
+  fi
+
+  # 验证SSH配置（直接在源目录验证，Include 使用绝对路径）
+  log INFO "验证SSH配置..."
+
+  local ssh_config="${DOTFILES_DIR}/ssh/config"
+  if [[ ! -f "${ssh_config}" ]]; then
+    log WARN "未找到 ssh/config，跳过"
+  elif ! command -v ssh > /dev/null 2>&1; then
+    log WARN "ssh 命令不可用，跳过 SSH 配置语法检查"
+  else
+    # ssh -G 不发起连接，只解析配置（OpenSSH 7.3+）
+    if ssh -F "${ssh_config}" -G github.com > /dev/null 2>&1; then
+      log SUCCESS "SSH 配置解析通过"
+    else
+      log ERROR "SSH 配置解析失败"
+      ssh -F "${ssh_config}" -G github.com 2>&1 | head -5 || true
+      return 1
+    fi
+  fi
+
+  # 验证Emacs配置（对 lisp/*.el 做字节编译，不触发包安装/网络）
+  log INFO "验证Emacs配置..."
+
+  local emacs_lisp_dir="${DOTFILES_DIR}/emacs/lisp"
+  if [[ ! -d "${emacs_lisp_dir}" ]]; then
+    log WARN "未找到 emacs/lisp/，跳过"
+  elif ! command -v emacs > /dev/null 2>&1; then
+    log WARN "emacs 命令不可用，跳过 Emacs 字节编译检查"
+  else
+    local all_valid_emacs=true
+    while IFS= read -r -d '' file; do
+      # batch-byte-compile 只做语法检查，不实际 require 依赖
+      if ! (cd "${DOTFILES_DIR}/emacs" && emacs --batch -f batch-byte-compile "${file}" 2>/dev/null); then
+        log ERROR "$(basename "${file}") 字节编译失败"
+        all_valid_emacs=false
+      fi
+    done < <(find "${emacs_lisp_dir}" -maxdepth 1 -name '*.el' -print0)
+
+    if $all_valid_emacs; then
+      log SUCCESS "Emacs 配置字节编译通过"
+    else
+      log ERROR "Emacs 配置字节编译失败"
+      return 1
+    fi
+  fi
+
+  # 验证 Git 配置（git config --file 只解析不执行）
+  log INFO "验证Git配置..."
+  {
+    local git_files=(
+      "${DOTFILES_DIR}/git/.gitconfig"
+      "${DOTFILES_DIR}/git/.gitignore_global"
+      "${DOTFILES_DIR}/git/.gitattributes"
+    )
+    local all_valid_git=true
+    for gf in "${git_files[@]}"; do
+      if [[ ! -f "${gf}" ]]; then
+        log WARN "未找到 $(basename "${gf}")，跳过"
+        continue
+      fi
+      if [[ "${gf}" == *.gitconfig ]]; then
+        if ! git config --file "${gf}" --list > /dev/null 2>&1; then
+          log ERROR "${gf} Git 配置解析失败"
+          all_valid_git=false
+        fi
+      fi
+    done
+    if $all_valid_git; then
+      log SUCCESS "Git 配置解析通过"
+    else
+      log ERROR "Git 配置解析失败"
+      return 1
+    fi
+  }
+
+  # 验证 Tmux 配置（tmux -f 静默启动只做语法检查）
+  log INFO "验证Tmux配置..."
+  {
+    local tmux_conf="${DOTFILES_DIR}/tmux/.tmux.conf"
+    if [[ ! -f "${tmux_conf}" ]]; then
+      log WARN "未找到 tmux/.tmux.conf，跳过"
+    elif ! command -v tmux > /dev/null 2>&1; then
+      log WARN "tmux 命令不可用，跳过 Tmux 语法检查"
+    else
+      # 用 -L 指定临时 socket 避免与已有 tmux server 冲突
+      tmux -L validate -f "${tmux_conf}" start-server 2>/dev/null || true
+      local rc=$?
+      tmux -L validate kill-server 2>/dev/null || true
+      if [[ ${rc} -eq 0 ]]; then
+        log SUCCESS "Tmux 配置语法通过"
+      else
+        log ERROR "Tmux 配置语法检查失败 (rc=${rc})"
+        return 1
+      fi
+    fi
+  }
+
+  # 验证 Python 环境
+  log INFO "验证Python环境..."
+  if ! command -v python3 > /dev/null 2>&1; then
+    log WARN "python3 命令不可用，跳过 Python 验证"
+  elif ! python3 --version > /dev/null 2>&1; then
+    log ERROR "python3 执行异常"
+    return 1
+  else
+    log SUCCESS "Python $(python3 --version 2>&1)"
+  fi
+
+  # 验证 Rust 环境
+  log INFO "验证Rust环境..."
+  if ! command -v rustc > /dev/null 2>&1; then
+    log WARN "rustc 命令不可用，跳过 Rust 验证"
+  elif ! rustc --version > /dev/null 2>&1; then
+    log ERROR "rustc 执行异常"
+    return 1
+  else
+    log SUCCESS "Rust $(rustc --version 2>&1)"
   fi
 
   log SUCCESS "功能验证通过！"

@@ -5,7 +5,43 @@
 
 ## [Unreleased]
 
-### 待发布 (下一个 Minor/Patch 版本)
+计划版本号：**v2.1.0**（新增模块与功能，无破坏性变更）
+
+### ✨ Added / 新增
+- **`docker/` 容器化模块**：多阶段 Dockerfile（Ubuntu/Debian/Fedora 测试矩阵 + 开发镜像）、docker-compose.yml（dev/validate/test 多服务）、build.sh 统一操作脚本、.env.example、.dockerignore；支持国内镜像加速（USTC apt + NO_MIRROR 开关）。Makefile 新增 `docker-build/up/test/validate/clean` 五个 target
+- **`editorconfig/` 独立模块**：install.sh + _common.sh，bootstrap.sh 最后一个内嵌安装函数完成抽离
+- **`lib/_module_loader.sh` 模块公共加载器**：统一 11 个模块 _common.sh 的路径解析样板，消除重复代码
+- **`make doctor` 全模块环境体检**：顺序聚合 9 个模块 check.sh，单模块失败不中断并汇总；补齐 brew/git/tmux/vim/zsh 五个缺失的 `*-check` target
+- **`bootstrap.sh --dry-run`**：预演模式，只打印将执行的软链操作不落地（复用 lib/common.sh 的 is_dry_run 机制）
+- **`validate.sh` 覆盖扩充**：新增 Git（git config 解析）、Tmux（start-server 语法）、Python、Rust、Vim（headless source）五项验证
+- 新增 brew/git/tmux/vim/zsh 五个模块的 `check.sh` 运行时体检脚本
+- 新增 git/wezterm/docker 三个模块的 `.gitignore`；根 `.gitignore` 补充 `*.elc`、测试覆盖率产物、nvim.log 等
+- 新增 `SECURITY.md` 安全策略文档
+- **VitePress 文档站补全**：新增决策记录（ADR-001~010 拆分页）、贡献指南、测试文档、变更日志等 14 个页面；新增 `docs/archive/` 归档目录
+- Emacs 新增 DeepSeek AI、consult-projectile 集成（见 Changed）
+
+### 🔄 Changed / 变更
+- **Emacs 补全体系从 Helm 迁移到 Vertico/Consult**：M-x、C-x b、C-x C-f、M-y 等统一走 Vertico + Orderless + Marginalia；C-s 恢复为标准 isearch（anzu 重新生效）；项目查找改用 consult-projectile
+- **`bootstrap.sh` 全面模块化**：brew/python/rust/ssh/editorconfig 内嵌安装逻辑全部改为委托各模块 install.sh，文件从 1024 行降至约 850 行，所有 install_* 函数统一为一行委托
+- **`Dockerfile.test` 迁移为 `docker/Dockerfile.ci`**：CI workflow 引用同步更新
+- **测试脚本迁移到 `tests/` 目录**：`test_install.sh`/`test_integration.sh` 统一收纳，全仓库 40+ 处引用同步更新（CI、Docker、文档、PR 模板）
+- **CI 接入模块体检**：static-tests job 新增各模块 check.sh 检查步骤（容错运行，环境缺工具不误红）
+- 各模块 `_common.sh` 统一改为 source `lib/_module_loader.sh`，不再各自实现路径解析
+- Emacs custom.el 的 package-selected-packages 移除 helm-org/helm-projectile/helm-rg 声明
+- 全面重写 emacs/README.md，修正与实际 lisp/ 结构（82 个功能命名模块）不符的过时描述
+- 全量同步项目文档以对齐 docker/editorconfig 新模块、tests/ 新路径、Vertico 新补全体系
+
+### 🐛 Fixed / 修复
+- **marginalia 与 Emacs 30.2 兼容崩溃**：marginalia 快照调用 3 参数版 `seconds-to-string`（Emacs 31 签名），在 30.2 上触发 wrong-number-of-arguments，导致 Vertico 候选注解报错；新增基于 compat-31 的行为探针 advice 桥接
+- **vterm 无法加载 `libvterm.so.0`**：Homebrew 版 Emacs 的动态链接器默认不搜索系统库目录；通过 `brew install libvterm`（0.3.3 与模块版本一致）经 DT_RPATH 传递解析修复
+- **init-ibuffer 直绑 C-x b 到 ido-switch-buffer**：Helm 移除后暴露的隐藏冲突，改为 consult-buffer
+- **修复 _common.sh 重构回归**：精简样板时误删 ssh 的 get_ssh_version/get_file_mode、vim 的 get_vim_version/have_sudo、emacs/wezterm/zsh 的 get_*_version，导致相关 install.sh/check.sh 中断（exit 127），已全部恢复
+- 修复 VitePress @include 场景下 vim/README.md、CONTRIBUTING.md 的两个相对路径死链（改为 GitHub 绝对 URL）
+- **修复 brew bundle 模块化回归**：bootstrap 模块化委托后，两层 `brew bundle`（通用 + 平台 Brewfile）调用丢失，已移入 `brew/install.sh` 的 `_bundle_brewfiles`，并支持 `--dry-run` 只打印不执行
+- 修复 `tests/test_install.sh` 迁移到 `tests/` 后 `DOTFILES_DIR` 未上溯一级导致静态测试路径全部失效的问题；同步更新 brew bundle 断言位置
+
+### 🗑 Removed / 移除
+- Helm 补全体系停用（`init-helm.el` 保留但标记弃用且不再 require，便于回退；确认稳定后将卸载 helm/helm-core/helm-org/helm-projectile/helm-rg）
 
 ---
 
@@ -21,11 +57,11 @@
 - `zsh/platform/wsl.zsh` **WSL 平台专属配置**：Windows 互操作、剪贴板同步、WSLg GUI、SSH Agent 转发、文件系统优化
 - **代码覆盖率报告 (kcov CI job)**：ShellCheck 之外新增 kcov 覆盖率报告 job，artifact 上传
 - **CI 依赖缓存**：actions/cache 缓存 apt 包、kcov 构建、Docker buildx 层、集成测试层
-- **集成测试**：Dockerfile.test + test_integration.sh (14 维度 73 项检查)，CI 中新增 integration-test job
+- **集成测试**：Dockerfile.test + tests/test_integration.sh (14 维度 73 项检查)，CI 中新增 integration-test job
 - **ShellCheck CI lint**：warning 级 lint，.shellcheckrc 配置
-- **架构文档**：`docs/ARCHITECTURE.md`（架构图 + 加载流程 + 依赖关系）
-- **架构决策记录**：`docs/ADR.md`（10 条 ADR）
-- **版本发布说明**：`docs/RELEASE_NOTES_v2.0.0.md`（完整改进说明）
+- **架构文档**：[架构总览](https://github.com/dclinee/.dotfiles/blob/main/docs/archive/ARCHITECTURE.md)（架构图 + 加载流程 + 依赖关系，已拆分为 VitePress 子页面）
+- **架构决策记录**：[ADR 索引](https://github.com/dclinee/.dotfiles/blob/main/docs/archive/ADR.md)（10 条 ADR，已拆分为独立页面）
+- **版本发布说明**：[RELEASE_NOTES_v2.0.0](https://github.com/dclinee/.dotfiles/blob/main/docs/archive/RELEASE_NOTES_v2.0.0.md)（完整改进说明）
 - **模块 README**：`zsh/`, `vim/`, `wezterm/`, `python/`, `rust/`, `emacs/` 六模块独立文档
 - **asdf 版本管理**：`.tool-versions` 固定 Python/Rust/Node/Go/Tmux/Zsh 版本
 - **GitHub PR 模板**：`.github/PULL_REQUEST_TEMPLATE.md`
@@ -59,7 +95,7 @@
 
 ### 🧪 Tests / 测试
 - 新增集成测试: 96/96 通过
-- test_install.sh: 104/104 通过 (100%)
+- tests/test_install.sh: 104/104 通过 (100%)
 - 语法检查: bash -n / zsh -n / make -n 全通过
 
 ---
@@ -132,4 +168,4 @@
 - 11 模块基础结构 (brew/emacs/git/lib/python/rust/tmux/vim/wezterm/zsh)
 - bootstrap.sh 一键安装入口
 - Makefile: install/clean/check/update/uninstall
-- validate.sh + test_install.sh 基础测试框架
+- validate.sh + tests/test_install.sh 基础测试框架

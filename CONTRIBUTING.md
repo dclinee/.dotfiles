@@ -10,6 +10,8 @@
 - **功能建议**：说明使用场景和期望效果
 - **文档问题**：指出文档中的错误或不清晰之处
 
+> 安全漏洞请不要公开提 Issue，按 [SECURITY.md](https://github.com/dclinee/.dotfiles/blob/main/SECURITY.md) 的方式私下报告。
+
 ## 🔧 提交 Pull Request
 
 ### 1. 准备环境
@@ -37,13 +39,13 @@ git checkout -b docs/描述性名称   # 文档
 
 ```bash
 # 静态语法检查（CI 会跑同一套）
-bash test_install.sh static
+bash tests/test_install.sh static
 
 # 配置语法验证
 bash validate.sh
 
 # 完整测试（含动态模拟，CI 不跑）
-bash test_install.sh all
+bash tests/test_install.sh all
 ```
 
 确保所有测试通过后再提交。
@@ -113,8 +115,9 @@ docs: clarify cross-platform brew path detection
 
 提交 PR 前请自检：
 
-- [ ] `bash test_install.sh static` 通过
+- [ ] `bash tests/test_install.sh static` 通过
 - [ ] `bash validate.sh` 通过
+- [ ] `make doctor` 通过（9 模块 check.sh 体检）
 - [ ] 没有硬编码个人信息（邮箱、用户名、密钥）
 - [ ] 没有引入新的外部依赖（或已在文档中说明）
 - [ ] 新增功能有对应的测试用例
@@ -122,4 +125,4 @@ docs: clarify cross-platform brew path detection
 
 ## 📄 许可证
 
-提交的代码将遵循 [MIT License](LICENSE)。
+提交的代码将遵循 [MIT License](https://github.com/dclinee/.dotfiles/blob/main/LICENSE)。

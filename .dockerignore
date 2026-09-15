@@ -1,0 +1,59 @@
+# ============================================================
+# Docker Build Context 忽略规则
+# ============================================================
+# 放在项目根目录（构建 context），避免把无关文件打进镜像
+
+# 构建产物
+node_modules/
+npm-debug.log*
+dist/
+.DS_Store
+
+# Emacs / Vim 运行时产物
+emacs/elpa-*/
+emacs/.cache/
+emacs/custom.elc
+emacs/lisp/*.elc
+vim/.swap/
+vim/.backup/
+vim/.undo/
+
+# Shell 产物
+.zwc
+zsh/.zcompdump*
+
+# 测试 / CI
+test_coverage/
+html_coverage/
+.kcov/
+.github/
+
+# Git 元数据（COPY 不需要 .git）
+.git/
+.gitignore
+
+# 日志 / 临时文件
+*.log
+/tmp/
+/temp/
+
+# 用户私有配置（不提交到仓库，不应出现在镜像中）
+git/.gitconfig.local
+ssh/config.local
+**/.env.local
+**/.pem
+**/.ssh/*
+
+# Docker 自身
+docker/.env
+docker/archive/
+
+# 文档构建产物
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -10,7 +10,7 @@ Vim 9+ 兼容的模块化配置，聚焦轻量级体验和多语言开发。
 - **零破坏性**：不修改任何 Vimscript 文件
 - **可一键关闭**：`~/.vimrc.local` 中 `let g:dotfiles_enable_lua_modules = 0`
 - **可切换插件管理**：`g:dotfiles_use_lazy_nvim = 1` 启用 lazy.nvim
-- **完整文档**：见 [MODULES.md](MODULES.md)
+- **完整文档**：见 [lua/dotfiles_modules/](https://github.com/dclinee/.dotfiles/tree/main/vim/lua/dotfiles_modules) 目录与 [lua/user/README.md](https://github.com/dclinee/.dotfiles/blob/main/vim/lua/user/README.md)
 
 ## 目录结构
 

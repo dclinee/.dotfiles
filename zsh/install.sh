@@ -4,8 +4,8 @@
 # Zsh 配置安装器
 # ======================
 #
-# 注意：brew 安装和 brew bundle 已统一由 bootstrap.sh 处理。
-# 如需独立运行此脚本，请先执行: ./bootstrap.sh --brew
+# 注意：brew 安装和 brew bundle 已统一由 brew/install.sh 处理。
+# 如需独立运行此脚本，请先执行: ./brew/install.sh
 # 或直接使用: ./bootstrap.sh --zsh（会自动处理 brew 依赖）
 
 set -euo pipefail

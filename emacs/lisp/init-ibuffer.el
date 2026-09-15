@@ -53,6 +53,7 @@
 (setq ibuffer-filter-group-name-face 'font-lock-doc-face)
 
 (global-set-key (kbd "C-x C-b") 'ibuffer)
-(global-set-key (kbd "C-x b") 'ido-switch-buffer)
+;; 切换 buffer 走 Consult（Vertico 补全栈）；init-minibuffer 中的 remap 对 ido 直绑不生效
+(global-set-key (kbd "C-x b") 'consult-buffer)
 (provide 'init-ibuffer)
 ;;; init-ibuffer.el ends here

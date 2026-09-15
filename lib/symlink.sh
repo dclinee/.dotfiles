@@ -54,6 +54,12 @@ safe_symlink() {
     return 0
   fi
 
+  # 2.5 dry-run 模式：仅预演，不备份、不落地
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    echo_detail "[dry-run] 将链接: $dst → $src"
+    return 0
+  fi
+
   # 3. 现有文件/错误链接 → 备份
   if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
     # 显式检查目录（ln -sf 对目录目标行为不正确）

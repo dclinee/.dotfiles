@@ -1,0 +1,45 @@
+# ============================================================
+# Dotfiles on Fedora 40 测试容器
+# ============================================================
+ARG FEDORA_MIRROR=https://mirrors.ustc.edu.cn/fedora
+ARG NO_MIRROR=0
+
+FROM fedora:40
+
+ARG FEDORA_MIRROR
+ARG NO_MIRROR
+
+ENV TZ=Asia/Shanghai LANG=zh_CN.UTF-8
+
+# Fedora 默认自带 dnf，USTC 镜像通过 /etc/dnf/dnf.conf 配置
+RUN if [[ "${FEDORA_MIRROR}" != "" && "${NO_MIRROR}" != "1" ]]; then \
+      echo "[main]" >> /etc/dnf/dnf.conf \
+      && echo "baseurl=${FEDORA_MIRROR}/releases/\$releasever/Everything/\$basearch/os/" >> /etc/dnf/dnf.conf; \
+    fi
+
+# Fedora 40 下包名不同
+RUN dnf install -y --setopt=install_weak_deps=False \
+        ca-certificates curl wget git tzdata procps-ng \
+        zsh vim-enhanced tmux emacs-nox python3 python3-pip \
+        gcc gcc-c++ make cmake pkg-config openssl-devel \
+        readline-devel libffi-devel sqlite-devel \
+        oniguruma-devel jansson-devel libjpeg-devel \
+        libpng-devel librsvg2-devel libxml2-devel \
+        libxslt-devel openssh-clients sudo \
+    && dnf clean all
+
+RUN localedef -i zh_CN -c -f UTF-8 -A /usr/share/locale/locale.alias zh_CN.UTF-8 2>/dev/null \
+    || true \
+    && echo "dotfiles-tester ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/dotfiles \
+    && chmod 440 /etc/sudoers.d/dotfiles \
+    && useradd -m -s /usr/bin/zsh -u 1000 dotfiles-tester
+
+USER dotfiles-tester
+WORKDIR /home/dotfiles-tester
+COPY --chown=dotfiles-tester:dotfiles-tester . /home/dotfiles-tester/.dotfiles
+
+ENV NO_MIRROR="${NO_MIRROR}" NO_BREW=1
+RUN bash ~/.dotfiles/bootstrap.sh --all 2>&1 || \
+    bash ~/.dotfiles/bootstrap.sh --zsh --vim --emacs --tmux --git --ssh --python --rust 2>&1 || true
+
+CMD ["zsh", "-l"]

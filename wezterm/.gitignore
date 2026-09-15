@@ -1,0 +1,4 @@
+# WezTerm 模块临时文件
+*.log
+.temp/
+.cache/

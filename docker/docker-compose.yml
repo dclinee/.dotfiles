@@ -1,0 +1,183 @@
+# ============================================================
+# Dotfiles 开发环境 - Docker Compose 编排
+# ============================================================
+#
+# 用途：
+#   1. dev       — 开发容器（挂载仓库实时编辑）
+#   2. ubuntu    — Ubuntu 24.04 测试容器
+#   3. debian    — Debian 12 测试容器
+#   4. fedora    — Fedora 40 测试容器
+#   5. validate  — 运行 validate.sh 静态检查
+#   6. test      — 运行 test_integration.sh 集成测试
+#
+# 快速开始：
+#   # 启动开发容器（进入交互式 zsh）
+#   docker compose run --rm dev
+#
+#   # 在特定发行版上运行集成测试
+#   docker compose run --rm --profile test ubuntu
+#   docker compose run --rm --profile test debian
+#
+#   # 同时构建所有发行版镜像
+#   docker compose build
+
+name: dotfiles
+
+networks:
+  dotfiles-net:
+    driver: bridge
+
+volumes:
+  # 持久化 dotfiles 用户目录，避免容器重建后重新安装
+  dotfiles-home:
+  # 各发行版独立的 home 卷
+  dotfiles-home-ubuntu:
+  dotfiles-home-debian:
+  dotfiles-home-fedora:
+
+services:
+  # ============================================================
+  # 开发容器：挂载本地仓库，实时编辑 + 测试
+  # ============================================================
+  dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-ubuntu:24.04}
+        APT_MIRROR: ${APT_MIRROR:-https://mirrors.ustc.edu.cn/ubuntu}
+        DOTFILES_USER: ${DOTFILES_USER:-dotfiles-dev}
+        NO_MIRROR: ${NO_MIRROR:-0}
+    image: dotfiles-dev:latest
+    container_name: dotfiles-dev
+    user: ${DOTFILES_USER:-dotfiles-dev}
+    environment:
+      - NO_MIRROR=${NO_MIRROR:-0}
+      - TZ=Asia/Shanghai
+      - DOTFILES_ROOT=/home/${DOTFILES_USER:-dotfiles-dev}/.dotfiles
+      - EDITOR=vim
+      - VISUAL=vim
+      - TERM=xterm-256color
+    volumes:
+      # 关键：挂载本地仓库到容器内，修改实时生效
+      - ${PWD}/..:/home/${DOTFILES_USER:-dotfiles-dev}/.dotfiles:cached
+      - dotfiles-home:/home/${DOTFILES_USER:-dotfiles-dev}
+    working_dir: /home/${DOTFILES_USER:-dotfiles-dev}
+    networks:
+      - dotfiles-net
+    stdin_open: true
+    tty: true
+    command: ["zsh", "-l"]
+
+  # ============================================================
+  # Ubuntu 24.04 测试矩阵
+  # ============================================================
+  ubuntu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ubuntu
+      args:
+        APT_MIRROR: ${APT_MIRROR:-https://mirrors.ustc.edu.cn/ubuntu}
+        NO_MIRROR: ${NO_MIRROR:-0}
+    image: dotfiles-ubuntu:latest
+    container_name: dotfiles-ubuntu
+    user: dotfiles-tester
+    environment:
+      - NO_MIRROR=${NO_MIRROR:-0}
+      - TZ=Asia/Shanghai
+    volumes:
+      - dotfiles-home-ubuntu:/home/dotfiles-tester
+    networks:
+      - dotfiles-net
+    profiles: ["test"]
+    stdin_open: true
+    tty: true
+    command: ["zsh", "-l"]
+
+  # ============================================================
+  # Debian 12 测试矩阵
+  # ============================================================
+  debian:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.debian
+      args:
+        DEBIAN_MIRROR: ${DEBIAN_MIRROR:-https://mirrors.ustc.edu.cn/debian}
+        NO_MIRROR: ${NO_MIRROR:-0}
+    image: dotfiles-debian:latest
+    container_name: dotfiles-debian
+    user: dotfiles-tester
+    environment:
+      - NO_MIRROR=${NO_MIRROR:-0}
+      - TZ=Asia/Shanghai
+    volumes:
+      - dotfiles-home-debian:/home/dotfiles-tester
+    networks:
+      - dotfiles-net
+    profiles: ["test"]
+    stdin_open: true
+    tty: true
+    command: ["zsh", "-l"]
+
+  # ============================================================
+  # Fedora 40 测试矩阵
+  # ============================================================
+  fedora:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.fedora
+      args:
+        FEDORA_MIRROR: ${FEDORA_MIRROR:-https://mirrors.ustc.edu.cn/fedora}
+        NO_MIRROR: ${NO_MIRROR:-0}
+    image: dotfiles-fedora:latest
+    container_name: dotfiles-fedora
+    user: dotfiles-tester
+    environment:
+      - NO_MIRROR=${NO_MIRROR:-0}
+      - TZ=Asia/Shanghai
+    volumes:
+      - dotfiles-home-fedora:/home/dotfiles-tester
+    networks:
+      - dotfiles-net
+    profiles: ["test"]
+    stdin_open: true
+    tty: true
+    command: ["zsh", "-l"]
+
+  # ============================================================
+  # 运行 validate.sh 的一次性容器
+  # ============================================================
+  validate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-ubuntu:24.04}
+        APT_MIRROR: ${APT_MIRROR:-https://mirrors.ustc.edu.cn/ubuntu}
+    image: dotfiles-validate:latest
+    container_name: dotfiles-validate
+    user: ${DOTFILES_USER:-dotfiles-dev}
+    volumes:
+      - ${PWD}/..:/home/${DOTFILES_USER:-dotfiles-dev}/.dotfiles:cached
+    working_dir: /home/${DOTFILES_USER:-dotfiles-dev}/.dotfiles
+    command: ["bash", "validate.sh"]
+    profiles: ["validate"]
+
+  # ============================================================
+  # 运行集成测试的一次性容器
+  # ============================================================
+  test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-ubuntu:24.04}
+        APT_MIRROR: ${APT_MIRROR:-https://mirrors.ustc.edu.cn/ubuntu}
+    image: dotfiles-test:latest
+    container_name: dotfiles-test
+    user: ${DOTFILES_USER:-dotfiles-dev}
+    volumes:
+      - ${PWD}/..:/home/${DOTFILES_USER:-dotfiles-dev}/.dotfiles:cached
+    working_dir: /home/${DOTFILES_USER:-dotfiles-dev}/.dotfiles
+    command: ["bash", "tests/test_integration.sh"]
+    profiles: ["test-run"]

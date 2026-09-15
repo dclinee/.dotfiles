@@ -70,11 +70,11 @@
 ## 测试计划
 <!-- 如何验证？至少勾选本地验证 -->
 - [ ] 本地执行过：`./validate.sh`
-- [ ] 本地执行过：`./test_install.sh static`
+- [ ] 本地执行过：`./tests/test_install.sh static`
 - [ ] 本地执行过：`./bootstrap.sh --all` 或 `./bootstrap.sh --<模块>`
 - [ ] 本地执行过：`bash -n` 对修改的脚本做语法检查
 - [ ] 本地执行过：`make check`
-- [ ] 集成测试：`./test_integration.sh` 或 Docker 测试
+- [ ] 集成测试：`./tests/test_integration.sh` 或 Docker 测试
 - [ ] 依赖 CI 通过（勾选后等待 CI 反馈）
 
 ## 回滚方案

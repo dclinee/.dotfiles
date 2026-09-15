@@ -75,7 +75,17 @@ jobs:
         run: ./validate.sh
 
       - name: Run static tests
-        run: ./test_install.sh static
+        run: ./tests/test_install.sh static
+
+      - name: Module health checks (check.sh)
+        run: |
+          # check.sh 为运行时状态体检：CI 干净环境缺少 brew/wezterm 等工具属预期，
+          # 用 || true 容错避免误红；所有输出仍完整保留在日志中，结构性错误可见。
+          for m in brew git tmux vim zsh ssh; do
+            echo "::group::$m/check.sh"
+            bash "$m/check.sh" || true
+            echo "::endgroup::"
+          done
 
   coverage:
     runs-on: ubuntu-latest
@@ -102,7 +112,7 @@ jobs:
           mkdir -p coverage
           kcov --include-pattern=.sh,.zsh \
                --exclude-pattern=.git,elpa,~,coverage \
-               coverage ./test_install.sh static 2>&1 || true
+               coverage ./tests/test_install.sh static 2>&1 || true
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -145,7 +155,7 @@ print(f'Code Coverage: {cov:.1f}% ({covered}/{total} lines)')
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-${{ hashFiles('Dockerfile.test') }}
+          key: ${{ runner.os }}-docker-${{ hashFiles('docker/Dockerfile.ci') }}
           restore-keys: |
             ${{ runner.os }}-docker-
 
@@ -156,7 +166,7 @@ print(f'Code Coverage: {cov:.1f}% ({covered}/{total} lines)')
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.test
+          file: docker/Dockerfile.ci
           tags: dotfiles-test
           load: true
           cache-from: type=local,src=/tmp/.buildx-cache

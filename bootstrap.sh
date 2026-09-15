@@ -28,7 +28,12 @@
 #   ./bootstrap.sh --ssh      仅安装 SSH 配置
 #   ./bootstrap.sh --editorconfig  仅安装 EditorConfig
 #   ./bootstrap.sh --rollback [dir]  回滚最近/指定失败的安装
+#   ./bootstrap.sh --all --dry-run   预演模式（软链/备份/删除只打印不落地）
 #   DOTFILES_AUTO_ROLLBACK=false ./bootstrap.sh  禁用失败模块的自动回滚
+#
+# 说明:
+#   --dry-run 导出 DRY_RUN=true 给所有子模块，safe_symlink/remove_symlinks/
+#   clean_dirs 等文件系统操作只打印不执行；适合安装前预览将创建的软链。
 
 set -euo pipefail
 
@@ -96,6 +101,9 @@ else
     if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
       echo_skip "链接已存在: $dst"; return 0
     fi
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      echo_detail "[dry-run] 将链接: $dst → $src"; return 0
+    fi
     if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
       local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
       mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
@@ -111,6 +119,11 @@ fi
 
 # 初始化回滚目录
 _init_rollback() {
+  # dry-run 下无文件改动，不创建快照目录
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    echo_detail "[dry-run] 跳过回滚快照初始化"
+    return 0
+  fi
   mkdir -p "${ROLLBACK_DIR}"
   : > "${ROLLBACK_MANIFEST}"
   echo_detail "回滚目录: ${ROLLBACK_DIR}"
@@ -269,6 +282,13 @@ _run_with_rollback() {
   local install_func="$1"
   shift
 
+  # dry-run：安装函数内部的文件操作各自只打印，无改动则无需快照/回滚
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    local _dry_rc=0
+    "$install_func" "$@" || _dry_rc=$?
+    return "${_dry_rc}"
+  fi
+
   # 1. 保存清单旧长度位置（模块范围标记）
   local manifest_marker="${ROLLBACK_DIR}/MANIFEST_START_$$"
   wc -l < "${ROLLBACK_MANIFEST}" > "${manifest_marker}" 2>/dev/null || true
@@ -279,7 +299,7 @@ _run_with_rollback() {
   case "$module_name" in
     EditorConfig)   _snapshot_paths "${HOME}/.editorconfig" ;;
     Git)            _snapshot_paths \
-                      "${HOME}/.gitconfig" "${HOME}/.gitconfig.local" \
+                      "${HOME}/.gitconfig" \
                       "${HOME}/.gitignore_global" "${HOME}/.gitattributes" ;;
     SSH)            _snapshot_paths \
                       "${HOME}/.ssh/config" "${HOME}/.ssh/config.local" ;;
@@ -405,18 +425,22 @@ parse_args() {
       --git)      INSTALL_GIT=true ;;
       --ssh)      INSTALL_SSH=true ;;
       --editorconfig) INSTALL_EDITORCONFIG=true ;;
+      --dry-run)
+        # 导出给所有子模块 install.sh（独立 bash 进程，必须 export 才能继承）
+        export DRY_RUN=true
+        ;;
       --rollback)
         shift
         full_rollback "${1:-}"
         exit 0
         ;;
       -h|--help)
-        head -30 "$0" | tail -25
+        head -36 "$0" | tail -31
         exit 0
         ;;
       *)
         echo_error "未知参数: $arg"
-        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--ssh|--editorconfig|--rollback [dir]]"
+        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--ssh|--editorconfig] [--dry-run] [--rollback [dir]]"
         exit 1
         ;;
     esac
@@ -562,319 +586,49 @@ install_wezterm() {
 # 安装 Homebrew 包
 # ======================
 install_brew() {
-  echo_step "安装 Homebrew 包..."
-
-  if ! command -v brew > /dev/null 2>&1; then
-    echo_warning "Homebrew 未安装，尝试安装..."
-    bash "${DOTFILES_DIR}/brew/install.sh" 2>>"${LOG_FILE}" || {
-      echo_warning "Homebrew 安装失败，跳过 brew bundle"
-      return 0
-    }
-  fi
-
-  # 1. 执行通用 Brewfile（约 30 秒 - 2 分钟）
-  if [[ -f "${DOTFILES_DIR}/brew/Brewfile" ]]; then
-    echo_step "执行 brew bundle（通用包，约 30 秒 - 2 分钟）..."
-    brew bundle --file="${DOTFILES_DIR}/brew/Brewfile" 2>>"${LOG_FILE}" || {
-      echo_warning "部分通用包安装失败，请查看日志: ${LOG_FILE}"
-    }
-  fi
-
-  # 2. 执行平台特定 Brewfile
-  local platform_brewfile=""
-  case "$(uname -s)" in
-    Linux)  platform_brewfile="${DOTFILES_DIR}/brew/Brewfile.linux" ;;
-    Darwin) platform_brewfile="${DOTFILES_DIR}/brew/Brewfile.macos" ;;
-  esac
-
-  # 2a. 平台应用包（GUI 应用 + App Store + 服务，约 1 - 5 分钟）
-  if [[ -n "${platform_brewfile}" ]] && [[ -f "${platform_brewfile}" ]]; then
-    echo_step "执行 brew bundle（平台包，约 1 - 5 分钟）..."
-    brew bundle --file="${platform_brewfile}" 2>>"${LOG_FILE}" || {
-      echo_warning "部分平台包安装失败，请查看日志: ${LOG_FILE}"
-    }
-  fi
-
-  echo_success "Homebrew 包安装完成"
+  bash "${DOTFILES_DIR}/brew/install.sh" 2>>"${LOG_FILE}"
 }
 
 # ======================
 # 配置 Python 环境
 # ======================
 install_python() {
-  echo_step "配置 Python 环境..."
-
-  if ! command -v python3 > /dev/null 2>&1; then
-    echo_warning "Python3 未安装，跳过配置"
-    return 0
-  fi
-
-  # 优先使用 python/install.sh（集成 uv）
-  local py_installer="${DOTFILES_DIR}/python/install.sh"
-  if [[ -f "${py_installer}" ]]; then
-    echo_step "使用 python/install.sh 配置 Python 环境..."
-    if bash "${py_installer}" 2>>"${LOG_FILE}"; then
-      echo_success "Python 环境配置完成"
-      return 0
-    else
-      echo_warning "python/install.sh 执行失败，回退到手动配置"
-    fi
-  fi
-
-  # pip 配置链接（回退）
-  mkdir -p "${HOME}/.pip"
-  safe_symlink "${DOTFILES_DIR}/python/pip.conf" "${HOME}/.pip/pip.conf" || true
-
-  # uv 配置链接（回退）
-  if command -v uv > /dev/null 2>&1; then
-    local uv_config_dir="${HOME}/.config/uv"
-    mkdir -p "${uv_config_dir}"
-    safe_symlink "${DOTFILES_DIR}/python/uv.toml.template" "${uv_config_dir}/uv.toml" || true
-  fi
-
-  # pythonrc.py 链接（回退）
-  safe_symlink "${DOTFILES_DIR}/python/pythonrc.py" "${HOME}/.pythonrc.py" || true
-
-  # 安装必装依赖（PEP 668 兼容：uv → pipx → pip → venv 四级回退）
-  if [[ -f "${DOTFILES_DIR}/python/requirements.txt" ]]; then
-    echo_step "安装 Python 必装依赖..."
-    local req_file="${DOTFILES_DIR}/python/requirements.txt"
-    local installed=false
-
-    # 方案 1: 使用 uv（最快）
-    if command -v uv > /dev/null 2>&1; then
-      local venv_dir="${HOME}/.venv-dotfiles"
-      echo_step "使用 uv 创建虚拟环境并安装依赖..."
-      if uv venv "${venv_dir}" 2>>"${LOG_FILE}" && \
-         uv pip install -r "${req_file}" 2>>"${LOG_FILE}"; then
-        local marker="${HOME}/.local/share/dotfiles-py-path"
-        mkdir -p "$(dirname "${marker}")"
-        printf '%s\n' "${venv_dir}/bin" > "${marker}"
-        installed=true
-      fi
-    fi
-
-    # 方案 2: 使用 pipx
-    if ! $installed; then
-      _ensure_pipx() {
-        if command -v pipx > /dev/null 2>&1; then return 0; fi
-        echo_step "自动安装 pipx..."
-        if command -v brew > /dev/null 2>&1; then
-          brew install pipx > /dev/null 2>&1 || return 1
-        elif command -v apt > /dev/null 2>&1; then
-          sudo apt update -qq > /dev/null 2>&1 || true
-          sudo apt install -y -qq pipx > /dev/null 2>&1 || return 1
-        elif command -v dnf > /dev/null 2>&1; then
-          sudo dnf install -y pipx > /dev/null 2>&1 || return 1
-        elif command -v pacman > /dev/null 2>&1; then
-          sudo pacman -S --noconfirm python-pipx > /dev/null 2>&1 || return 1
-        else
-          pip3 install --user pipx > /dev/null 2>&1 || return 1
-        fi
-        pipx ensurepath > /dev/null 2>&1 || true
-        if [[ -d "${HOME}/.local/bin" ]]; then
-          export PATH="${HOME}/.local/bin:${PATH}"
-        fi
-        command -v pipx > /dev/null 2>&1
-      }
-
-      local externally_managed=false
-      if pip3 install --dry-run "pip" 2>&1 | grep -qi "externally-managed"; then
-        externally_managed=true
-      fi
-
-      if $externally_managed; then
-        if _ensure_pipx; then
-          echo_step "使用 pipx 安装必装依赖..."
-          if pipx install --include-deps -r "${req_file}" 2>>"${LOG_FILE}"; then
-            installed=true
-          fi
-        fi
-      else
-        if pip3 install --user -r "${req_file}" 2>>"${LOG_FILE}"; then
-          installed=true
-        fi
-      fi
-    fi
-
-    # 方案 3: venv 兜底
-    if ! $installed; then
-      local venv_dir
-      if [[ "$(uname -s)" == "Darwin" ]]; then
-        venv_dir="${HOME}/Library/Caches/dotfiles-py-venv"
-      else
-        venv_dir="${HOME}/.cache/dotfiles-py-venv"
-      fi
-      echo_step "创建独立虚拟环境: ${venv_dir}"
-      python3 -m venv "${venv_dir}" 2>>"${LOG_FILE}" || return 1
-      "${venv_dir}/bin/pip" install --upgrade pip > /dev/null 2>&1 || true
-      if "${venv_dir}/bin/pip" install -r "${req_file}" 2>>"${LOG_FILE}"; then
-        local marker="${HOME}/.local/share/dotfiles-py-path"
-        mkdir -p "$(dirname "${marker}")"
-        printf '%s\n' "${venv_dir}/bin" > "${marker}"
-        installed=true
-      fi
-    fi
-
-    if ! $installed; then
-      echo_error "Python 必装依赖安装失败，请查看日志: ${LOG_FILE}"
-      echo "  备选 1: pipx install uv"
-      echo "  备选 2: 官方脚本: curl -LsSf https://astral.sh/uv/install.sh | sh"
-      echo "  备选 3: pip3 install --user -r ${req_file}"
-      echo "  备选 4: python3 -m venv ~/.venv-dotfiles && source ~/.venv-dotfiles/bin/activate && pip install -r ${req_file}"
-      return 1
-    fi
-  fi
-
-  # 提示可选依赖
-  local optional_files=("requirements-dev.txt" "requirements-data.txt" "requirements-web.txt")
-  local opt_file
-  for opt_file in "${optional_files[@]}"; do
-    if [[ -f "${DOTFILES_DIR}/python/${opt_file}" ]]; then
-      echo_step "可选依赖（不自动安装）: ${opt_file}"
-      echo "  按需安装: uv pip install -r python/${opt_file}"
-      break
-    fi
-  done
-
-  echo_success "Python 环境配置完成"
+  bash "${DOTFILES_DIR}/python/install.sh" 2>>"${LOG_FILE}"
 }
 
 # ======================
 # 配置 Rust 环境
 # ======================
 install_rust() {
-  echo_step "配置 Rust 环境..."
-  bash "${DOTFILES_DIR}/rust/install.sh" 2>>"${LOG_FILE}" || {
-    echo_warning "Rust 安装出现错误，请查看日志: ${LOG_FILE}"
-  }
+  bash "${DOTFILES_DIR}/rust/install.sh" 2>>"${LOG_FILE}"
 }
 
 # ======================
-# 安装 Tmux 配置
+# 安装 Tmux 配置（委托给 tmux/install.sh）
 # ======================
 install_tmux() {
-  echo_step "安装 Tmux 配置..."
-
-  if ! command -v tmux > /dev/null 2>&1; then
-    echo_warning "Tmux 未安装"
-    if command -v brew > /dev/null 2>&1; then
-      brew install tmux
-    elif command -v apt > /dev/null 2>&1; then
-      sudo apt install -y tmux
-    elif command -v dnf > /dev/null 2>&1; then
-      sudo dnf install -y tmux
-    else
-      echo_warning "请手动安装 tmux"
-    fi
-  fi
-
-  # 创建符号链接
-  safe_symlink "${DOTFILES_DIR}/tmux/.tmux.conf" "${HOME}/.tmux.conf" || true
-  echo_success "Tmux 配置已链接"
-
-  # 安装 TPM (Tmux Plugin Manager，含国内镜像降级)
-  local tpm_dir="${HOME}/.tmux/plugins/tpm"
-  if [[ ! -d "${tpm_dir}" ]] || [[ -z "$(ls -A "${tpm_dir}" 2>/dev/null)" ]]; then
-    echo_step "安装 Tmux Plugin Manager (TPM)..."
-    # 镜像源列表（GitHub 官方优先，国内镜像降级）
-    local tpm_mirrors
-    if [[ -n "${NO_MIRROR:-}" ]]; then
-      tpm_mirrors=("https://github.com/tmux-plugins/tpm.git")
-    else
-      tpm_mirrors=(
-        "https://github.com/tmux-plugins/tpm.git"
-        "https://ghproxy.net/https://github.com/tmux-plugins/tpm.git"
-        "https://gh-proxy.com/https://github.com/tmux-plugins/tpm.git"
-      )
-    fi
-    local tpm_cloned=false
-    for tpm_url in "${tpm_mirrors[@]}"; do
-      if git clone --depth 1 "${tpm_url}" "${tpm_dir}" 2>>"${LOG_FILE}"; then
-        tpm_cloned=true
-        break
-      fi
-      rm -rf "${tpm_dir}" 2>/dev/null
-    done
-    if $tpm_cloned; then
-      echo_success "TPM 安装完成"
-      echo "  安装插件: 打开 tmux 后按 前缀键 + I"
-    else
-      echo_warning "TPM 安装失败（所有镜像源均不可用），可稍后手动安装"
-      echo "  git clone https://github.com/tmux-plugins/tpm.git ~/.tmux/plugins/tpm"
-    fi
-  else
-    echo_success "TPM 已安装"
-  fi
+  bash "${DOTFILES_DIR}/tmux/install.sh" 2>>"${LOG_FILE}"
 }
 
 # ======================
-# 安装 Git 配置
+# 安装 Git 配置（委托给 git/install.sh）
 # ======================
 install_git() {
-  echo_step "安装 Git 配置..."
-
-  # .gitconfig
-  safe_symlink "${DOTFILES_DIR}/git/.gitconfig" "${HOME}/.gitconfig" || true
-
-  # .gitignore_global
-  safe_symlink "${DOTFILES_DIR}/git/.gitignore_global" "${HOME}/.gitignore_global" || true
-
-  # .gitattributes
-  safe_symlink "${DOTFILES_DIR}/git/.gitattributes" "${HOME}/.gitattributes" || true
-
-  echo_success "Git 配置已链接"
-
-  # 创建 .gitconfig.local 模板（如不存在）
-  local local_config="${HOME}/.gitconfig.local"
-  if [[ ! -f "${local_config}" ]]; then
-    cat > "${local_config}" << 'GITLOCAL_EOF'
-# Git 个人配置（不提交到仓库）
-# 请修改以下信息为你自己的（替换 YOUR_NAME / YOUR_EMAIL）
-
-[user]
-    name = YOUR_NAME
-    email = YOUR_EMAIL
-
-# 可在此添加其他个人配置，如：
-# [commit]
-#     gpgsign = true
-# [user]
-#     signingkey = YOUR_GPG_KEY
-GITLOCAL_EOF
-    echo_warning "已创建 ~/.gitconfig.local 模板，请修改其中的用户信息"
-    echo "  vim ~/.gitconfig.local"
-  else
-    echo_success ".gitconfig.local 已存在"
-  fi
-
-  # 验证用户信息是否已配置（匹配所有占位符变体）
-  local current_name
-  current_name=$(git config user.name 2>/dev/null || echo "")
-  if [[ -z "${current_name}" ]] || \
-     [[ "${current_name}" == "YOUR_NAME" ]] || \
-     [[ "${current_name}" == "Your Name" ]]; then
-    echo_warning "Git 用户信息未配置，请编辑 ~/.gitconfig.local"
-  fi
+  bash "${DOTFILES_DIR}/git/install.sh" 2>>"${LOG_FILE}"
 }
 
 # ======================
 # 安装 SSH 配置
 # ======================
 install_ssh() {
-  echo_step "安装 SSH 配置..."
-  bash "${DOTFILES_DIR}/ssh/install.sh" 2>>"${LOG_FILE}" || {
-    echo_warning "SSH 安装出现错误，请查看日志: ${LOG_FILE}"
-  }
+  bash "${DOTFILES_DIR}/ssh/install.sh" 2>>"${LOG_FILE}"
 }
 
 # ======================
 # 创建 .editorconfig 链接
 # ======================
 install_editorconfig() {
-  echo_step "配置 .editorconfig..."
-  safe_symlink "${DOTFILES_DIR}/.editorconfig" "${HOME}/.editorconfig" || true
-  echo_success ".editorconfig 已链接"
+  bash "${DOTFILES_DIR}/editorconfig/install.sh" 2>>"${LOG_FILE}"
 }
 
 # ======================
@@ -976,6 +730,9 @@ main() {
   parse_args "$@"
 
   echo_title "Dotfiles 一键安装"
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    echo_warning "DRY-RUN 预演模式：软链创建/备份/删除只打印，不实际修改配置文件"
+  fi
   echo "安装日志: ${LOG_FILE}"
   echo ""
 

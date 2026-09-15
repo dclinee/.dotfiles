@@ -1,0 +1,6 @@
+# Git 模块私有配置
+.gitconfig.local
+
+# 临时 token 文件
+.gh_token
+.github_token

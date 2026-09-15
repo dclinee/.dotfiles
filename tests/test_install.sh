@@ -6,7 +6,8 @@
 
 set -eo pipefail
 
-DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
+# 脚本位于 tests/ 子目录，仓库根需上溯一级
+DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TEST_DIR=""
 # 保存原始 PATH，避免后续测试环境的 mock 命令污染 command -v 查找
 ORIGINAL_PATH="${PATH:-}"
@@ -507,9 +508,9 @@ test_install_error_handling() {
   assert_file_contains "apt install 有 if 判断" \
     "$DOTFILES_DIR/zsh/install.sh" "if sudo apt install"
 
-  # brew shellenv 和 pip 安装逻辑已移至 bootstrap.sh
-  assert_file_contains "bootstrap.sh brew bundle 有 || 保护" \
-    "$DOTFILES_DIR/bootstrap.sh" "brew bundle.*||"
+  # brew bundle 分层安装已随模块化移入 brew/install.sh
+  assert_file_contains "brew/install.sh brew bundle 有 || 保护" \
+    "$DOTFILES_DIR/brew/install.sh" "brew bundle.*||"
 }
 
 test_install_brew_fixes() {

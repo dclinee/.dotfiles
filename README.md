@@ -74,7 +74,11 @@ cd ~/.dotfiles
 ./bootstrap.sh --git      # 仅安装 Git 配置
 ./bootstrap.sh --brew     # 仅安装 Brew 包
 ./bootstrap.sh --all      # 安装全部（默认）
+./bootstrap.sh --all --dry-run  # 预演模式：只打印将创建的软链/备份，不落地
 ```
+
+> **先预演再安装**：不确定安装会改动哪些文件时，先加 `--dry-run`。
+> 该模式会导出 `DRY_RUN=true` 给所有子模块，软链创建、备份、删除均只打印不执行。
 
 ### 方式二：使用 Makefile
 
@@ -335,7 +339,7 @@ command -v starship && echo "OK" || brew install starship
 ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 ```
 
-## �� 配置结构
+## 📁 配置结构
 
 ```
 ~/.dotfiles/
@@ -353,7 +357,10 @@ ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 │   │   ├── 04_plugins.zsh # 插件配置（zinit）
 │   │   └── 05_starship.zsh # Starship 主题配置
 │   ├── lib/              # 公共库
-│   │   └── output.sh      # 统一输出函数（echo_step/echo_success...）
+│   │   ├── common.sh       # 核心函数库（safe_symlink, require-package, check_*）
+│   │   ├── _module_loader.sh # 模块公共加载器（替代 11 份 _common.sh 样板）
+│   │   ├── output.sh       # 统一输出函数（echo_step/echo_success...）
+│   │   └── symlink.sh      # 符号链接安全创建
 │   ├── platform/         # 平台特定配置
 │   │   ├── linux.zsh      # Linux 配置
 │   │   └── macos.zsh      # macOS 配置
@@ -382,6 +389,16 @@ ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 ├── git/                  # Git 全局配置
 │   ├── .gitconfig        # Git 配置模板（别名/颜色/pager）
 │   └── .gitignore_global # 全局忽略规则
+├── docker/               # Docker 模块（开发环境 + CI 测试）
+│   ├── Dockerfile          # 主多阶段构建（Ubuntu 24.04）
+│   ├── Dockerfile.ci       # CI 集成测试镜像
+│   ├── Dockerfile.{ubuntu,debian,fedora} # 多发行版矩阵
+│   ├── docker-compose.yml  # 编排（dev + 测试矩阵 + validate + test）
+│   ├── build.sh            # 统一操作脚本（build/up/down/shell/test）
+│   └── README.md           # Docker 模块文档
+├── editorconfig/         # EditorConfig 配置（极简：只有一个软链）
+│   ├── install.sh         # 创建 .editorconfig 软链
+│   └── _common.sh
 ├── brew/                 # Homebrew 配置
 │   ├── Brewfile          # 通用包（git/gh/fzf/ripgrep/bat/eza...）
 │   ├── Brewfile.linux    # Linux 特定包
@@ -397,7 +414,9 @@ ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 │   ├── config            # 主入口（软链到 ~/.ssh/config）
 │   ├── config.d/         # 通用片段（core/github 加速/共享主机）
 │   └── platform/         # 平台片段（macOS/Linux）
-├── test_install.sh       # 静态与动态测试脚本
+├── tests/                # 测试脚本目录
+│   ├── test_install.sh       # 静态与动态测试脚本
+│   └── test_integration.sh   # Docker 集成测试脚本
 ├── validate.sh           # 配置验证脚本
 └── README.md             # 项目文档
 ```
@@ -472,6 +491,7 @@ cd ~/.dotfiles
 
 make update     # 一键更新：git pull + zinit update + brew upgrade
 make backup     # 备份当前配置
+make doctor     # 九模块安装体检（聚合各模块 check.sh，不修改系统）
 make check      # 环境检查（调用 check_env）
 make test       # 运行静态测试
 make perf       # Zsh 启动性能分析
@@ -536,7 +556,7 @@ ZSH_DEBUG=1 zsh
 
 ## 🤝 贡献
 
-欢迎提交 Issue 和 Pull Request 来改进这个项目！请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 了解贡献流程。
+欢迎提交 Issue 和 Pull Request 来改进这个项目！请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 了解贡献流程。安全漏洞请按 [SECURITY.md](SECURITY.md) 私下报告。
 
 ## 📞 联系方式
 

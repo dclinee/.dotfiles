@@ -18,6 +18,11 @@ dotfiles-sandbox-*/
 # 依赖目录
 node_modules/
 
+# VitePress 构建产物与缓存
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+
 # 编译产物
 *.o
 *.class
@@ -46,3 +51,21 @@ temp/
 # 通用临时文件
 *~
 ._*
+
+# Emacs 字节编译产物
+*.elc
+
+# 测试覆盖率产物
+test_coverage/
+html_coverage/
+.kcov/
+
+# 根级运行时临时文件
+nvim.log
+~/
+
+#trae
+trae/
+trae-*
+trae-*.json
+.trae/

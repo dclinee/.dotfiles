@@ -117,7 +117,7 @@ check "lib/output.sh 存在" "[[ -f ${DOTFILES_DIR}/lib/output.sh ]]"
 check "lib/symlink.sh 存在" "[[ -f ${DOTFILES_DIR}/lib/symlink.sh ]]"
 check "bootstrap.sh 存在" "[[ -f ${DOTFILES_DIR}/bootstrap.sh ]]"
 check "validate.sh 存在" "[[ -f ${DOTFILES_DIR}/validate.sh ]]"
-check "test_install.sh 存在" "[[ -f ${DOTFILES_DIR}/test_install.sh ]]"
+check "test_install.sh 存在" "[[ -f ${DOTFILES_DIR}/tests/test_install.sh ]]"
 
 # 12. CI/CD 验证
 echo "--- CI/CD ---"

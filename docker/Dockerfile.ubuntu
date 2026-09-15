@@ -1,0 +1,43 @@
+# ============================================================
+# Dotfiles on Ubuntu 24.04 测试容器
+# ============================================================
+ARG APT_MIRROR=https://mirrors.ustc.edu.cn/ubuntu
+ARG NO_MIRROR=0
+
+FROM ubuntu:24.04
+
+ARG APT_MIRROR
+ARG NO_MIRROR
+
+ENV DEBIAN_FRONTEND=noninteractive TZ=Asia/Shanghai
+
+# 换 apt 源
+RUN if [[ "${APT_MIRROR}" != "" && "${NO_MIRROR}" != "1" ]]; then \
+      sed -i "s|http://archive.ubuntu.com/ubuntu|${APT_MIRROR}|g" /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null \
+      || sed -i "s|http://archive.ubuntu.com/ubuntu|${APT_MIRROR}|g" /etc/apt/sources.list 2>/dev/null || true; \
+    fi
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates curl wget git locales tzdata procps \
+        zsh vim tmux emacs-nox python3 python3-pip python3-venv \
+        build-essential cmake pkg-config libssl-dev libreadline-dev \
+        libffi-dev libsqlite3-dev libjansson-dev libjpeg-dev \
+        libpng-dev librsvg2-dev libxml2-dev libxslt1-dev \
+        libtool-bin openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN locale-gen zh_CN.UTF-8 \
+    && echo "dotfiles-tester ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/dotfiles \
+    && chmod 440 /etc/sudoers.d/dotfiles \
+    && useradd -m -s /usr/bin/zsh -u 1000 dotfiles-tester
+
+USER dotfiles-tester
+WORKDIR /home/dotfiles-tester
+COPY --chown=dotfiles-tester:dotfiles-tester . /home/dotfiles-tester/.dotfiles
+
+ENV NO_MIRROR="${NO_MIRROR}" NO_BREW=1
+RUN bash ~/.dotfiles/bootstrap.sh --all 2>&1 || \
+    bash ~/.dotfiles/bootstrap.sh --zsh --vim --emacs --tmux --git --ssh --python --rust 2>&1 || true
+
+CMD ["zsh", "-l"]

@@ -112,6 +112,9 @@ _common_load_symlink() {
     if [[ -L "$dst" ]] && [[ "$(_resolve_link "$dst")" == "$(_resolve_link "$src")" ]]; then
       echo_skip "链接已存在: $dst"; return 0
     fi
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      echo_detail "[dry-run] 将链接: $dst → $src"; return 0
+    fi
     if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
       local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
       mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"

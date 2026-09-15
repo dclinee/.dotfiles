@@ -450,7 +450,7 @@ integration-test:
 
 ### 改进 4: 架构文档 + ADR
 
-**文件**: `docs/ARCHITECTURE.md`, `docs/ADR.md`
+**文件**: `docs/archive/ARCHITECTURE.md`, `docs/archive/ADR.md`（原 docs/ 根目录，已归档）
 
 **ARCHITECTURE.md** 包含：
 - 系统架构总览图（bootstrap.sh → lib → 11 模块）
@@ -598,8 +598,8 @@ if [[ "${1:-}" == "--dry-run" || "${1:-}" == "--simulate" ]]; then
 | .tool-versions | 新增 | +12 |
 | Dockerfile.test | 新增 | +38 |
 | test_integration.sh | 新增 | +153 |
-| docs/ARCHITECTURE.md | 新增 | +150 |
-| docs/ADR.md | 新增 | +180 |
+| docs/archive/ARCHITECTURE.md | 新增 | +150 |
+| docs/archive/ADR.md | 新增 | +180 |
 | .github/workflows/ci.yml | 修改 | +12 |
 | validate.sh | 修改 | +2 |
 | zsh/profile_performance.sh | 修改 | +1 |

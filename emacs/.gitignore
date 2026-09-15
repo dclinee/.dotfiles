@@ -41,7 +41,7 @@ site-lisp/package/
 /ido.last
 /recentf
 /viper
-/projectile-bookmarks.eld
+/projectile-*.eld
 /anaconda-mode/
 /.historian
 /.uptimes.el

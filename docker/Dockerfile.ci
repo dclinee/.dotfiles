@@ -40,4 +40,4 @@ WORKDIR /home/dotfiles-tester
 RUN bash ~/.dotfiles/bootstrap.sh --all 2>&1 || true
 
 # 验证安装结果
-CMD ["bash", "-c", "~/.dotfiles/test_integration.sh"]
+CMD ["bash", "-c", "~/.dotfiles/tests/test_integration.sh"]

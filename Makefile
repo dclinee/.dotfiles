@@ -4,7 +4,7 @@
 # 统一命令入口，简化操作
 # 设计原则：所有 target 都委托给 per-component install.sh，避免与 bootstrap.sh 逻辑漂移
 
-.PHONY: install update backup test check clean help zsh vim emacs wezterm wezterm-check wezterm-uninstall brew python rust tmux git ssh ssh-check ssh-uninstall editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin perf validate
+.PHONY: install update backup test check doctor clean help zsh zsh-check vim vim-check emacs wezterm wezterm-check wezterm-uninstall brew brew-check python rust tmux tmux-check git git-check ssh ssh-check ssh-uninstall editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin perf validate
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -30,7 +30,8 @@ help: ## 显示帮助信息
 	@printf "\n"
 	@printf "$(CYAN)示例:$(RESET)\n"
 	@printf "  make install      # 一键安装所有配置\n"
-	@printf "  make check        # 检查环境状态\n"
+	@printf "  make doctor       # 全模块环境体检（汇总）\n"
+	@printf "  make check        # 快速环境检查\n"
 	@printf "  make update       # 更新配置和插件\n"
 
 install: editorconfig git ssh brew zsh vim emacs wezterm python rust tmux ## 一键安装所有配置（推荐）
@@ -214,17 +215,65 @@ backup: ## 备份当前配置
 
 ##@ 诊断
 
-test: ## 运行测试
-	@bash test_install.sh static
+test: ## 运行静态测试
+	@bash tests/test_install.sh static
 
-check: ## 环境检查
+check: ## 快速环境检查
 	@zsh -ic 'check_env' 2>/dev/null || printf "请先安装配置: make install\n"
+
+# 各模块环境体检（委托模块 check.sh；check.sh 设计为 warn 不 fail）
+brew-check: ## Homebrew 模块体检
+	@bash brew/check.sh
+
+git-check: ## Git 模块体检
+	@bash git/check.sh
+
+tmux-check: ## Tmux 模块体检
+	@bash tmux/check.sh
+
+vim-check: ## Vim 模块体检
+	@bash vim/check.sh
+
+zsh-check: ## Zsh 模块体检
+	@bash zsh/check.sh
+
+doctor: ## 全模块环境体检（汇总报告，单模块失败不中断）
+	@printf "$(BOLD)=== Dotfiles 全模块体检 ===$(RESET)\n"; \
+	fail=0; \
+	for m in brew zsh vim git tmux ssh wezterm python rust; do \
+		printf "\n$(CYAN)── %s ──$(RESET)\n" "$$m"; \
+		bash "$$m/check.sh" || fail=$$((fail + 1)); \
+	done; \
+	printf "\n$(BOLD)==========================$(RESET)\n"; \
+	if [ $$fail -gt 0 ]; then \
+		printf "$(YELLOW)⚠  $$fail 个模块存在失败项（多为当前机器未安装该工具）$(RESET)\n"; \
+	else \
+		printf "$(GREEN)✓ 全部模块体检通过$(RESET)\n"; \
+	fi; \
+	printf "$(BOLD)另请运行:$(RESET) make validate（配置语法）与 make test（静态断言）\n"
 
 perf: ## 性能分析
 	@zsh zsh/profile_performance.sh
 
 validate: ## 验证配置语法
 	@bash validate.sh
+
+##@ Docker
+
+docker-build: ## 构建 Docker dev 镜像
+	@bash docker/build.sh build dev
+
+docker-up: ## 启动 Docker dev 容器（交互式 shell）
+	@bash docker/build.sh shell dev
+
+docker-test: ## 运行 Docker 集成测试
+	@bash docker/build.sh test
+
+docker-validate: ## 运行 Docker 静态验证
+	@bash docker/build.sh validate
+
+docker-clean: ## 清理所有 Docker 资源
+	@bash docker/build.sh clean
 
 clean: ## 清理缓存
 	@printf "$(CYAN)→ 清理缓存...$(RESET)\n"
