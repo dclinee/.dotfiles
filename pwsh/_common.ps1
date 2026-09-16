@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+﻿﻿#requires -Version 5.1
 <#
 .SYNOPSIS
   pwsh 模块公共函数库（PowerShell 原生）

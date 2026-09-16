@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+﻿﻿#requires -Version 5.1
 <# 环境变量、PATH 与 PSReadLine 行编辑器配置 #>
 
 # ---------- 编码：PS5.1 默认 GBK/CP936，统一为 UTF-8，避免中文输出乱码 ----------

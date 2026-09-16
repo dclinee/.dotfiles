@@ -636,7 +636,7 @@ test_pwsh_module() {
   # .ps1 文件必须带 UTF-8 BOM（PS5.1 无 BOM 时按 GBK 解析会乱码）
   local ps1_file
   for ps1_file in "$DOTFILES_DIR"/pwsh/*.ps1 "$DOTFILES_DIR"/pwsh/modules/*.ps1; do
-    if head -c 3 "$ps1_file" | od -An -tx1 | grep -q "ef bb bf"; then
+    if head -c 3 "$ps1_file" | xxd -p | grep -q "efbbbf"; then
       assert_pass "UTF-8 BOM: $(basename "$ps1_file")"
     else
       assert_fail "UTF-8 BOM: $(basename "$ps1_file") 缺失"

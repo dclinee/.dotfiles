@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+﻿﻿#requires -Version 5.1
 <# 别名与跨 shell 一致的快捷函数（zsh 侧同名，降低切换成本） #>
 
 # PowerShell 的 Set-Alias 只能映射命令名、不能附带参数，因此带参数的一律用 function + @args 透传。

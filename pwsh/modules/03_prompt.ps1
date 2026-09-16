@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+﻿﻿#requires -Version 5.1
 <# 提示符与智能跳转：starship 优先（与 zsh 侧主题统一），缺失时使用内置轻量 prompt #>
 
 # ---------- zoxide（若安装）：提供 z/zi 智能跳转 ----------

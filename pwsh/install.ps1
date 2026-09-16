@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+﻿﻿#requires -Version 5.1
 <#
 .SYNOPSIS
   pwsh 模块主安装器（跨平台：Windows 原生 / Linux / macOS）

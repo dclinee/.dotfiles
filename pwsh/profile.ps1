@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+﻿﻿#requires -Version 5.1
 <#
 .SYNOPSIS
   PowerShell Profile 主入口（被链接到 $PROFILE.CurrentUserCurrentHost）
