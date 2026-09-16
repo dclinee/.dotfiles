@@ -25,8 +25,8 @@ local function bootstrap()
     'https://github.com/folke/lazy.nvim.git',
   } or {
     'https://github.com/folke/lazy.nvim.git',
-    'https://ghfast.top/https://github.com/folke/lazy.nvim.git',
-    'https://mirror.ghproxy.com/https://github.com/folke/lazy.nvim.git',
+    'https://ghproxy.net/https://github.com/folke/lazy.nvim.git',
+    'https://gh-proxy.com/https://github.com/folke/lazy.nvim.git',
   }
 
   Util.debug('lazy.nvim 未安装，开始 bootstrap...')

@@ -5,21 +5,10 @@
 # ======================
 
 set -euo pipefail
-LOG_FILE="/tmp/wezterm_install_$(date +%Y%m%d_%H%M%S).log"
+LOG_FILE="/tmp/dotfiles_wezterm_install_$(date +%Y%m%d_%H%M%S).log"
 
-# 确定配置目录
-DOTFILES_DIR="${HOME}/.dotfiles"
-WEZTERM_DIR="${DOTFILES_DIR}/wezterm"
-
-# 加载公共库（lib/common.sh 自带 output + symlink 的自动加载和 fallback）
-_COMMON_LIB="${DOTFILES_DIR}/lib/common.sh"
-if [[ -f "${_COMMON_LIB}" ]]; then
-  # shellcheck source=/dev/null
-  source "${_COMMON_LIB}"
-else
-  printf '错误: 找不到 %s\n' "${_COMMON_LIB}" >&2
-  exit 1
-fi
+# 加载模块公共库
+source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
 
 # 开始安装
 echo_title "Wezterm 配置安装器"
@@ -52,17 +41,17 @@ create_wezterm_link() {
   local link_path="${HOME}/.wezterm.lua"
   local target_path="${WEZTERM_DIR}/wezterm.lua"
 
-  if [ -L "${link_path}" ]; then
+  if [[ -L "${link_path}" ]]; then
     # 已存在符号链接，检查是否指向正确位置
     local current_target=$(readlink "${link_path}")
-    if [ "${current_target}" == "${target_path}" ]; then
+    if [[ "${current_target}" == "${target_path}" ]]; then
       echo_success "Wezterm 配置链接已存在且指向正确位置"
     else
       echo_warning "更新 Wezterm 配置链接..."
       safe_symlink "${target_path}" "${link_path}" || true
       echo_success "Wezterm 配置链接已更新"
     fi
-  elif [ -f "${link_path}" ]; then
+  elif [[ -f "${link_path}" ]]; then
     # 已存在文件，备份并创建链接
     echo_warning "发现现有 Wezterm 配置文件，将其备份为 ${link_path}.bak"
     mv "${link_path}" "${link_path}.bak"

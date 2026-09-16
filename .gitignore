@@ -52,6 +52,14 @@ temp/
 *.local.zsh
 .gitconfig.local
 
+# 环境变量文件（敏感信息）
+.env
+.env.local
+.env.*.local
+
+# AI 工具配置（含本地状态与敏感配置）
+.codeartsdoer/
+
 # 通用临时文件
 *~
 ._*

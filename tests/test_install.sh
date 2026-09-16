@@ -7,7 +7,7 @@
 set -eo pipefail
 
 # 脚本位于 tests/ 子目录，仓库根需上溯一级
-DOTFILES_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+DOTFILES_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEST_DIR=""
 # 保存原始 PATH，避免后续测试环境的 mock 命令污染 command -v 查找
 ORIGINAL_PATH="${PATH:-}"
@@ -133,11 +133,11 @@ setup_test_env() {
   mkdir -p "$TEST_DIR/home/.pip"
 
   # 复制 dotfiles 到测试环境
-  cp -r "$DOTFILES_DIR/zsh" "$TEST_DIR/home/.dotfiles/"
-  cp -r "$DOTFILES_DIR/brew" "$TEST_DIR/home/.dotfiles/"
-  cp -r "$DOTFILES_DIR/python" "$TEST_DIR/home/.dotfiles/" 2>/dev/null || true
-  cp -r "$DOTFILES_DIR/wezterm" "$TEST_DIR/home/.dotfiles/" 2>/dev/null || true
-  cp -r "$DOTFILES_DIR/lib" "$TEST_DIR/home/.dotfiles/" 2>/dev/null || true
+  cp -r "$DOTFILES_ROOT/zsh" "$TEST_DIR/home/.dotfiles/"
+  cp -r "$DOTFILES_ROOT/brew" "$TEST_DIR/home/.dotfiles/"
+  cp -r "$DOTFILES_ROOT/python" "$TEST_DIR/home/.dotfiles/" 2>/dev/null || true
+  cp -r "$DOTFILES_ROOT/wezterm" "$TEST_DIR/home/.dotfiles/" 2>/dev/null || true
+  cp -r "$DOTFILES_ROOT/lib" "$TEST_DIR/home/.dotfiles/" 2>/dev/null || true
 
   # 创建 mock 命令
   create_mock_commands "$ostype" "$arch"
@@ -327,7 +327,7 @@ cleanup_test_env() {
 
 test_install_sh_syntax() {
   log_info "测试: install.sh 语法"
-  if bash -n "$DOTFILES_DIR/zsh/install.sh" 2>/dev/null; then
+  if bash -n "$DOTFILES_ROOT/zsh/install.sh" 2>/dev/null; then
     assert_pass "install.sh bash 语法检查通过"
   else
     assert_fail "install.sh bash 语法检查失败"
@@ -337,17 +337,17 @@ test_install_sh_syntax() {
 test_zoxide_redirect_fix() {
   log_info "测试: zoxide 重定向修复 (P0)"
   local content
-  content=$(cat "$DOTFILES_DIR/zsh/install.sh")
+  content=$(cat "$DOTFILES_ROOT/zsh/install.sh")
 
   assert_contains "zoxide init 存在" "$content" "zoxide init zsh"
-  assert_file_not_contains "zoxide 无双 > 重定向" "$DOTFILES_DIR/zsh/install.sh" "zoxide init zsh.*>.*> /dev/null"
-  assert_file_contains "zoxide init 输出到 init.zsh" "$DOTFILES_DIR/zsh/install.sh" "init.zsh"
-  assert_file_contains "zoxide init stderr 到日志" "$DOTFILES_DIR/zsh/install.sh" "LOG_FILE"
+  assert_file_not_contains "zoxide 无双 > 重定向" "$DOTFILES_ROOT/zsh/install.sh" "zoxide init zsh.*>.*> /dev/null"
+  assert_file_contains "zoxide init 输出到 init.zsh" "$DOTFILES_ROOT/zsh/install.sh" "init.zsh"
+  assert_file_contains "zoxide init stderr 到日志" "$DOTFILES_ROOT/zsh/install.sh" "LOG_FILE"
 }
 
 test_zinit_removal() {
   log_info "测试: zinit 已正确集成"
-  local zsh_dir="$DOTFILES_DIR/zsh"
+  local zsh_dir="$DOTFILES_ROOT/zsh"
 
   # 项目已迁移到 zinit 插件管理器，验证其正确引用
   assert_file_contains "install.sh 包含 zinit 安装" \
@@ -364,29 +364,29 @@ test_brewfile_fix() {
   log_info "测试: Brewfile 语法修复"
 
   assert_file_not_contains "Brewfile.linux 无 eval cat" \
-    "$DOTFILES_DIR/brew/Brewfile.linux" "eval.*cat"
+    "$DOTFILES_ROOT/brew/Brewfile.linux" "eval.*cat"
 
   assert_file_not_contains "Brewfile.macos 无 eval cat" \
-    "$DOTFILES_DIR/brew/Brewfile.macos" "eval.*cat"
+    "$DOTFILES_ROOT/brew/Brewfile.macos" "eval.*cat"
 
   # brew bundle 不支持嵌套引用（brewfile 指令不存在），
   # 平台 Brewfile 仅包含平台特定包，通用包在主 Brewfile 中
   assert_file_not_contains "Brewfile.linux 无 brewfile 指令" \
-    "$DOTFILES_DIR/brew/Brewfile.linux" "brewfile"
+    "$DOTFILES_ROOT/brew/Brewfile.linux" "brewfile"
 
   assert_file_not_contains "Brewfile.macos 无 brewfile 指令" \
-    "$DOTFILES_DIR/brew/Brewfile.macos" "brewfile"
+    "$DOTFILES_ROOT/brew/Brewfile.macos" "brewfile"
 
   assert_file_not_contains "Brewfile.linux 无 cask 指令" \
-    "$DOTFILES_DIR/brew/Brewfile.linux" "^cask"
+    "$DOTFILES_ROOT/brew/Brewfile.linux" "^cask"
 
   assert_file_not_contains "主 Brewfile 无 cask 指令" \
-    "$DOTFILES_DIR/brew/Brewfile" "^cask"
+    "$DOTFILES_ROOT/brew/Brewfile" "^cask"
 }
 
 test_env_zsh_fixes() {
   log_info "测试: 00_env.zsh 修复"
-  local env_file="$DOTFILES_DIR/zsh/core/00_env.zsh"
+  local env_file="$DOTFILES_ROOT/zsh/core/00_env.zsh"
 
   # PYTHONPATH 已移除（避免污染其他 Python 项目）
   assert_file_not_contains "PYTHONPATH 不再污染全局" \
@@ -419,7 +419,7 @@ test_env_zsh_fixes() {
 
 test_plugins_fix() {
   log_info "测试: 04_plugins.zsh zinit 架构"
-  local plugins_file="$DOTFILES_DIR/zsh/core/04_plugins.zsh"
+  local plugins_file="$DOTFILES_ROOT/zsh/core/04_plugins.zsh"
 
   # 项目已迁移到 zinit 插件管理器
   assert_file_contains "使用 zinit 插件管理器" "$plugins_file" "zinit"
@@ -446,7 +446,7 @@ test_plugins_fix() {
 
 test_starship_font_detection() {
   log_info "测试: starship Nerd Font 检测与降级"
-  local starship_file="$DOTFILES_DIR/zsh/core/05_starship.zsh"
+  local starship_file="$DOTFILES_ROOT/zsh/core/05_starship.zsh"
 
   assert_file_contains "包含 _has_nerd_font 函数" "$starship_file" "_has_nerd_font"
   assert_file_contains "包含 fc-list 检测" "$starship_file" "fc-list"
@@ -465,7 +465,7 @@ test_starship_font_detection() {
 
 test_zshenv_entry() {
   log_info "测试: .zshenv 入口文件"
-  local zshenv_file="$DOTFILES_DIR/zsh/.zshenv"
+  local zshenv_file="$DOTFILES_ROOT/zsh/.zshenv"
 
   assert_file_exists ".zshenv 文件存在" "$zshenv_file"
   assert_file_contains ".zshenv 设置 ZSH_HOME" "$zshenv_file" "ZSH_HOME"
@@ -475,13 +475,13 @@ test_zshenv_entry() {
   assert_file_contains ".zshenv 有交互式检查" "$zshenv_file" "interactive"
 
   assert_file_contains "install.sh 创建 .zshenv 链接" \
-    "$DOTFILES_DIR/zsh/install.sh" ".zshenv"
+    "$DOTFILES_ROOT/zsh/install.sh" ".zshenv"
 }
 
 test_cross_platform_compat() {
   log_info "测试: 跨平台兼容性"
 
-  local func_file="$DOTFILES_DIR/zsh/core/03_functions.zsh"
+  local func_file="$DOTFILES_ROOT/zsh/core/03_functions.zsh"
   assert_file_contains "03_functions 有 lscpu 条件判断" "$func_file" "command -v lscpu"
   assert_file_contains "03_functions 有 sysctl 降级" "$func_file" "command -v sysctl"
   assert_file_contains "03_functions 有 free 条件判断" "$func_file" "command -v free"
@@ -489,7 +489,7 @@ test_cross_platform_compat() {
   assert_file_contains "03_functions 有 ip 条件判断" "$func_file" "command -v ip"
   assert_file_contains "03_functions 有 ifconfig 降级" "$func_file" "command -v ifconfig"
 
-  local opt_file="$DOTFILES_DIR/zsh/core/01_options.zsh"
+  local opt_file="$DOTFILES_ROOT/zsh/core/01_options.zsh"
   assert_file_contains "01_options 有 ZSH_COMPDUMP 缓存" "$opt_file" "ZSH_COMPDUMP"
   assert_file_contains "01_options 有 compinit -C 快速路径" "$opt_file" "compinit -C"
   assert_file_contains "01_options 有 compinit -u 重建路径" "$opt_file" "compinit -u"
@@ -500,22 +500,22 @@ test_install_error_handling() {
   log_info "测试: install.sh 错误处理"
 
   assert_file_contains "starship 安装使用安全下载" \
-    "$DOTFILES_DIR/zsh/install.sh" "dotfiles_install_script.*starship"
+    "$DOTFILES_ROOT/zsh/install.sh" "dotfiles_install_script.*starship"
 
   assert_file_contains "brew install 有 if 判断" \
-    "$DOTFILES_DIR/zsh/install.sh" "if brew install"
+    "$DOTFILES_ROOT/zsh/install.sh" "if brew install"
 
   assert_file_contains "apt install 有 if 判断" \
-    "$DOTFILES_DIR/zsh/install.sh" "if sudo apt install"
+    "$DOTFILES_ROOT/zsh/install.sh" "if sudo apt install"
 
   # brew bundle 分层安装已随模块化移入 brew/install.sh
   assert_file_contains "brew/install.sh brew bundle 有 || 保护" \
-    "$DOTFILES_DIR/brew/install.sh" "brew bundle.*||"
+    "$DOTFILES_ROOT/brew/install.sh" "brew bundle.*||"
 }
 
 test_install_brew_fixes() {
   log_info "测试: brew/install.sh 修复"
-  local brew_install="$DOTFILES_DIR/brew/install.sh"
+  local brew_install="$DOTFILES_ROOT/brew/install.sh"
 
   assert_file_contains "install.sh 有 set -euo pipefail" "$brew_install" "set -euo pipefail"
   assert_file_contains "install.sh 有 brew shellenv 条件判断" "$brew_install" "command -v brew"
@@ -527,7 +527,7 @@ test_install_brew_fixes() {
 
 test_fallback_config_generation() {
   log_info "测试: 降级配置生成"
-  local starship_file="$DOTFILES_DIR/zsh/starship/starship_fallback.toml"
+  local starship_file="$DOTFILES_ROOT/zsh/starship/starship_fallback.toml"
 
   # 检查降级配置中的 Unicode 符号（在独立 TOML 文件中）
   assert_file_contains "降级配置使用 Unicode 三角" "$starship_file" "▓"
@@ -543,7 +543,7 @@ test_fallback_config_generation() {
 
 test_starship_toml_comments() {
   log_info "测试: starship.toml Nerd Font 说明"
-  local toml_file="$DOTFILES_DIR/zsh/starship/starship.toml"
+  local toml_file="$DOTFILES_ROOT/zsh/starship/starship.toml"
 
   assert_file_contains "starship.toml 有 Nerd Font 说明" "$toml_file" "Nerd Font"
   assert_file_contains "starship.toml 有降级说明" "$toml_file" "降级"
@@ -558,16 +558,16 @@ test_all_zsh_syntax() {
   fi
 
   local zsh_files=(
-    "$DOTFILES_DIR/zsh/.zshrc"
-    "$DOTFILES_DIR/zsh/.zshenv"
-    "$DOTFILES_DIR/zsh/core/00_env.zsh"
-    "$DOTFILES_DIR/zsh/core/01_options.zsh"
-    "$DOTFILES_DIR/zsh/core/02_aliases.zsh"
-    "$DOTFILES_DIR/zsh/core/03_functions.zsh"
-    "$DOTFILES_DIR/zsh/core/04_plugins.zsh"
-    "$DOTFILES_DIR/zsh/core/05_starship.zsh"
-    "$DOTFILES_DIR/zsh/platform/linux.zsh"
-    "$DOTFILES_DIR/zsh/platform/macos.zsh"
+    "$DOTFILES_ROOT/zsh/.zshrc"
+    "$DOTFILES_ROOT/zsh/.zshenv"
+    "$DOTFILES_ROOT/zsh/core/00_env.zsh"
+    "$DOTFILES_ROOT/zsh/core/01_options.zsh"
+    "$DOTFILES_ROOT/zsh/core/02_aliases.zsh"
+    "$DOTFILES_ROOT/zsh/core/03_functions.zsh"
+    "$DOTFILES_ROOT/zsh/core/04_plugins.zsh"
+    "$DOTFILES_ROOT/zsh/core/05_starship.zsh"
+    "$DOTFILES_ROOT/zsh/platform/linux.zsh"
+    "$DOTFILES_ROOT/zsh/platform/macos.zsh"
   )
 
   for file in "${zsh_files[@]}"; do
@@ -587,49 +587,49 @@ test_all_bash_syntax() {
   log_info "测试: 所有 bash 脚本语法"
 
   local bash_files=(
-    "$DOTFILES_DIR/bootstrap.sh"
-    "$DOTFILES_DIR/validate.sh"
+    "$DOTFILES_ROOT/bootstrap.sh"
+    "$DOTFILES_ROOT/validate.sh"
     # lib/
-    "$DOTFILES_DIR/lib/common.sh"
-    "$DOTFILES_DIR/lib/output.sh"
-    "$DOTFILES_DIR/lib/symlink.sh"
-    "$DOTFILES_DIR/lib/net.sh"
-    "$DOTFILES_DIR/lib/_module_loader.sh"
+    "$DOTFILES_ROOT/lib/common.sh"
+    "$DOTFILES_ROOT/lib/output.sh"
+    "$DOTFILES_ROOT/lib/symlink.sh"
+    "$DOTFILES_ROOT/lib/net.sh"
+    "$DOTFILES_ROOT/lib/_module_loader.sh"
     # 各模块 install.sh
-    "$DOTFILES_DIR/zsh/install.sh"
-    "$DOTFILES_DIR/brew/install.sh"
-    "$DOTFILES_DIR/wezterm/install.sh"
-    "$DOTFILES_DIR/vim/install.sh"
-    "$DOTFILES_DIR/rust/install.sh"
-    "$DOTFILES_DIR/python/install.sh"
-    "$DOTFILES_DIR/ssh/install.sh"
-    "$DOTFILES_DIR/git/install.sh"
-    "$DOTFILES_DIR/tmux/install.sh"
-    "$DOTFILES_DIR/emacs/install.sh"
-    "$DOTFILES_DIR/pwsh/install.sh"
+    "$DOTFILES_ROOT/zsh/install.sh"
+    "$DOTFILES_ROOT/brew/install.sh"
+    "$DOTFILES_ROOT/wezterm/install.sh"
+    "$DOTFILES_ROOT/vim/install.sh"
+    "$DOTFILES_ROOT/rust/install.sh"
+    "$DOTFILES_ROOT/python/install.sh"
+    "$DOTFILES_ROOT/ssh/install.sh"
+    "$DOTFILES_ROOT/git/install.sh"
+    "$DOTFILES_ROOT/tmux/install.sh"
+    "$DOTFILES_ROOT/emacs/install.sh"
+    "$DOTFILES_ROOT/pwsh/install.sh"
     # 各模块 check.sh / uninstall.sh / upgrade.sh / clean.sh / pin.sh
-    "$DOTFILES_DIR/rust/uninstall.sh"
-    "$DOTFILES_DIR/rust/check.sh"
-    "$DOTFILES_DIR/rust/upgrade.sh"
-    "$DOTFILES_DIR/rust/clean.sh"
-    "$DOTFILES_DIR/rust/pin.sh"
-    "$DOTFILES_DIR/python/check.sh"
-    "$DOTFILES_DIR/python/uninstall.sh"
-    "$DOTFILES_DIR/python/upgrade.sh"
-    "$DOTFILES_DIR/python/clean.sh"
-    "$DOTFILES_DIR/python/pin.sh"
-    "$DOTFILES_DIR/ssh/check.sh"
-    "$DOTFILES_DIR/ssh/uninstall.sh"
-    "$DOTFILES_DIR/git/check.sh"
-    "$DOTFILES_DIR/tmux/check.sh"
-    "$DOTFILES_DIR/vim/check.sh"
-    "$DOTFILES_DIR/wezterm/check.sh"
-    "$DOTFILES_DIR/wezterm/uninstall.sh"
-    "$DOTFILES_DIR/brew/check.sh"
-    "$DOTFILES_DIR/zsh/check.sh"
+    "$DOTFILES_ROOT/rust/uninstall.sh"
+    "$DOTFILES_ROOT/rust/check.sh"
+    "$DOTFILES_ROOT/rust/upgrade.sh"
+    "$DOTFILES_ROOT/rust/clean.sh"
+    "$DOTFILES_ROOT/rust/pin.sh"
+    "$DOTFILES_ROOT/python/check.sh"
+    "$DOTFILES_ROOT/python/uninstall.sh"
+    "$DOTFILES_ROOT/python/upgrade.sh"
+    "$DOTFILES_ROOT/python/clean.sh"
+    "$DOTFILES_ROOT/python/pin.sh"
+    "$DOTFILES_ROOT/ssh/check.sh"
+    "$DOTFILES_ROOT/ssh/uninstall.sh"
+    "$DOTFILES_ROOT/git/check.sh"
+    "$DOTFILES_ROOT/tmux/check.sh"
+    "$DOTFILES_ROOT/vim/check.sh"
+    "$DOTFILES_ROOT/wezterm/check.sh"
+    "$DOTFILES_ROOT/wezterm/uninstall.sh"
+    "$DOTFILES_ROOT/brew/check.sh"
+    "$DOTFILES_ROOT/zsh/check.sh"
     # _common.sh
-    "$DOTFILES_DIR/rust/_common.sh"
-    "$DOTFILES_DIR/pwsh/_common.sh"
+    "$DOTFILES_ROOT/rust/_common.sh"
+    "$DOTFILES_ROOT/pwsh/_common.sh"
   )
 
   for file in "${bash_files[@]}"; do
@@ -649,20 +649,20 @@ test_pwsh_module() {
   log_info "测试: PowerShell 模块文件与集成"
 
   # 核心文件存在
-  assert_file_exists "pwsh/profile.ps1 存在" "$DOTFILES_DIR/pwsh/profile.ps1"
-  assert_file_exists "pwsh/_common.ps1 存在" "$DOTFILES_DIR/pwsh/_common.ps1"
-  assert_file_exists "pwsh/install.ps1 存在" "$DOTFILES_DIR/pwsh/install.ps1"
-  assert_file_exists "pwsh/check.ps1 存在" "$DOTFILES_DIR/pwsh/check.ps1"
-  assert_file_exists "pwsh/install.sh 存在" "$DOTFILES_DIR/pwsh/install.sh"
-  assert_file_exists "pwsh/check.sh 存在" "$DOTFILES_DIR/pwsh/check.sh"
-  assert_file_exists "pwsh/modules/00_env.ps1 存在" "$DOTFILES_DIR/pwsh/modules/00_env.ps1"
-  assert_file_exists "pwsh/modules/01_aliases.ps1 存在" "$DOTFILES_DIR/pwsh/modules/01_aliases.ps1"
-  assert_file_exists "pwsh/modules/02_functions.ps1 存在" "$DOTFILES_DIR/pwsh/modules/02_functions.ps1"
-  assert_file_exists "pwsh/modules/03_prompt.ps1 存在" "$DOTFILES_DIR/pwsh/modules/03_prompt.ps1"
+  assert_file_exists "pwsh/profile.ps1 存在" "$DOTFILES_ROOT/pwsh/profile.ps1"
+  assert_file_exists "pwsh/_common.ps1 存在" "$DOTFILES_ROOT/pwsh/_common.ps1"
+  assert_file_exists "pwsh/install.ps1 存在" "$DOTFILES_ROOT/pwsh/install.ps1"
+  assert_file_exists "pwsh/check.ps1 存在" "$DOTFILES_ROOT/pwsh/check.ps1"
+  assert_file_exists "pwsh/install.sh 存在" "$DOTFILES_ROOT/pwsh/install.sh"
+  assert_file_exists "pwsh/check.sh 存在" "$DOTFILES_ROOT/pwsh/check.sh"
+  assert_file_exists "pwsh/modules/00_env.ps1 存在" "$DOTFILES_ROOT/pwsh/modules/00_env.ps1"
+  assert_file_exists "pwsh/modules/01_aliases.ps1 存在" "$DOTFILES_ROOT/pwsh/modules/01_aliases.ps1"
+  assert_file_exists "pwsh/modules/02_functions.ps1 存在" "$DOTFILES_ROOT/pwsh/modules/02_functions.ps1"
+  assert_file_exists "pwsh/modules/03_prompt.ps1 存在" "$DOTFILES_ROOT/pwsh/modules/03_prompt.ps1"
 
   # .ps1 文件必须带 UTF-8 BOM（PS5.1 无 BOM 时按 GBK 解析会乱码）
   local ps1_file
-  for ps1_file in "$DOTFILES_DIR"/pwsh/*.ps1 "$DOTFILES_DIR"/pwsh/modules/*.ps1; do
+  for ps1_file in "$DOTFILES_ROOT"/pwsh/*.ps1 "$DOTFILES_ROOT"/pwsh/modules/*.ps1; do
     if head -c 3 "$ps1_file" | xxd -p | grep -q "efbbbf"; then
       assert_pass "UTF-8 BOM: $(basename "$ps1_file")"
     else
@@ -672,42 +672,42 @@ test_pwsh_module() {
 
   # check.ps1 关键检查逻辑
   assert_file_contains "check.ps1 包含 Profile 路径检查" \
-    "$DOTFILES_DIR/pwsh/check.ps1" "CurrentUserCurrentHost"
+    "$DOTFILES_ROOT/pwsh/check.ps1" "CurrentUserCurrentHost"
   assert_file_contains "check.ps1 包含冒烟测试" \
-    "$DOTFILES_DIR/pwsh/check.ps1" "Show-Step"
+    "$DOTFILES_ROOT/pwsh/check.ps1" "Show-Step"
   assert_file_contains "check.ps1 包含失败退出码" \
-    "$DOTFILES_DIR/pwsh/check.ps1" "exit 1"
+    "$DOTFILES_ROOT/pwsh/check.ps1" "exit 1"
 
   # bash 侧封装调用链
   assert_file_contains "check.sh 调用 check.ps1" \
-    "$DOTFILES_DIR/pwsh/check.sh" "check.ps1"
+    "$DOTFILES_ROOT/pwsh/check.sh" "check.ps1"
   assert_file_contains "install.sh 调用 install.ps1" \
-    "$DOTFILES_DIR/pwsh/install.sh" "install.ps1"
+    "$DOTFILES_ROOT/pwsh/install.sh" "install.ps1"
 
   # 与既有系统的集成
   assert_file_contains "bootstrap.sh 支持 --pwsh" \
-    "$DOTFILES_DIR/bootstrap.sh" "--pwsh"
+    "$DOTFILES_ROOT/bootstrap.sh" "--pwsh"
   assert_file_contains "Makefile 包含 pwsh-check target" \
-    "$DOTFILES_DIR/Makefile" "pwsh-check"
+    "$DOTFILES_ROOT/Makefile" "pwsh-check"
   assert_file_contains "Makefile doctor 循环包含 pwsh" \
-    "$DOTFILES_DIR/Makefile" "python rust pwsh"
+    "$DOTFILES_ROOT/Makefile" "python rust pwsh"
   assert_file_contains "validate.sh 包含 PowerShell AST 检查" \
-    "$DOTFILES_DIR/validate.sh" "Parser"
+    "$DOTFILES_ROOT/validate.sh" "Parser"
 }
 
 test_platform_files() {
   log_info "测试: 平台文件跨平台检查"
 
   assert_file_not_contains "macos.zsh 无 free 命令" \
-    "$DOTFILES_DIR/zsh/platform/macos.zsh" "free"
+    "$DOTFILES_ROOT/zsh/platform/macos.zsh" "free"
 
   assert_file_not_contains "linux.zsh 无 defaults 命令" \
-    "$DOTFILES_DIR/zsh/platform/linux.zsh" "defaults"
+    "$DOTFILES_ROOT/zsh/platform/linux.zsh" "defaults"
 }
 
 test_performance_script() {
   log_info "测试: profile_performance.sh"
-  local perf_file="$DOTFILES_DIR/zsh/profile_performance.sh"
+  local perf_file="$DOTFILES_ROOT/zsh/profile_performance.sh"
 
   assert_file_exists "profile_performance.sh 存在" "$perf_file"
   assert_file_contains "包含 zprof 检测" "$perf_file" "zprof"
@@ -718,7 +718,7 @@ test_performance_script() {
 
 test_plugin_order() {
   log_info "测试: zinit 插件加载顺序"
-  local plugins_file="$DOTFILES_DIR/zsh/core/04_plugins.zsh"
+  local plugins_file="$DOTFILES_ROOT/zsh/core/04_plugins.zsh"
 
   # zinit 架构下，验证关键插件通过 zinit 加载
   assert_file_contains "zsh-syntax-highlighting 由 zinit 加载" "$plugins_file" "zsh-syntax-highlighting"
@@ -731,7 +731,7 @@ test_plugin_order() {
 
 test_plugin_find_fallback() {
   log_info "测试: zinit 插件管理（无 find 兜底）"
-  local plugins_file="$DOTFILES_DIR/zsh/core/04_plugins.zsh"
+  local plugins_file="$DOTFILES_ROOT/zsh/core/04_plugins.zsh"
 
   # zinit 架构下，插件加载由 zinit 管理，无需 find 兜底
   assert_file_contains "使用 zinit 加载插件" "$plugins_file" "zinit"
@@ -741,7 +741,7 @@ test_plugin_find_fallback() {
 
 test_plugin_error_messages() {
   log_info "测试: zinit 错误处理"
-  local plugins_file="$DOTFILES_DIR/zsh/core/04_plugins.zsh"
+  local plugins_file="$DOTFILES_ROOT/zsh/core/04_plugins.zsh"
 
   # zinit 架构下，验证错误处理机制
   assert_file_contains "包含 ZSH_DISABLE_PLUGINS 开关" "$plugins_file" "ZSH_DISABLE_PLUGINS"
@@ -758,7 +758,7 @@ test_install_simulated() {
 
   setup_test_env "$ostype" "$arch"
 
-  local install_script="$DOTFILES_DIR/zsh/install.sh"
+  local install_script="$DOTFILES_ROOT/zsh/install.sh"
 
   # 运行 install.sh (带超时保护，兼容 macOS 无 timeout 的情况)
   log_info "执行 install.sh..."

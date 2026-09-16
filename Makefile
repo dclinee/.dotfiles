@@ -43,24 +43,19 @@ install: editorconfig git ssh brew zsh vim emacs wezterm python rust tmux pwsh #
 
 zsh: ## 安装 Zsh 配置
 	@printf "$(CYAN)→ 安装 Zsh 配置...$(RESET)\n"
-	@bash zsh/install.sh
+	@bash bootstrap.sh --zsh
 
 vim: ## 安装 Vim 配置
 	@printf "$(CYAN)→ 安装 Vim 配置...$(RESET)\n"
-	@bash vim/install.sh
+	@bash bootstrap.sh --vim
 
 emacs: ## 安装 Emacs 配置
 	@printf "$(CYAN)→ 安装 Emacs 配置...$(RESET)\n"
-	@if [ -f emacs/install.sh ]; then \
-		bash emacs/install.sh || \
-			printf "$(YELLOW)⚠️  Emacs 安装出现警告，请查看日志$(RESET)\n"; \
-	else \
-		printf "$(YELLOW)⚠️  emacs/install.sh 不存在$(RESET)\n"; \
-	fi
+	@bash bootstrap.sh --emacs
 
 wezterm: ## 安装 WezTerm 配置
 	@printf "$(CYAN)→ 安装 WezTerm 配置...$(RESET)\n"
-	@bash wezterm/install.sh
+	@bash bootstrap.sh --wezterm
 
 wezterm-check: ## WezTerm 环境体检
 	@printf "$(CYAN)→ WezTerm 环境体检...$(RESET)\n"
@@ -78,12 +73,7 @@ brew: ## 安装 Homebrew 包
 
 python: ## 配置 Python 环境（uv 优先）
 	@printf "$(CYAN)→ 配置 Python 环境...$(RESET)\n"
-	@if [ -f python/install.sh ]; then \
-		bash python/install.sh || \
-			printf "$(YELLOW)⚠️  Python 安装出现警告，请查看日志$(RESET)\n"; \
-	else \
-		printf "$(YELLOW)⚠️  python/install.sh 不存在$(RESET)\n"; \
-	fi
+	@bash bootstrap.sh --python
 
 python-check: ## Python 环境体检
 	@printf "$(CYAN)→ Python 环境体检...$(RESET)\n"
@@ -134,12 +124,7 @@ python-pin: ## 固化当前 Python 版本到 versions.lock
 
 rust: ## 配置 Rust 环境
 	@printf "$(CYAN)→ 配置 Rust 环境...$(RESET)\n"
-	@if [ -f rust/install.sh ]; then \
-		bash rust/install.sh || \
-			printf "$(YELLOW)⚠️  Rust 安装出现警告，请查看日志$(RESET)\n"; \
-	else \
-		printf "$(YELLOW)⚠️  rust/install.sh 不存在$(RESET)\n"; \
-	fi
+	@bash bootstrap.sh --rust
 
 rust-check: ## Rust 环境体检
 	@printf "$(CYAN)→ Rust 环境体检...$(RESET)\n"
@@ -180,7 +165,7 @@ editorconfig: ## 安装 EditorConfig
 
 pwsh: ## 安装 PowerShell 配置（跨平台；无 pwsh 运行时时自动跳过）
 	@printf "$(CYAN)→ 安装 PowerShell 配置...$(RESET)\n"
-	@bash pwsh/install.sh
+	@bash bootstrap.sh --pwsh
 
 pwsh-check: ## PowerShell 环境体检
 	@printf "$(CYAN)→ PowerShell 环境体检...$(RESET)\n"
@@ -189,7 +174,7 @@ pwsh-check: ## PowerShell 环境体检
 
 ssh: ## 安装 SSH 配置
 	@printf "$(CYAN)→ 安装 SSH 配置...$(RESET)\n"
-	@bash ssh/install.sh
+	@bash bootstrap.sh --ssh
 
 ssh-check: ## SSH 环境体检
 	@printf "$(CYAN)→ SSH 环境体检...$(RESET)\n"

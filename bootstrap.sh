@@ -41,7 +41,8 @@ set -euo pipefail
 # ======================
 # 变量定义
 # ======================
-DOTFILES_DIR="${HOME}/.dotfiles"
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_ROOT="${DOTFILES_DIR}"
 LOG_FILE="/tmp/dotfiles_bootstrap_$(date +%Y%m%d_%H%M%S).log"
 ROLLBACK_DIR="${HOME}/.cache/dotfiles_rollback_$(date +%Y%m%d_%H%M%S)"
 ROLLBACK_MANIFEST="${ROLLBACK_DIR}/manifest.txt"
@@ -63,57 +64,14 @@ INSTALL_EDITORCONFIG=false
 INSTALL_PWSH=false
 
 # ======================
-# 颜色与输出
+# 加载共享库（fail-fast）
 # ======================
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-BLUE="\033[34m"
-CYAN="\033[36m"
-RESET="\033[0m"
-BOLD="\033[1m"
-ARROW="➡️"
-SKIP="⏭️"
-
-echo_step()      { printf "${BOLD}${BLUE}➜  %s${RESET}\n"  "${1}"; }
-echo_success()   { printf "${GREEN}✓ %s${RESET}\n"         "${1}"; }
-echo_warning()   { printf "${YELLOW}⚠  %s${RESET}\n"       "${1}"; }
-echo_error()     { printf "${RED}✗ %s${RESET}\n"           "${1}"; }
-echo_skip()      { printf "${CYAN}⊘ %s${RESET}\n"          "${1}"; }
-echo_detail()    { printf "${BLUE}  %s${RESET}\n"           "${1}"; }
-echo_separator() { printf "${BLUE}=============================================${RESET}\n"; }
-echo_title() {
-  echo_separator
-  printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
-  echo_separator
-}
-
-# ======================
-# 加载公共符号链接函数库
-# ======================
-_SYMLINK_LIB="${DOTFILES_DIR}/lib/symlink.sh"
-if [[ -f "${_SYMLINK_LIB}" ]]; then
-  # shellcheck source=/dev/null
-  source "${_SYMLINK_LIB}"
-else
-  # 回退：当 lib/symlink.sh 不可用时使用内联定义
-  safe_symlink() {
-    local src="$1" dst="$2"
-    [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
-    if [[ -L "$dst" ]] && [[ "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
-      echo_skip "链接已存在: $dst"; return 0
-    fi
-    if [[ "${DRY_RUN:-false}" == "true" ]]; then
-      echo_detail "[dry-run] 将链接: $dst → $src"; return 0
-    fi
-    if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
-      local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
-      mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
-    fi
-    mkdir -p "$(dirname "$dst")" 2>/dev/null
-    ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
-  }
-fi
+# shellcheck source=/dev/null
+source "${DOTFILES_ROOT}/lib/output.sh" || { printf 'ERROR: lib/output.sh 不可用\n' >&2; exit 1; }
+# shellcheck source=/dev/null
+source "${DOTFILES_ROOT}/lib/symlink.sh" || { printf 'ERROR: lib/symlink.sh 不可用\n' >&2; exit 1; }
+# shellcheck source=/dev/null
+source "${DOTFILES_ROOT}/lib/common.sh" || { printf 'ERROR: lib/common.sh 不可用\n' >&2; exit 1; }
 
 # ======================
 # 自动回滚机制
@@ -122,7 +80,7 @@ fi
 # 初始化回滚目录
 _init_rollback() {
   # dry-run 下无文件改动，不创建快照目录
-  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+  if is_dry_run; then
     echo_detail "[dry-run] 跳过回滚快照初始化"
     return 0
   fi
@@ -290,7 +248,7 @@ _run_with_rollback() {
   shift
 
   # dry-run：安装函数内部的文件操作各自只打印，无改动则无需快照/回滚
-  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+  if is_dry_run; then
     local _dry_rc=0
     "$install_func" "$@" || _dry_rc=$?
     return "${_dry_rc}"
@@ -745,7 +703,7 @@ main() {
   parse_args "$@"
 
   echo_title "Dotfiles 一键安装"
-  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+  if is_dry_run; then
     echo_warning "DRY-RUN 预演模式：软链创建/备份/删除只打印，不实际修改配置文件"
   fi
   echo "安装日志: ${LOG_FILE}"

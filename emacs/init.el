@@ -154,7 +154,8 @@
 (require 'init-avy)
 (require 'init-helpful)
 
-(require 'init-deepseek)
+(with-eval-after-load 'corfu
+  (require 'init-deepseek))
 (require 'init-vterm)
 (require 'init-icons)
 

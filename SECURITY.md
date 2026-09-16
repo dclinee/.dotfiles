@@ -11,7 +11,7 @@
 
 ## 已采取的措施
 
-- `.gitignore` 排除了 `.env`、`.pem`、`.ssh/` 等敏感文件
+- `.gitignore` 排除了 `.env`、`.env.local`、`.env.*.local`、`.codeartsdoer/`、`.pem`、`.key`、`.crt`、`*.local` 等敏感文件
 - Git 配置使用 `.gitconfig.local` 存储个人信息，不提交到仓库
 - SSH 配置使用 `config.local` 存储主机别名和密钥路径
 - `safe_symlink` 函数防止覆盖已有配置文件

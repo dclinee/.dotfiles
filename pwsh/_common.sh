@@ -18,10 +18,4 @@ select_pwsh_bin() {
   command -v pwsh 2>/dev/null || command -v powershell 2>/dev/null || true
 }
 
-# 返回 PowerShell 主版本号（7 / 5），不可用时返回非零
-get_pwsh_version() {
-  local bin
-  bin="$(select_pwsh_bin)"
-  [[ -n "${bin}" ]] || return 1
-  "${bin}" -NoProfile -Command '$PSVersionTable.PSVersion.Major' 2>/dev/null
-}
+

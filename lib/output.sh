@@ -9,7 +9,7 @@
 # 适用于 bash 和 zsh 脚本
 #
 # 使用方法:
-#   source "${DOTFILES_DIR}/lib/output.sh"
+#   source "${DOTFILES_ROOT}/lib/output.sh"
 #   echo_step "开始执行"
 #   echo_success "完成"
 

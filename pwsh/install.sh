@@ -32,7 +32,7 @@ if [[ -z "${PWSH_BIN}" ]]; then
 fi
 
 pwsh_args=("$@")
-if [[ "${DRY_RUN:-false}" == "true" ]]; then
+if is_dry_run; then
   pwsh_args+=("-DryRun")
 fi
 

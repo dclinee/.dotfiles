@@ -11,8 +11,8 @@
 # 依赖: lib/output.sh 中的 echo_warning / echo_skip / echo_detail / echo_error
 #
 # 使用方法:
-#   source "${DOTFILES_DIR}/lib/symlink.sh"
-#   safe_symlink "${DOTFILES_DIR}/zsh/.zshrc" "${HOME}/.zshrc"
+#   source "${DOTFILES_ROOT}/lib/symlink.sh"
+#   safe_symlink "${DOTFILES_ROOT}/zsh/.zshrc" "${HOME}/.zshrc"
 
 if [[ -z "${__SYMLINK_SH_LOADED:-}" ]]; then
   __SYMLINK_SH_LOADED=1

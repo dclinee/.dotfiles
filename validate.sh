@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # 配置变量
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 temp_dir=$(mktemp -d)
 trap 'rm -rf ${temp_dir}' EXIT
 
@@ -67,7 +67,7 @@ simulate_install() {
   log SIM "模拟安装流程："
 
   # Brew 安装模拟（实际文件名为 install.sh）
-  local brew_script="${DOTFILES_DIR}/brew/install.sh"
+  local brew_script="${DOTFILES_ROOT}/brew/install.sh"
   if [ -f "${brew_script}" ]; then
     log SIM "[Brew] 将执行："
     grep 'brew bundle\|brew install' "${brew_script}" || true
@@ -75,7 +75,7 @@ simulate_install() {
 
   # Zsh 安装模拟
   log SIM "[Zsh] 将配置："
-  find "${DOTFILES_DIR}/zsh" -name '*.zsh' -exec grep -E '^source|^export' {} \; | sort | uniq | head -20
+  find "${DOTFILES_ROOT}/zsh" -name '*.zsh' -exec grep -E '^source|^export' {} \; | sort | uniq | head -20
 }
 
 # 功能验证
@@ -86,8 +86,8 @@ validate_functionality() {
   # 排除 .md 文档和 .git 目录，只验证可执行配置
   local dir
   for dir in zsh brew vim wezterm; do
-    if [[ -d "${DOTFILES_DIR}/${dir}" ]]; then
-      cp -r "${DOTFILES_DIR}/${dir}" "${temp_dir}/" 2>/dev/null || true
+    if [[ -d "${DOTFILES_ROOT}/${dir}" ]]; then
+      cp -r "${DOTFILES_ROOT}/${dir}" "${temp_dir}/" 2>/dev/null || true
       # 移除文档和非配置文件
       find "${temp_dir}/${dir}" -name '*.md' -delete 2>/dev/null || true
     fi
@@ -190,7 +190,7 @@ validate_functionality() {
   # 验证SSH配置（直接在源目录验证，Include 使用绝对路径）
   log INFO "验证SSH配置..."
 
-  local ssh_config="${DOTFILES_DIR}/ssh/config"
+  local ssh_config="${DOTFILES_ROOT}/ssh/config"
   if [[ ! -f "${ssh_config}" ]]; then
     log WARN "未找到 ssh/config，跳过"
   elif ! command -v ssh > /dev/null 2>&1; then
@@ -209,7 +209,7 @@ validate_functionality() {
   # 验证Emacs配置（对 lisp/*.el 做字节编译，不触发包安装/网络）
   log INFO "验证Emacs配置..."
 
-  local emacs_lisp_dir="${DOTFILES_DIR}/emacs/lisp"
+  local emacs_lisp_dir="${DOTFILES_ROOT}/emacs/lisp"
   if [[ ! -d "${emacs_lisp_dir}" ]]; then
     log WARN "未找到 emacs/lisp/，跳过"
   elif ! command -v emacs > /dev/null 2>&1; then
@@ -218,7 +218,7 @@ validate_functionality() {
     local all_valid_emacs=true
     while IFS= read -r -d '' file; do
       # batch-byte-compile 只做语法检查，不实际 require 依赖
-      if ! (cd "${DOTFILES_DIR}/emacs" && emacs --batch -f batch-byte-compile "${file}" 2>/dev/null); then
+      if ! (cd "${DOTFILES_ROOT}/emacs" && emacs --batch -f batch-byte-compile "${file}" 2>/dev/null); then
         log ERROR "$(basename "${file}") 字节编译失败"
         all_valid_emacs=false
       fi
@@ -236,9 +236,9 @@ validate_functionality() {
   log INFO "验证Git配置..."
   {
     local git_files=(
-      "${DOTFILES_DIR}/git/.gitconfig"
-      "${DOTFILES_DIR}/git/.gitignore_global"
-      "${DOTFILES_DIR}/git/.gitattributes"
+      "${DOTFILES_ROOT}/git/.gitconfig"
+      "${DOTFILES_ROOT}/git/.gitignore_global"
+      "${DOTFILES_ROOT}/git/.gitattributes"
     )
     local all_valid_git=true
     for gf in "${git_files[@]}"; do
@@ -264,7 +264,7 @@ validate_functionality() {
   # 验证 Tmux 配置（tmux -f 静默启动只做语法检查）
   log INFO "验证Tmux配置..."
   {
-    local tmux_conf="${DOTFILES_DIR}/tmux/.tmux.conf"
+    local tmux_conf="${DOTFILES_ROOT}/tmux/.tmux.conf"
     if [[ ! -f "${tmux_conf}" ]]; then
       log WARN "未找到 tmux/.tmux.conf，跳过"
     elif ! command -v tmux > /dev/null 2>&1; then
@@ -307,11 +307,11 @@ foreach ($f in $Files) {
 exit $failed
 PSSYNTAX_EOF
       local ps_files=(
-        "${DOTFILES_DIR}/pwsh/profile.ps1"
-        "${DOTFILES_DIR}/pwsh/_common.ps1"
-        "${DOTFILES_DIR}/pwsh/install.ps1"
-        "${DOTFILES_DIR}/pwsh/check.ps1"
-        "${DOTFILES_DIR}/pwsh/modules"/*.ps1
+        "${DOTFILES_ROOT}/pwsh/profile.ps1"
+        "${DOTFILES_ROOT}/pwsh/_common.ps1"
+        "${DOTFILES_ROOT}/pwsh/install.ps1"
+        "${DOTFILES_ROOT}/pwsh/check.ps1"
+        "${DOTFILES_ROOT}/pwsh/modules"/*.ps1
       )
       if pwsh -NoProfile -ExecutionPolicy Bypass \
            -File "${temp_dir}/ps_syntax_check.ps1" -Files "${ps_files[@]}"; then

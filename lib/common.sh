@@ -44,10 +44,9 @@ if [[ -z "${DOTFILES_ROOT:-}" ]]; then
 fi
 
 # ======================
-# 1. 自动加载依赖库（含 fallback，保证任何时候输出函数都可用）
+# 1. 自动加载依赖库（fail-fast：库缺失则报错退出）
 # ======================
 _common_load_libs() {
-  # 尝试加载 lib/output.sh
   if [[ -n "${__OUTPUT_SH_LOADED:-}" ]]; then
     return 0
   fi
@@ -57,33 +56,8 @@ _common_load_libs() {
     source "${_output_lib}"
     return 0
   fi
-
-  # Fallback: 内联最小化 output 函数（当 lib 缺失时不崩）
-  # 注意：此处图标与 lib/output.sh 保持同步（Oh My Zsh 风格）
-  if [[ -n "${NO_COLOR:-}" ]] || [[ ! -t 1 ]]; then
-    RED="" GREEN="" YELLOW="" BLUE="" CYAN="" RESET="" BOLD=""
-  else
-    RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; BLUE="\033[34m"
-    CYAN="\033[36m"; RESET="\033[0m"; BOLD="\033[1m"
-  fi
-  CHECK="✓"; INFO="➜"; WARN="⚠"; ERROR="✗"; SKIP="⊘"
-  # 兼容保留：ARROW/WHITE（旧脚本引用，避免 set -u 崩溃）
-  ARROW="${INFO}"
-  WHITE=$([[ -z "${NO_COLOR:-}" && -t 1 ]] && printf '\033[37m' || printf '')
-  SEPARATOR="${BLUE}============================================${RESET}"
-  echo_step()      { printf "${BOLD}${BLUE}${INFO}  %s${RESET}\n"  "${1}"; }
-  echo_success()   { printf "${GREEN}${CHECK} %s${RESET}\n"        "${1}"; }
-  echo_warning()   { printf "${YELLOW}${WARN}  %s${RESET}\n"        "${1}"; }
-  echo_error()     { printf "${RED}${ERROR} %s${RESET}\n"          "${1}"; }
-  echo_skip()      { printf "${CYAN}${SKIP} %s${RESET}\n"          "${1}"; }
-  echo_detail()    { printf "${BLUE}  %s${RESET}\n"                "${1}"; }
-  echo_separator() { printf '%b\n' "${SEPARATOR}"; }
-  echo_title() {
-    echo_separator
-    printf "${BOLD}${CYAN}%s${RESET}\n" "${1}"
-    echo_separator
-  }
-  __OUTPUT_SH_LOADED=1
+  printf 'ERROR: lib/output.sh 不可用，请检查仓库完整性\n' >&2
+  exit 1
 }
 
 _common_load_symlink() {
@@ -96,33 +70,8 @@ _common_load_symlink() {
     source "${_symlink_lib}"
     return 0
   fi
-
-  # Fallback: 内联 safe_symlink 最小化实现
-  # 注意：此处与 lib/symlink.sh 保持同步（含 _resolve_link 跨平台兼容）
-  _resolve_link() {
-    local target="$1"
-    if readlink -f "$target" 2>/dev/null; then
-      return 0
-    fi
-    python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$target" 2>/dev/null || echo "$target"
-  }
-  safe_symlink() {
-    local src="$1" dst="$2"
-    [[ -e "$src" ]] || { echo_warning "源文件不存在: $src"; return 1; }
-    if [[ -L "$dst" ]] && [[ "$(_resolve_link "$dst")" == "$(_resolve_link "$src")" ]]; then
-      echo_skip "链接已存在: $dst"; return 0
-    fi
-    if [[ "${DRY_RUN:-false}" == "true" ]]; then
-      echo_detail "[dry-run] 将链接: $dst → $src"; return 0
-    fi
-    if [[ -e "$dst" ]] || [[ -L "$dst" ]]; then
-      local backup="${dst}.bak.$(date +%Y%m%d_%H%M%S 2>/dev/null || echo bak)"
-      mv "$dst" "$backup" 2>/dev/null && echo_warning "已备份: $dst → $backup"
-    fi
-    mkdir -p "$(dirname "$dst")" 2>/dev/null
-    ln -sf "$src" "$dst" 2>/dev/null && echo_detail "已链接: $dst → $src" || { echo_error "链接失败: $dst"; return 1; }
-  }
-  __SYMLINK_SH_LOADED=1
+  printf 'ERROR: lib/symlink.sh 不可用，请检查仓库完整性\n' >&2
+  exit 1
 }
 
 _common_load_net() {
@@ -135,8 +84,8 @@ _common_load_net() {
     source "${_net_lib}"
     return 0
   fi
-  # Fallback: net.sh 缺失时不崩，但无镜像回退能力
-  __NET_SH_LOADED=1
+  printf 'ERROR: lib/net.sh 不可用，请检查仓库完整性\n' >&2
+  exit 1
 }
 
 # 执行自动加载（在 DOTFILES_ROOT 已定义后立即调用）
@@ -159,16 +108,6 @@ is_dry_run() {
   [[ "${DRY_RUN:-false}" == "true" ]]
 }
 
-# 获取工具版本（兼容 "name --version" 和 "name version" 两种输出格式）
-# 用法: get_version rustc → "1.80.0"
-get_version() {
-  local cmd="$1"
-  has_cmd "$cmd" || return 1
-  # 优先 --version，失败则 version
-  local out
-  out=$("$cmd" --version 2>&1 | head -1 || true) || out=$("$cmd" version 2>&1 | head -1 || true)
-  echo "$out" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true
-}
 
 # ======================
 # 3. tools.list 解析器
@@ -271,17 +210,6 @@ check_summary() {
 #   check_symlinks "${configs[@]}"     # check.sh 用：验证软链是否正确
 #   remove_symlinks "${configs[@]}"    # uninstall.sh 用：删除软链
 
-# 跨平台 resolve symlink（macOS BSD readlink 不支持 -f）
-# 注意: 若 lib/symlink.sh 或 fallback 已定义则跳过（避免重复定义）
-if ! command -v _resolve_link > /dev/null 2>&1; then
-  _resolve_link() {
-    local target="$1"
-    if readlink -f "$target" 2>/dev/null; then
-      return 0
-    fi
-    python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$target" 2>/dev/null || echo "$target"
-  }
-fi
 
 # 批量检查软链状态（check.sh 专用）
 # 对每个 "dst|src"：

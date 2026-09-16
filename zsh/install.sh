@@ -16,9 +16,9 @@ LOG_FILE="/tmp/dotfiles_install_$(date +%Y%m%d_%H%M%S).log"
 source "$(dirname "$0")/_common.sh"
 
 # 确定配置目录
-DOTFILES_DIR="${ZSH_DIR}"
-ZSH_HOME="${DOTFILES_DIR}"
-PLUGINS_DIR="${DOTFILES_DIR}/plugins"
+DOTFILES_ROOT="${ZSH_DIR}"
+ZSH_HOME="${DOTFILES_ROOT}"
+PLUGINS_DIR="${DOTFILES_ROOT}/plugins"
 
 # ======================
 
@@ -174,7 +174,7 @@ main() {
   # 创建 .zshrc 符号链接
   echo_step "配置 .zshrc 符号链接..."
   if [[ ! -L "${HOME}/.zshrc" ]]; then
-    safe_symlink "${DOTFILES_DIR}/.zshrc" "${HOME}/.zshrc" || true
+    safe_symlink "${DOTFILES_ROOT}/.zshrc" "${HOME}/.zshrc" || true
     echo_success "已创建 .zshrc 符号链接"
   else
     echo_warning ".zshrc 符号链接已存在"
@@ -183,7 +183,7 @@ main() {
   # 创建 .zshenv 符号链接（用于所有 zsh 会话的环境变量初始化）
   echo_step "配置 .zshenv 符号链接..."
   if [[ ! -L "${HOME}/.zshenv" ]]; then
-    safe_symlink "${DOTFILES_DIR}/.zshenv" "${HOME}/.zshenv" || true
+    safe_symlink "${DOTFILES_ROOT}/.zshenv" "${HOME}/.zshenv" || true
     echo_success "已创建 .zshenv 符号链接"
   else
     echo_warning ".zshenv 符号链接已存在"
