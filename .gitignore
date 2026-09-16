@@ -13,6 +13,9 @@ logs/
 .DS_Store
 Thumbs.db
 
+# 版本锁定（由 pin.sh 运行时生成）
+versions.lock
+
 # 沙盒环境
 dotfiles-sandbox-*/
 

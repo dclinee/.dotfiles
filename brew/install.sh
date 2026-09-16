@@ -30,33 +30,6 @@ if [[ -z "${NO_MIRROR:-}" ]]; then
   export HOMEBREW_API_DOMAIN="https://mirrors.ustc.edu.cn/homebrew-bottles/api"
 fi
 
-# 安全下载并执行脚本（替代 curl | bash）
-_download_and_run() {
-  local url="$1"
-  shift
-  local tmp_file
-  tmp_file="$(mktemp)"
-  trap 'rm -f "${tmp_file}"' EXIT RETURN
-
-  echo_step "下载脚本: ${url}"
-  if ! curl -fsSL "${url}" -o "${tmp_file}" 2>>"${LOG_FILE}"; then
-    echo_error "下载失败: ${url}"
-    rm -f "${tmp_file}"
-    trap - EXIT RETURN
-    return 1
-  fi
-
-  echo_step "执行下载的安装脚本..."
-  bash "${tmp_file}" "$@" 2>>"${LOG_FILE}" || {
-    local rc=$?
-    rm -f "${tmp_file}"
-    trap - EXIT RETURN
-    return $rc
-  }
-  rm -f "${tmp_file}"
-  trap - EXIT RETURN
-  return 0
-}
 
 _detect_brew_prefix() {
   if [[ "$(uname)" == "Linux" ]] && [[ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
@@ -77,7 +50,7 @@ _install_brew() {
   if [[ -n "${NO_MIRROR:-}" ]]; then
     mirror_url="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
   fi
-  _download_and_run "${mirror_url}"
+  dotfiles_install_script "${mirror_url}" 2>>"${LOG_FILE}"
 }
 
 _configure_brew_env() {
@@ -155,7 +128,7 @@ main() {
     local install_url
     install_url="${HOMEBREW_BREW_GIT_REMOTE:-https://mirrors.ustc.edu.cn/misc/brew-install.sh}"
 
-    if _download_and_run "${install_url}"; then
+    if dotfiles_install_script "${install_url}" 2>>"${LOG_FILE}"; then
       COMPLETED_STEPS+=("brew-install")
     else
       FAILED_STEPS+=("brew-install")

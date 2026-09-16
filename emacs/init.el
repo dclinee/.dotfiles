@@ -152,9 +152,7 @@
 (require 'init-direnv)
 (require 'init-avy)
 (require 'init-helpful)
-;; Helm 已停用：补全体系统一切到 Vertico/Consult（见 init-minibuffer.el）。
-;; 保留 init-helm.el 便于回退；确认稳定后可卸载 helm/helm-core/helm-org/helm-projectile/helm-rg。
-;; (require 'init-helm)
+
 (require 'init-deepseek)
 (require 'init-vterm)
 (require 'init-icons)

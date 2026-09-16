@@ -25,17 +25,17 @@
     (when (maybe-require-package 'projectile)
       (setq-default consult-project-root-function 'projectile-project-root))
 
-    ;; consult-projectile：helm-projectile 的替代品（多源聚合：项目文件/buffer/最近文件/项目列表）
+    ;; consult-projectile：多源聚合（项目文件/buffer/最近文件/项目列表）
     (when (maybe-require-package 'consult-projectile)
       (with-eval-after-load 'projectile
-        ;; projectile 命令（C-c p f/p/b 等）统一走 Vertico 而非 Helm
+        ;; projectile 命令（C-c p f/p/b 等）统一走 Vertico
         (setq projectile-completion-system 'default)
-        ;; 保留原 helm-projectile 的肌肉记忆：C-c p h
+        ;; C-c p h：项目级聚合搜索
         (define-key projectile-command-map (kbd "h") #'consult-projectile)))
 
-    ;; Helm 移除后补齐的全局按键
-    (global-set-key (kbd "M-y")   'consult-yank-pop)   ; 原 helm-show-kill-ring
-    (global-set-key (kbd "M-s l") 'consult-line)       ; 当前缓冲区内容搜索（原 C-s 上的 helm-occur）
+    ;; 全局补全按键
+    (global-set-key (kbd "M-y")   'consult-yank-pop)   ; kill-ring 浏览
+    (global-set-key (kbd "M-s l") 'consult-line)       ; 当前缓冲区内容搜索
     (global-set-key (kbd "M-s r") 'consult-ripgrep)    ; 项目内 ripgrep 全文搜索
 
     (when (and (executable-find "rg") (maybe-require-package 'affe))

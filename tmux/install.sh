@@ -12,31 +12,6 @@ source "$(dirname "$0")/_common.sh"
 
 TMUX_HOME="${TMUX_DIR}"
 
-# 安全下载并执行脚本（替代 curl | bash）
-_download_and_run() {
-  local url="$1"
-  local tmp_file
-  tmp_file="$(mktemp)"
-  trap "rm -f '${tmp_file}'" EXIT RETURN
-
-  echo_step "下载脚本: ${url}"
-  if ! curl -fsSL "${url}" -o "${tmp_file}" 2>>"${LOG_FILE}"; then
-    echo_error "下载失败: ${url}"
-    rm -f "${tmp_file}"
-    trap - EXIT RETURN
-    return 1
-  fi
-
-  bash "${tmp_file}" 2>>"${LOG_FILE}" || {
-    local rc=$?
-    rm -f "${tmp_file}"
-    trap - EXIT RETURN
-    return $rc
-  }
-  rm -f "${tmp_file}"
-  trap - EXIT RETURN
-  return 0
-}
 
 install_tmux_binary() {
   if command -v tmux > /dev/null 2>&1; then

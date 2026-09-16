@@ -21,39 +21,7 @@ ZSH_HOME="${DOTFILES_DIR}"
 PLUGINS_DIR="${DOTFILES_DIR}/plugins"
 
 # ======================
-# 安全下载并执行脚本
-# ======================
-# 用法: _download_and_run <url> [args...]
-# 替代 curl ... | sh 模式，先下载到临时文件再执行
-_download_and_run() {
-  local url="$1"
-  shift
-  local tmp_file
-  tmp_file="$(mktemp)"
-  # 双引号烘烤路径，return 前清理 trap 避免污染调用者
-  trap "rm -f '${tmp_file}'" EXIT RETURN
 
-  echo_step "下载脚本: ${url}"
-  if ! curl -fsSL "${url}" -o "${tmp_file}" 2>>"${LOG_FILE}"; then
-    echo_error "下载失败: ${url}"
-    rm -f "${tmp_file}"
-    trap - EXIT RETURN
-    return 1
-  fi
-
-  printf "${BOLD}${CYAN}${ARROW} 执行脚本（参数: %s）...${RESET}\n" "$*"
-  bash "${tmp_file}" "$@" 2>>"${LOG_FILE}" || {
-    local rc=$?
-    rm -f "${tmp_file}"
-    trap - EXIT RETURN
-    return $rc
-  }
-  rm -f "${tmp_file}"
-  trap - EXIT RETURN
-  return 0
-}
-
-# ======================
 # 插件管理器安装（zinit）
 # ======================
 install_plugins() {
