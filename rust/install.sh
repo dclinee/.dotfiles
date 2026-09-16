@@ -47,34 +47,23 @@ install_rustup() {
   echo_step "安装 rustup..."
 
   local rustup_url="https://sh.rustup.rs"
-  local tmp_script
-  tmp_script="$(mktemp)"
-  trap "rm -f '${tmp_script}'" EXIT RETURN
 
-  # SJTU 镜像加速（受 NO_MIRROR 控制）
+  # SJTU 镜像加速工具链下载（受 NO_MIRROR 控制）
   if [[ -z "${NO_MIRROR:-}" ]]; then
     export RUSTUP_DIST_SERVER="https://mirrors.sjtug.sjtu.edu.cn/rust-static"
     export RUSTUP_UPDATE_ROOT="https://mirrors.sjtug.sjtu.edu.cn/rust-static/rustup"
   fi
 
-  if ! curl -fsSL "${rustup_url}" -o "${tmp_script}" 2>>"${LOG_FILE}"; then
-    echo_error "无法下载 rustup 安装脚本"
-    echo "  手动安装: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-    rm -f "${tmp_script}"; trap - EXIT RETURN
-    return 1
-  fi
-
-  if sh "${tmp_script}" -y --default-toolchain stable 2>>"${LOG_FILE}"; then
+  # 使用 dotfiles_install_script 自动镜像回退: 原始源 → ghproxy → gh-proxy
+  if dotfiles_install_script "${rustup_url}" -y --default-toolchain stable 2>>"${LOG_FILE}"; then
     echo_success "rustup 安装完成"
     # shellcheck source=/dev/null
     source "${HOME}/.cargo/env" 2>/dev/null || true
   else
     echo_error "rustup 安装失败，请查看日志: ${LOG_FILE}"
-    rm -f "${tmp_script}"; trap - EXIT RETURN
+    echo "  手动安装: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
     return 1
   fi
-
-  rm -f "${tmp_script}"; trap - EXIT RETURN
 }
 
 # ======================

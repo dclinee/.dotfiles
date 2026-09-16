@@ -24,6 +24,12 @@ if empty(glob(s:plug_path))
 endif
 
 " 插件列表
+" vim-plug 插件下载镜像加速（受 NO_MIRROR 环境变量控制）
+" 仅影响首次克隆；已安装插件不受影响
+if empty($NO_MIRROR)
+  let g:plug_url_format = 'https://ghproxy.net/https://github.com/%s.git'
+endif
+
 call plug#begin('~/.vim/plugged')
 
 " 主题插件（LazyVim 风格配色，默认 Gruvbox + Tokyo Night 风格高亮）

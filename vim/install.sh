@@ -213,6 +213,33 @@ install_vim_plug() {
 }
 
 # ======================
+# 配置 coc.nvim npm 镜像（加速扩展安装）
+# ======================
+# coc.nvim 扩展从 npm registry 下载，默认无镜像
+# 在 coc extensions 目录放置 .npmrc，仅影响 coc 扩展安装，不污染全局 npm
+configure_coc_npm_mirror() {
+  if [[ -n "${NO_MIRROR:-}" ]]; then
+    return 0
+  fi
+
+  local coc_ext_dir="${HOME}/.config/coc/extensions"
+  local npmrc_file="${coc_ext_dir}/.npmrc"
+
+  if is_dry_run; then
+    echo_detail "[dry-run] 将创建: ${npmrc_file}"
+    return 0
+  fi
+
+  mkdir -p "${coc_ext_dir}" 2>/dev/null
+  if [[ ! -f "${npmrc_file}" ]] || ! grep -q 'npmmirror' "${npmrc_file}" 2>/dev/null; then
+    printf 'registry=https://registry.npmmirror.com\n' > "${npmrc_file}"
+    echo_success "coc.nvim npm 镜像已配置 (npmmirror)"
+  else
+    echo_skip "coc.nvim npm 镜像已存在"
+  fi
+}
+
+# ======================
 # 主流程
 # ======================
 main() {
@@ -227,6 +254,7 @@ main() {
   create_nvim_link
   create_cache_dirs
   install_vim_plug
+  configure_coc_npm_mirror
 
   echo_separator
   printf "${GREEN}${CHECK} ${BOLD}Vim 配置安装完成！${RESET}\n"

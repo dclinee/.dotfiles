@@ -125,9 +125,24 @@ _common_load_symlink() {
   __SYMLINK_SH_LOADED=1
 }
 
+_common_load_net() {
+  if [[ -n "${__NET_SH_LOADED:-}" ]]; then
+    return 0
+  fi
+  local _net_lib="${DOTFILES_ROOT:-${HOME}/.dotfiles}/lib/net.sh"
+  if [[ -f "${_net_lib}" ]]; then
+    # shellcheck source=/dev/null
+    source "${_net_lib}"
+    return 0
+  fi
+  # Fallback: net.sh 缺失时不崩，但无镜像回退能力
+  __NET_SH_LOADED=1
+}
+
 # 执行自动加载（在 DOTFILES_ROOT 已定义后立即调用）
 _common_load_libs
 _common_load_symlink
+_common_load_net
 
 # ======================
 # 2. 通用小工具函数

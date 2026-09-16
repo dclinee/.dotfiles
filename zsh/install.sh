@@ -131,10 +131,10 @@ _install_zinit_manual() {
 install_essential_tools() {
   echo_step "检查必备工具..."
 
-  # 安装 starship 主题
+  # 安装 starship 主题（使用 dotfiles_install_script 自动镜像回退）
   if ! command -v starship > /dev/null; then
     printf "${BOLD}${CYAN}${ARROW} 安装 starship 主题...${RESET}\n"
-    if _download_and_run "https://starship.rs/install.sh" -y > /dev/null 2>&1; then
+    if dotfiles_install_script "https://starship.rs/install.sh" -y > /dev/null 2>&1; then
       echo_success "starship 安装完成"
     else
       echo_warning "starship 安装失败，请手动安装: curl -sS https://starship.rs/install.sh | sh"

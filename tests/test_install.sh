@@ -500,7 +500,7 @@ test_install_error_handling() {
   log_info "测试: install.sh 错误处理"
 
   assert_file_contains "starship 安装使用安全下载" \
-    "$DOTFILES_DIR/zsh/install.sh" "_download_and_run.*starship"
+    "$DOTFILES_DIR/zsh/install.sh" "dotfiles_install_script.*starship"
 
   assert_file_contains "brew install 有 if 判断" \
     "$DOTFILES_DIR/zsh/install.sh" "if brew install"

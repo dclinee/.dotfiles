@@ -63,34 +63,23 @@ install_uv() {
   echo_step "安装 uv..."
 
   # ---------- 方案 1: 官方脚本（不触碰系统 Python，推荐） ----------
-  echo_detail "方案 1/3: curl -LsSf https://astral.sh/uv/install.sh | sh"
+  # 使用 dotfiles_install_script 自动镜像回退: 原始源 → ghproxy → gh-proxy
+  echo_detail "方案 1/3: dotfiles_install_script https://astral.sh/uv/install.sh"
   local install_script_url="https://astral.sh/uv/install.sh"
-  local tmp_script
-  tmp_script="$(mktemp)"
-  local _uv_tmp="${tmp_script}"
-  trap "rm -f '${_uv_tmp}'" EXIT RETURN
 
   if is_dry_run; then
     echo_detail "[dry-run] curl -LsSf ${install_script_url} | sh"
-    trap - EXIT RETURN
-    rm -f "${tmp_script}"
     _register_uv_path || true
     return 0
   fi
 
-  if curl -fsSL --connect-timeout 15 --max-time 300 "${install_script_url}" -o "${tmp_script}" 2>>"${LOG_FILE}" \
-      && sh "${tmp_script}" 2>>"${LOG_FILE}"; then
-    trap - EXIT RETURN
-    rm -f "${tmp_script}"
-    if _register_uv_path; then
-      echo_success "uv 安装完成（官方脚本）"
-      return 0
-    fi
+  DOTFILES_CURL_MAX_TIME=300 dotfiles_install_script "${install_script_url}" 2>>"${LOG_FILE}"
+  if [[ $? -eq 0 ]] && _register_uv_path; then
+    echo_success "uv 安装完成（官方脚本）"
+    return 0
   else
     echo_warning "官方脚本安装失败，切换方案 2"
   fi
-  trap - EXIT RETURN
-  rm -f "${tmp_script}"
 
   # ---------- 方案 2: pipx install uv（需 pipx 已安装） ----------
   if has_pipx; then
