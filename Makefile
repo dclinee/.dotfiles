@@ -16,6 +16,8 @@ GREEN  := \033[32m
 YELLOW := \033[33m
 RESET  := \033[0m
 BOLD   := \033[1m
+DIM    := \033[2m
+MAGENTA := \033[35m
 
 ##@ 通用
 
@@ -34,28 +36,53 @@ help: ## 显示帮助信息
 	@printf "  make check        # 快速环境检查\n"
 	@printf "  make update       # 更新配置和插件\n"
 
-install: editorconfig git ssh brew zsh vim emacs wezterm python rust tmux pwsh ## 一键安装所有配置（推荐）
-	@printf "\n"
-	@printf "$(GREEN)✅ 所有配置安装完成！$(RESET)\n"
-	@printf "$(YELLOW)请执行: source ~/.zshrc 或重启终端$(RESET)\n"
+# 单模块计时安装宏: $(call timed_bootstrap,显示名,bootstrap参数)
+define timed_bootstrap
+	@printf "$(CYAN)→ 安装 $(1)...$(RESET)\n"
+	@_t=$$(date +%s); bash bootstrap.sh --$(2); _rc=$$?; printf "$(DIM)  %ss$(RESET)\n" $$(($$(date +%s) - $$_t)); exit $$_rc
+endef
+
+install: ## 一键安装所有配置（推荐）
+	@bash -c ' \
+		. "$(CURDIR)/lib/make-output.sh"; \
+		platform=$$(uname -s); \
+		modules="editorconfig git ssh brew zsh vim emacs wezterm python rust tmux pwsh"; \
+		total=12; \
+		make_banner $$total $$platform; \
+		rf=$$(mktemp /tmp/dotfiles_results_XXXXXX); \
+		num=0; \
+		for m in $$modules; do \
+			num=$$((num + 1)); \
+			make_step $$num $$total $$m; \
+			start=$$(date +%s); \
+			if bash "$(CURDIR)/bootstrap.sh" --$$m; then \
+				el=$$(($$(date +%s) - $$start)); \
+				make_ok $$m $$start; \
+				echo "OK|$$m|$$el" >> $$rf; \
+			else \
+				el=$$(($$(date +%s) - $$start)); \
+				make_fail $$m $$start; \
+				echo "FAIL|$$m|$$el" >> $$rf; \
+			fi; \
+		done; \
+		make_summary $$rf $$total; \
+		rm -f $$rf; \
+		printf "\n$${_Y}请执行: source ~/.zshrc 或重启终端$${_X}\n"; \
+	'
 
 ##@ 安装
 
 zsh: ## 安装 Zsh 配置
-	@printf "$(CYAN)→ 安装 Zsh 配置...$(RESET)\n"
-	@bash bootstrap.sh --zsh
+	$(call timed_bootstrap,Zsh 配置,zsh)
 
 vim: ## 安装 Vim 配置
-	@printf "$(CYAN)→ 安装 Vim 配置...$(RESET)\n"
-	@bash bootstrap.sh --vim
+	$(call timed_bootstrap,Vim 配置,vim)
 
 emacs: ## 安装 Emacs 配置
-	@printf "$(CYAN)→ 安装 Emacs 配置...$(RESET)\n"
-	@bash bootstrap.sh --emacs
+	$(call timed_bootstrap,Emacs 配置,emacs)
 
 wezterm: ## 安装 WezTerm 配置
-	@printf "$(CYAN)→ 安装 WezTerm 配置...$(RESET)\n"
-	@bash bootstrap.sh --wezterm
+	$(call timed_bootstrap,WezTerm 配置,wezterm)
 
 wezterm-check: ## WezTerm 环境体检
 	@printf "$(CYAN)→ WezTerm 环境体检...$(RESET)\n"
@@ -68,12 +95,10 @@ wezterm-uninstall: ## 卸载 WezTerm 配置（不含本体）
 	else printf "$(YELLOW)⚠️  wezterm/uninstall.sh 不存在$(RESET)\n"; fi
 
 brew: ## 安装 Homebrew 包
-	@printf "$(CYAN)→ 安装 Homebrew 包...$(RESET)\n"
-	@bash bootstrap.sh --brew
+	$(call timed_bootstrap,Homebrew 包,brew)
 
 python: ## 配置 Python 环境（uv 优先）
-	@printf "$(CYAN)→ 配置 Python 环境...$(RESET)\n"
-	@bash bootstrap.sh --python
+	$(call timed_bootstrap,Python 环境,python)
 
 python-check: ## Python 环境体检
 	@printf "$(CYAN)→ Python 环境体检...$(RESET)\n"
@@ -123,8 +148,7 @@ python-pin: ## 固化当前 Python 版本到 versions.lock
 	else printf "$(YELLOW)⚠️  python/pin.sh 不存在$(RESET)\n"; fi
 
 rust: ## 配置 Rust 环境
-	@printf "$(CYAN)→ 配置 Rust 环境...$(RESET)\n"
-	@bash bootstrap.sh --rust
+	$(call timed_bootstrap,Rust 环境,rust)
 
 rust-check: ## Rust 环境体检
 	@printf "$(CYAN)→ Rust 环境体检...$(RESET)\n"
@@ -152,20 +176,16 @@ rust-pin: ## 固化当前 Rust 版本到 versions.lock
 	else printf "$(YELLOW)⚠️  rust/pin.sh 不存在$(RESET)\n"; fi
 
 tmux: ## 安装 Tmux 配置
-	@printf "$(CYAN)→ 安装 Tmux 配置...$(RESET)\n"
-	@bash bootstrap.sh --tmux
+	$(call timed_bootstrap,Tmux 配置,tmux)
 
 git: ## 安装 Git 配置
-	@printf "$(CYAN)→ 安装 Git 配置...$(RESET)\n"
-	@bash bootstrap.sh --git
+	$(call timed_bootstrap,Git 配置,git)
 
 editorconfig: ## 安装 EditorConfig
-	@printf "$(CYAN)→ 安装 EditorConfig...$(RESET)\n"
-	@bash bootstrap.sh --editorconfig
+	$(call timed_bootstrap,EditorConfig,editorconfig)
 
 pwsh: ## 安装 PowerShell 配置（跨平台；无 pwsh 运行时时自动跳过）
-	@printf "$(CYAN)→ 安装 PowerShell 配置...$(RESET)\n"
-	@bash bootstrap.sh --pwsh
+	$(call timed_bootstrap,PowerShell 配置,pwsh)
 
 pwsh-check: ## PowerShell 环境体检
 	@printf "$(CYAN)→ PowerShell 环境体检...$(RESET)\n"
@@ -173,8 +193,7 @@ pwsh-check: ## PowerShell 环境体检
 	else printf "$(YELLOW)⚠️  pwsh/check.sh 不存在$(RESET)\n"; fi
 
 ssh: ## 安装 SSH 配置
-	@printf "$(CYAN)→ 安装 SSH 配置...$(RESET)\n"
-	@bash bootstrap.sh --ssh
+	$(call timed_bootstrap,SSH 配置,ssh)
 
 ssh-check: ## SSH 环境体检
 	@printf "$(CYAN)→ SSH 环境体检...$(RESET)\n"
