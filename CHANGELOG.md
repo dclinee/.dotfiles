@@ -10,6 +10,8 @@
 ### ✨ Added / 新增
 - **`docker/` 容器化模块**：多阶段 Dockerfile（Ubuntu/Debian/Fedora 测试矩阵 + 开发镜像）、docker-compose.yml（dev/validate/test 多服务）、build.sh 统一操作脚本、.env.example、.dockerignore；支持国内镜像加速（USTC apt + NO_MIRROR 开关）。Makefile 新增 `docker-build/up/test/validate/clean` 五个 target
 - **`editorconfig/` 独立模块**：install.sh + _common.sh，bootstrap.sh 最后一个内嵌安装函数完成抽离
+- **`pwsh/` 跨平台 PowerShell 模块**：兼容 PowerShell 7+ 与 Windows PowerShell 5.1，覆盖 Profile/别名/函数/提示符/PSReadLine；Windows 符号链接三层降级（SymbolicLink → Junction/HardLink → Copy）；Git 配置联动（credential.helper 自动适配 Git for Windows）；bootstrap.sh `--pwsh`、Makefile `pwsh`/`pwsh-check`、`make doctor` 第 10 个模块
+- **PowerShell 体检与验证**：`pwsh/check.ps1`（PS 原生体检：版本/文件完整性/Profile 链接/PSReadLine/加载冒烟测试）+ `pwsh/check.sh`（bash 封装，无 pwsh 时跳过）；`validate.sh` 新增 PS AST 语法解析段；CI 新增 PowerShell syntax-check step；`tests/test_install.sh` 新增 30 项断言（BOM 校验、文件存在、集成检查）
 - **`lib/_module_loader.sh` 模块公共加载器**：统一 11 个模块 _common.sh 的路径解析样板，消除重复代码
 - **`make doctor` 全模块环境体检**：顺序聚合 9 个模块 check.sh，单模块失败不中断并汇总；补齐 brew/git/tmux/vim/zsh 五个缺失的 `*-check` target
 - **`bootstrap.sh --dry-run`**：预演模式，只打印将执行的软链操作不落地（复用 lib/common.sh 的 is_dry_run 机制）

@@ -283,6 +283,46 @@ validate_functionality() {
     fi
   }
 
+  # 验证 PowerShell 配置（pwsh AST 解析，只解析不执行）
+  log INFO "验证PowerShell配置..."
+  {
+    if ! command -v pwsh > /dev/null 2>&1; then
+      log WARN "pwsh 命令不可用，跳过 PowerShell 语法检查"
+    else
+      # AST 解析辅助脚本写入临时目录（随 trap 清理）
+      cat > "${temp_dir}/ps_syntax_check.ps1" << 'PSSYNTAX_EOF'
+param([string[]]$Files)
+$failed = 0
+foreach ($f in $Files) {
+    if (-not (Test-Path -LiteralPath $f)) { continue }
+    $tokens = $null; $errors = $null
+    [System.Management.Automation.Language.Parser]::ParseFile($f, [ref]$tokens, [ref]$errors) | Out-Null
+    if ($errors -and $errors.Count -gt 0) {
+        foreach ($e in $errors) {
+            Write-Host ("  {0}:{1}: {2}" -f $f, $e.Extent.StartLineNumber, $e.Message)
+        }
+        $failed++
+    }
+}
+exit $failed
+PSSYNTAX_EOF
+      local ps_files=(
+        "${DOTFILES_DIR}/pwsh/profile.ps1"
+        "${DOTFILES_DIR}/pwsh/_common.ps1"
+        "${DOTFILES_DIR}/pwsh/install.ps1"
+        "${DOTFILES_DIR}/pwsh/check.ps1"
+        "${DOTFILES_DIR}/pwsh/modules"/*.ps1
+      )
+      if pwsh -NoProfile -ExecutionPolicy Bypass \
+           -File "${temp_dir}/ps_syntax_check.ps1" -Files "${ps_files[@]}"; then
+        log SUCCESS "PowerShell 配置语法检查通过"
+      else
+        log ERROR "PowerShell 配置语法检查失败"
+        return 1
+      fi
+    fi
+  }
+
   # 验证 Python 环境
   log INFO "验证Python环境..."
   if ! command -v python3 > /dev/null 2>&1; then

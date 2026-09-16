@@ -61,6 +61,7 @@ export default defineConfig({
           items: [
             { text: 'SSH', link: '/modules/ssh' },
             { text: 'Git', link: '/modules/git' },
+            { text: 'PowerShell', link: '/modules/pwsh' },
             { text: 'Docker', link: '/modules/docker' }
           ]
         }

@@ -9,8 +9,8 @@
 | 语法检查 | `bash -n` / `zsh -n` / `make -n` | 本地 + CI | 所有 shell 脚本语法 |
 | 静态分析 | ShellCheck | 本地 + CI | 潜在 bug 与最佳实践 |
 | 配置验证 | `validate.sh` | 本地 + CI | SSH/Emacs/Git 等配置语法 |
-| 安装体检 | 各模块 `check.sh`（`make doctor` 聚合） | 本地 + CI | 9 模块工具/软链/配置就位情况（只读） |
-| 静态测试 | `tests/test_install.sh static` | 本地 + CI | 104 个断言（符号链接、文件存在性） |
+| 安装体检 | 各模块 `check.sh`（`make doctor` 聚合） | 本地 + CI | 10 模块工具/软链/配置就位情况（只读） |
+| 静态测试 | `tests/test_install.sh static` | 本地 + CI | 134 个断言（符号链接、文件存在性、模块集成） |
 | 集成测试 | `tests/test_integration.sh` (Docker) | 本地（可选）+ CI | 73 项检查（14 维度端到端安装） |
 | 覆盖率 | kcov | CI | 覆盖率报告 artifact 上传 |
 
@@ -30,12 +30,12 @@ bash tests/test_install.sh static
 bash validate.sh
 ```
 
-验证 SSH 配置（`ssh -F ssh/config -G github.com`）、Emacs 字节编译（`emacs --batch -f batch-compile`）等。命令缺失时自动跳过对应检查。
+验证 SSH 配置（`ssh -F ssh/config -G github.com`）、Emacs 字节编译、PowerShell AST 解析等。命令缺失时自动跳过对应检查。
 
 ### 2.5 模块安装体检
 
 ```bash
-make doctor          # 聚合 9 个模块的 check.sh，容错执行并汇总通过/失败数
+make doctor          # 聚合 10 个模块的 check.sh，容错执行并汇总通过/失败数
 bash git/check.sh    # 或单独体检某个模块
 ```
 
@@ -47,7 +47,7 @@ bash git/check.sh    # 或单独体检某个模块
 bash tests/test_install.sh all
 ```
 
-包含动态模拟安装，覆盖 104 个断言（CI 不跑动态部分以节省时间）。
+包含动态模拟安装，覆盖 134 个断言（CI 不跑动态部分以节省时间）。
 
 ### 4. 集成测试（Docker）
 

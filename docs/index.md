@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Dotfiles"
   text: "A+ 级模块化配置框架"
-  tagline: 支持 Linux/macOS/WSL 三平台，覆盖 Zsh/Vim/Emacs/WezTerm/Tmux 五大编辑器与终端
+  tagline: 支持 Linux/macOS/WSL 三平台，覆盖 Zsh/Vim/Emacs/WezTerm/Tmux 五大编辑器与终端，含 PowerShell 跨平台配置
   actions:
     - theme: brand
       text: 快速开始
@@ -21,7 +21,7 @@ features:
     details: 完美兼容 Linux (Ubuntu/Debian) 和 macOS，平台差异隔离在 platform/ 目录。
     icon: 🌐
   - title: 模块化设计
-    details: 12 个独立模块，每个模块自带 install/check/uninstall/clean/upgrade 脚本。
+    details: 13 个独立模块，每个模块自带 install/check/uninstall/clean/upgrade 脚本。
     icon: 🧩
   - title: Zinit 插件管理
     details: 并行加载和异步安装，懒加载提升启动速度，支持 turbo mode。

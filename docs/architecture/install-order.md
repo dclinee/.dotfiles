@@ -50,6 +50,7 @@
 ./bootstrap.sh --tmux     # 仅安装 Tmux
 ./bootstrap.sh --git      # 仅安装 Git 配置
 ./bootstrap.sh --brew     # 仅安装 Brew 包
+./bootstrap.sh --pwsh     # 仅安装 PowerShell 配置
 ./bootstrap.sh --all      # 安装全部（默认）
 ```
 

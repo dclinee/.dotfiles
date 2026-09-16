@@ -600,6 +600,9 @@ test_all_bash_syntax() {
     "$DOTFILES_DIR/rust/pin.sh"
     "$DOTFILES_DIR/rust/_common.sh"
     "$DOTFILES_DIR/validate.sh"
+    "$DOTFILES_DIR/pwsh/install.sh"
+    "$DOTFILES_DIR/pwsh/check.sh"
+    "$DOTFILES_DIR/pwsh/_common.sh"
   )
 
   for file in "${bash_files[@]}"; do
@@ -613,6 +616,56 @@ test_all_bash_syntax() {
       fi
     fi
   done
+}
+
+test_pwsh_module() {
+  log_info "测试: PowerShell 模块文件与集成"
+
+  # 核心文件存在
+  assert_file_exists "pwsh/profile.ps1 存在" "$DOTFILES_DIR/pwsh/profile.ps1"
+  assert_file_exists "pwsh/_common.ps1 存在" "$DOTFILES_DIR/pwsh/_common.ps1"
+  assert_file_exists "pwsh/install.ps1 存在" "$DOTFILES_DIR/pwsh/install.ps1"
+  assert_file_exists "pwsh/check.ps1 存在" "$DOTFILES_DIR/pwsh/check.ps1"
+  assert_file_exists "pwsh/install.sh 存在" "$DOTFILES_DIR/pwsh/install.sh"
+  assert_file_exists "pwsh/check.sh 存在" "$DOTFILES_DIR/pwsh/check.sh"
+  assert_file_exists "pwsh/modules/00_env.ps1 存在" "$DOTFILES_DIR/pwsh/modules/00_env.ps1"
+  assert_file_exists "pwsh/modules/01_aliases.ps1 存在" "$DOTFILES_DIR/pwsh/modules/01_aliases.ps1"
+  assert_file_exists "pwsh/modules/02_functions.ps1 存在" "$DOTFILES_DIR/pwsh/modules/02_functions.ps1"
+  assert_file_exists "pwsh/modules/03_prompt.ps1 存在" "$DOTFILES_DIR/pwsh/modules/03_prompt.ps1"
+
+  # .ps1 文件必须带 UTF-8 BOM（PS5.1 无 BOM 时按 GBK 解析会乱码）
+  local ps1_file
+  for ps1_file in "$DOTFILES_DIR"/pwsh/*.ps1 "$DOTFILES_DIR"/pwsh/modules/*.ps1; do
+    if head -c 3 "$ps1_file" | od -An -tx1 | grep -q "ef bb bf"; then
+      assert_pass "UTF-8 BOM: $(basename "$ps1_file")"
+    else
+      assert_fail "UTF-8 BOM: $(basename "$ps1_file") 缺失"
+    fi
+  done
+
+  # check.ps1 关键检查逻辑
+  assert_file_contains "check.ps1 包含 Profile 路径检查" \
+    "$DOTFILES_DIR/pwsh/check.ps1" "CurrentUserCurrentHost"
+  assert_file_contains "check.ps1 包含冒烟测试" \
+    "$DOTFILES_DIR/pwsh/check.ps1" "Show-Step"
+  assert_file_contains "check.ps1 包含失败退出码" \
+    "$DOTFILES_DIR/pwsh/check.ps1" "exit 1"
+
+  # bash 侧封装调用链
+  assert_file_contains "check.sh 调用 check.ps1" \
+    "$DOTFILES_DIR/pwsh/check.sh" "check.ps1"
+  assert_file_contains "install.sh 调用 install.ps1" \
+    "$DOTFILES_DIR/pwsh/install.sh" "install.ps1"
+
+  # 与既有系统的集成
+  assert_file_contains "bootstrap.sh 支持 --pwsh" \
+    "$DOTFILES_DIR/bootstrap.sh" "--pwsh"
+  assert_file_contains "Makefile 包含 pwsh-check target" \
+    "$DOTFILES_DIR/Makefile" "pwsh-check"
+  assert_file_contains "Makefile doctor 循环包含 pwsh" \
+    "$DOTFILES_DIR/Makefile" "python rust pwsh"
+  assert_file_contains "validate.sh 包含 PowerShell AST 检查" \
+    "$DOTFILES_DIR/validate.sh" "Parser"
 }
 
 test_platform_files() {
@@ -789,6 +842,7 @@ run_all_tests() {
   test_fallback_config_generation
   test_starship_toml_comments
   test_platform_files
+  test_pwsh_module
   test_performance_script
   test_plugin_order
   test_plugin_find_fallback

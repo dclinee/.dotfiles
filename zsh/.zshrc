@@ -42,3 +42,6 @@ fi
 
 # uv 安装器写入的环境（~/.local/bin），文件存在时才加载
 [ -f "${HOME}/.local/bin/env" ] && . "${HOME}/.local/bin/env"
+
+# Added by codearts installer
+export PATH="/home/dclee/.codeartsdoer/installers:$PATH"

@@ -27,6 +27,7 @@
 #   ./bootstrap.sh --git      仅安装 Git 配置
 #   ./bootstrap.sh --ssh      仅安装 SSH 配置
 #   ./bootstrap.sh --editorconfig  仅安装 EditorConfig
+#   ./bootstrap.sh --pwsh         仅安装 PowerShell 配置（跨平台）
 #   ./bootstrap.sh --rollback [dir]  回滚最近/指定失败的安装
 #   ./bootstrap.sh --all --dry-run   预演模式（软链/备份/删除只打印不落地）
 #   DOTFILES_AUTO_ROLLBACK=false ./bootstrap.sh  禁用失败模块的自动回滚
@@ -59,6 +60,7 @@ INSTALL_TMUX=false
 INSTALL_GIT=false
 INSTALL_SSH=false
 INSTALL_EDITORCONFIG=false
+INSTALL_PWSH=false
 
 # ======================
 # 颜色与输出
@@ -150,7 +152,12 @@ _snapshot_file() {
 
   if [[ -L "$target" ]]; then
     local link_src
-    link_src=$(readlink "$target" 2>/dev/null || echo "__broken__")
+    # 先用 _resolve_link（lib/symlink.sh）把可能的相对路径 resolve 成绝对路径，
+    # 否则 [[ -e ]] 会按当前目录解析，导致损坏/正常链接误判
+    link_src=$(_resolve_link "$target" 2>/dev/null)
+    if [[ ! -e "$link_src" ]]; then
+      link_src="__broken__"
+    fi
     echo "SYMLINK|${target}|${link_src}" >> "${ROLLBACK_MANIFEST}"
     return 0
   fi
@@ -425,6 +432,7 @@ parse_args() {
       --git)      INSTALL_GIT=true ;;
       --ssh)      INSTALL_SSH=true ;;
       --editorconfig) INSTALL_EDITORCONFIG=true ;;
+      --pwsh) INSTALL_PWSH=true ;;
       --dry-run)
         # 导出给所有子模块 install.sh（独立 bash 进程，必须 export 才能继承）
         export DRY_RUN=true
@@ -440,7 +448,7 @@ parse_args() {
         ;;
       *)
         echo_error "未知参数: $arg"
-        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--ssh|--editorconfig] [--dry-run] [--rollback [dir]]"
+        echo "使用: $0 [--all|--zsh|--vim|--emacs|--wezterm|--brew|--python|--rust|--tmux|--git|--ssh|--editorconfig|--pwsh] [--dry-run] [--rollback [dir]]"
         exit 1
         ;;
     esac
@@ -632,6 +640,13 @@ install_editorconfig() {
 }
 
 # ======================
+# 安装 PowerShell 配置（跨平台；无 pwsh 运行时时 install.sh 自行优雅跳过）
+# ======================
+install_pwsh() {
+  bash "${DOTFILES_DIR}/pwsh/install.sh"
+}
+
+# ======================
 # 最终验证
 # ======================
 final_check() {
@@ -761,6 +776,15 @@ main() {
       COMPLETED_STEPS+=("EditorConfig")
     else
       FAILED_STEPS+=("EditorConfig")
+    fi
+  fi
+
+  # PowerShell（Linux/macOS 未安装 pwsh 时模块自行跳过；Windows 原生请直接运行 pwsh/install.ps1）
+  if $INSTALL_ALL || $INSTALL_PWSH; then
+    if _run_with_rollback "PowerShell" install_pwsh; then
+      COMPLETED_STEPS+=("PowerShell")
+    else
+      FAILED_STEPS+=("PowerShell")
     fi
   fi
 

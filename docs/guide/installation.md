@@ -38,6 +38,7 @@
 ./git/install.sh        # Git 全局配置
 ./tmux/install.sh       # Tmux + TPM
 ./editorconfig/install.sh  # .editorconfig 软链
+./pwsh/install.sh         # PowerShell 配置（跨平台，无 pwsh 时自动跳过）
 # Docker 是容器编排模块，无 install.sh，用 build.sh：
 ./docker/build.sh build dev  # 构建开发镜像
 ```
@@ -67,12 +68,12 @@
 
 ## 安装体检（check.sh）
 
-9 个模块提供只读体检脚本，检查工具是否安装、软链/配置是否就位，**不修改系统**：
+10 个模块提供只读体检脚本，检查工具是否安装、软链/配置是否就位，**不修改系统**：
 
 ```bash
-make doctor              # 一键跑全部 9 个模块的 check.sh 并汇总
+make doctor              # 一键跑全部 10 个模块的 check.sh 并汇总
 bash git/check.sh        # 单独体检某个模块
-make git-check           # 等价的 Makefile 入口（brew/zsh/vim/git/tmux 五个模块）
+make git-check           # 等价的 Makefile 入口（brew/zsh/vim/git/tmux/pwsh 等模块）
 ```
 
 check.sh 发现失败项时以非零码退出（警告不影响退出码），因此已接入 CI。
@@ -82,8 +83,8 @@ check.sh 发现失败项时以非零码退出（警告不影响退出码），�
 安装完成后可运行验证脚本：
 
 ```bash
-make doctor              # 九模块安装体检（只读）
-bash validate.sh         # 验证所有配置语法（9 模块）
+make doctor              # 十模块安装体检（只读）
+bash validate.sh         # 验证所有配置语法（10 模块）
 bash tests/test_install.sh static   # 静态测试（CI 同套）
 bash tests/test_install.sh all      # 完整测试（含动态模拟）
 

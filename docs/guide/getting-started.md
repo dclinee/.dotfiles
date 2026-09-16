@@ -31,6 +31,7 @@ cd ~/.dotfiles
 ./bootstrap.sh --tmux     # 仅安装 Tmux
 ./bootstrap.sh --git      # 仅安装 Git 配置
 ./bootstrap.sh --brew     # 仅安装 Brew 包
+./bootstrap.sh --pwsh     # 仅安装 PowerShell 配置
 ./bootstrap.sh --all      # 安装全部（默认）
 ./bootstrap.sh --all --dry-run  # 预演：只打印将创建的软链/备份，不实际改动
 ```
@@ -55,7 +56,7 @@ make tmux       # 仅安装 Tmux
 make git        # 仅安装 Git 配置
 make ssh        # 仅安装 SSH 配置
 make brew       # 执行 brew bundle
-make doctor     # 九模块安装体检（聚合 check.sh，只读不修改）
+make doctor     # 十模块安装体检（聚合 check.sh，只读不修改）
 make help       # 查看所有可用命令
 ```
 

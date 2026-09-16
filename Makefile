@@ -4,7 +4,7 @@
 # 统一命令入口，简化操作
 # 设计原则：所有 target 都委托给 per-component install.sh，避免与 bootstrap.sh 逻辑漂移
 
-.PHONY: install update backup test check doctor clean help zsh zsh-check vim vim-check emacs wezterm wezterm-check wezterm-uninstall brew brew-check python rust tmux tmux-check git git-check ssh ssh-check ssh-uninstall editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin perf validate
+.PHONY: install update backup test check doctor clean help pwsh pwsh-check zsh zsh-check vim vim-check emacs wezterm wezterm-check wezterm-uninstall brew brew-check python rust tmux tmux-check git git-check ssh ssh-check ssh-uninstall editorconfig rust-check rust-upgrade rust-clean rust-uninstall rust-pin python-check python-install python-venv python-clean python-upgrade python-uninstall python-pin perf validate
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -34,7 +34,7 @@ help: ## 显示帮助信息
 	@printf "  make check        # 快速环境检查\n"
 	@printf "  make update       # 更新配置和插件\n"
 
-install: editorconfig git ssh brew zsh vim emacs wezterm python rust tmux ## 一键安装所有配置（推荐）
+install: editorconfig git ssh brew zsh vim emacs wezterm python rust tmux pwsh ## 一键安装所有配置（推荐）
 	@printf "\n"
 	@printf "$(GREEN)✅ 所有配置安装完成！$(RESET)\n"
 	@printf "$(YELLOW)请执行: source ~/.zshrc 或重启终端$(RESET)\n"
@@ -178,6 +178,15 @@ editorconfig: ## 安装 EditorConfig
 	@printf "$(CYAN)→ 安装 EditorConfig...$(RESET)\n"
 	@bash bootstrap.sh --editorconfig
 
+pwsh: ## 安装 PowerShell 配置（跨平台；无 pwsh 运行时时自动跳过）
+	@printf "$(CYAN)→ 安装 PowerShell 配置...$(RESET)\n"
+	@bash pwsh/install.sh
+
+pwsh-check: ## PowerShell 环境体检
+	@printf "$(CYAN)→ PowerShell 环境体检...$(RESET)\n"
+	@if [ -f pwsh/check.sh ]; then bash pwsh/check.sh; \
+	else printf "$(YELLOW)⚠️  pwsh/check.sh 不存在$(RESET)\n"; fi
+
 ssh: ## 安装 SSH 配置
 	@printf "$(CYAN)→ 安装 SSH 配置...$(RESET)\n"
 	@bash ssh/install.sh
@@ -240,7 +249,7 @@ zsh-check: ## Zsh 模块体检
 doctor: ## 全模块环境体检（汇总报告，单模块失败不中断）
 	@printf "$(BOLD)=== Dotfiles 全模块体检 ===$(RESET)\n"; \
 	fail=0; \
-	for m in brew zsh vim git tmux ssh wezterm python rust; do \
+	for m in brew zsh vim git tmux ssh wezterm python rust pwsh; do \
 		printf "\n$(CYAN)── %s ──$(RESET)\n" "$$m"; \
 		bash "$$m/check.sh" || fail=$$((fail + 1)); \
 	done; \

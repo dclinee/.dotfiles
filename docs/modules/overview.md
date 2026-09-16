@@ -1,6 +1,6 @@
 # 模块总览
 
-Dotfiles 共有 12 个独立模块，每个模块自带 `_common.sh` 公共加载器，可单独安装或通过 `bootstrap.sh` 统一部署。
+Dotfiles 共有 13 个独立模块，每个模块自带 `_common.sh` 公共加载器，可单独安装或通过 `bootstrap.sh` 统一部署。
 
 ## 模块清单
 
@@ -18,6 +18,7 @@ Dotfiles 共有 12 个独立模块，每个模块自带 `_common.sh` 公共加�
 | **SSH** | `ssh/` | config.d 分片 | 无 | SSH 多机配置 |
 | **EditorConfig** | `editorconfig/` | `.editorconfig` 软链 | 无 | 跨编辑器统一缩进/换行/编码（极简模块） |
 | **Docker** | `docker/` | 多发行版镜像 + compose | 无 | 容器化开发环境 + CI 集成测试 |
+| **PowerShell** | `pwsh/` | profile.ps1 + modules/ | 无 | 跨平台 PowerShell 配置（Win/Linux/macOS） |
 
 ## 模块脚本标准结构
 
@@ -56,6 +57,7 @@ Dotfiles 共有 12 个独立模块，每个模块自带 `_common.sh` 公共加�
 ### 其他模块
 - [SSH](/modules/ssh) — SSH 配置
 - [Git](/modules/git) — Git 全局配置
+- [PowerShell](/modules/pwsh) — 跨平台 PowerShell 配置
 - EditorConfig — 跨编辑器代码风格统一（极简，仅一个软链，无独立文档页）
 - [Docker](/modules/docker) — 容器化开发环境与 CI 集成测试
 

@@ -101,6 +101,7 @@ make help       # 查看所有可用命令
 ./vim/install.sh        # Vim + vim-plug
 ./wezterm/install.sh    # WezTerm 配置
 ./ssh/install.sh        # SSH 配置（--gen-key 可生成本机密钥）
+./pwsh/install.sh        # PowerShell 配置（跨平台，无 pwsh 时自动跳过）
 ```
 
 ### 使用国内镜像加速
@@ -491,7 +492,7 @@ cd ~/.dotfiles
 
 make update     # 一键更新：git pull + zinit update + brew upgrade
 make backup     # 备份当前配置
-make doctor     # 九模块安装体检（聚合各模块 check.sh，不修改系统）
+make doctor     # 十模块安装体检（聚合各模块 check.sh，不修改系统）
 make check      # 环境检查（调用 check_env）
 make test       # 运行静态测试
 make perf       # Zsh 启动性能分析

@@ -55,6 +55,29 @@ jobs:
       - name: Makefile syntax check
         run: make -n help
 
+      - name: PowerShell syntax check
+        # runner 预装 pwsh；用 AST 解析检查所有 .ps1（只解析不执行），无 pwsh 时跳过
+        run: |
+          if ! command -v pwsh > /dev/null 2>&1; then
+            echo "pwsh 不可用，跳过"
+            exit 0
+          fi
+          pwsh -NoProfile -Command '
+            $failed = 0
+            Get-ChildItem -Recurse -Filter *.ps1 -File |
+              Where-Object { $_.FullName -notmatch "[\\/]\.git[\\/]" } |
+              ForEach-Object {
+                $tokens = $null; $errors = $null
+                [System.Management.Automation.Language.Parser]::ParseFile(
+                  $_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+                if ($errors.Count -gt 0) {
+                  Write-Host "::error file=$($_.FullName)::$($errors[0].Message)"
+                  $failed++
+                }
+              }
+            exit $failed
+          '
+
   static-tests:
     runs-on: ubuntu-latest
     steps:
@@ -81,7 +104,7 @@ jobs:
         run: |
           # check.sh 为运行时状态体检：CI 干净环境缺少 brew/wezterm 等工具属预期，
           # 用 || true 容错避免误红；所有输出仍完整保留在日志中，结构性错误可见。
-          for m in brew git tmux vim zsh ssh; do
+          for m in brew git tmux vim zsh ssh pwsh; do
             echo "::group::$m/check.sh"
             bash "$m/check.sh" || true
             echo "::endgroup::"
