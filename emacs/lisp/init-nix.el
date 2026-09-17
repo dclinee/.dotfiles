@@ -8,7 +8,7 @@
   (maybe-require-package 'nix-buffer)
 
   (when (maybe-require-package 'nixos-options)
-    ;; TODO: write a CAPF backend based on company-nixos-options
+    ;; NOTE: write a CAPF backend based on company-nixos-options
     ))
 
 

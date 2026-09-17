@@ -23,7 +23,7 @@
 (add-hook 'after-init-hook 'reapply-themes)
 
 
-
+
 ;; Toggle between light and dark
 
 (defun light ()
@@ -43,7 +43,7 @@
   (setq-default dimmer-fraction 0.15)
   (add-hook 'after-init-hook 'dimmer-mode)
   (with-eval-after-load 'dimmer
-    ;; TODO: file upstream as a PR
+    ;; NOTE: file upstream as a PR
     (advice-add 'frame-set-background-mode :after (lambda (&rest args) (dimmer-process-all))))
   (with-eval-after-load 'dimmer
     ;; Don't dim in terminal windows. Even with 256 colours it can

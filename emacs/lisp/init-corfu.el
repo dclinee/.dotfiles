@@ -3,7 +3,7 @@
 ;;; Code:
 
 ;; WAITING: haskell-mode sets tags-table-list globally, breaks tags-completion-at-point-function
-;; TODO Default sort order should place [a-z] before punctuation
+;; NOTE Default sort order should place [a-z] before punctuation
 
 (setq tab-always-indent 'complete)
 (when (maybe-require-package 'orderless)
@@ -26,7 +26,7 @@
       (corfu-popupinfo-mode)))
 
 
-  ;; TODO: https://github.com/jdtsmith/kind-icon
+  ;; NOTE: https://github.com/jdtsmith/kind-icon
   )
 
 

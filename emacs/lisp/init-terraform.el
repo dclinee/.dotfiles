@@ -5,7 +5,7 @@
 ;;; Terraform
 
 (when (maybe-require-package 'terraform-mode)
-  ;; TODO: find/write a replacement for company-terraform
+  ;; NOTE: find/write a replacement for company-terraform
   (with-eval-after-load 'terraform-mode
     ;; I find formatters based on "reformatter" to be more reliable
     ;; so I redefine `terraform-format-on-save-mode' here.

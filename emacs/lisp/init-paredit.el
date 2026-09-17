@@ -21,7 +21,7 @@
 
 
 ;; Use paredit in the minibuffer
-;; TODO: break out into separate package
+;; NOTE: break out into separate package
 ;; http://emacsredux.com/blog/2013/04/18/evaluate-emacs-lisp-in-the-minibuffer/
 (add-hook 'minibuffer-setup-hook 'sanityinc/conditionally-enable-paredit-mode)
 
