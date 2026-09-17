@@ -68,6 +68,25 @@ Windows 原生创建符号链接需要**管理员权限**或开启**开发者模
 
 建议开启开发者模式：`设置 → 系统 → 开发者选项 → 开发人员模式`，然后重新运行安装器。
 
+### 入口文件的伴生内容同步
+
+Profile 入口 `profile.ps1` 依赖同目录的 `_common.ps1` 与 `modules/`，单独复制一个入口文件会导致加载失败。
+因此 Profile 走 HardLink/Copy 兜底时，安装器会通过 `-CompanionPaths` 自动把依赖按相同相对结构同步到
+Profile 所在目录：**伴生目录用 Junction**（支持跨卷、免提权，如 Documents 被重定向到 D 盘、仓库在 C 盘），
+**伴生文件先尝试 HardLink，跨卷失败则 Copy**。同步是幂等的，重复运行安装器会跳过指向同源的链接。
+
+### Profile 路径解析回退链
+
+无论 Profile 以哪种方式落地，`profile.ps1` 按以下顺序定位真实模块目录，第一个含 `_common.ps1` 的生效：
+
+1. 自身所在目录（伴生同步后的 HardLink/Copy，或直接运行仓库文件）
+2. 符号链接 `.Target` 的真实目录
+3. `$env:DOTFILES_ROOT\pwsh`
+4. `$HOME\.dotfiles\pwsh`（跨盘符兜底，如仓库在 C 盘、Documents 在 D 盘）
+
+全部找不到时会给出"请重新运行 install.ps1"的明确警告，而不是抛出一堆加载错误。
+
+
 ## Profile 路径差异
 
 安装器自动选择当前运行时对应的 `$PROFILE.CurrentUserCurrentHost`：

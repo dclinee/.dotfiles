@@ -35,6 +35,8 @@
 - 全量同步项目文档以对齐 docker/editorconfig 新模块、tests/ 新路径、Vertico 新补全体系
 
 ### 🐛 Fixed / 修复
+- **PowerShell Profile 在 Windows 跨盘 HardLink/Copy 兜底时加载失败**：Documents 重定向到非系统盘（如 D 盘）且仓库在 C 盘时，符号链接无权限、硬链接不可跨卷，安装器仅复制单个 profile.ps1，导致同目录的 `_common.ps1` 与 `modules/` 全部找不到。`New-SafeLink` 新增 `-CompanionPaths` 伴生同步（目录 Junction 跨卷、文件 HardLink→Copy，幂等）；`profile.ps1` 路径解析改为四级回退链（自身→符号链接 Target→`$env:DOTFILES_ROOT\pwsh`→`$HOME\.dotfiles\pwsh`），旧版孤立副本亦可自愈；新增 6 项静态断言
+- **全部 `.ps1` 文件的双重 UTF-8 BOM**：双 BOM 使 `#requires` 指令失效并导致 `[CmdletBinding()]param()` AST 解析错误；统一修正为单 BOM，静态测试新增"禁止重复 BOM"断言（每个 ps1 检查）
 - **marginalia 与 Emacs 30.2 兼容崩溃**：marginalia 快照调用 3 参数版 `seconds-to-string`（Emacs 31 签名），在 30.2 上触发 wrong-number-of-arguments，导致 Vertico 候选注解报错；新增基于 compat-31 的行为探针 advice 桥接
 - **vterm 无法加载 `libvterm.so.0`**：Homebrew 版 Emacs 的动态链接器默认不搜索系统库目录；通过 `brew install libvterm`（0.3.3 与模块版本一致）经 DT_RPATH 传递解析修复
 - **init-ibuffer 直绑 C-x b 到 ido-switch-buffer**：Helm 移除后暴露的隐藏冲突，改为 consult-buffer

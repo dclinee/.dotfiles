@@ -1,4 +1,4 @@
-﻿﻿#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
   pwsh 模块公共函数库（PowerShell 原生）
@@ -154,11 +154,93 @@ function Resolve-FullPath {
     }
 }
 
+# 伴生内容同步：入口文件（如 profile.ps1）降级为 HardLink/Copy 后，其依赖的同目录
+# 伴生文件/目录（_common.ps1、modules/）必须按相同相对结构到达链接所在目录，否则
+# 入口加载时找不到依赖。策略：目录→Junction（可跨卷、免提权），文件→HardLink（同卷），
+# 失败→Copy；Linux/macOS→SymbolicLink。
+function Sync-CompanionPaths {
+    param(
+        [Parameter(Mandatory = $true)][string]$Link,
+        [Parameter(Mandatory = $true)][string]$Target,
+        [string[]]$CompanionPaths
+    )
+    if (-not $CompanionPaths -or $CompanionPaths.Count -eq 0) { return }
+
+    $linkDir = Split-Path -Parent $Link
+    $targetDir = Split-Path -Parent $Target
+
+    foreach ($rel in $CompanionPaths) {
+        if ([System.IO.Path]::IsPathRooted($rel)) {
+            $src = $rel
+            $relName = Split-Path -Leaf $rel
+        } else {
+            $src = Join-Path $targetDir $rel
+            $relName = $rel
+        }
+        if (-not (Test-Path -LiteralPath $src)) {
+            Show-Warn ("伴生内容不存在，跳过: " + $src)
+            continue
+        }
+
+        $dst = Join-Path $linkDir $relName
+        $dstParent = Split-Path -Parent $dst
+        if ($dstParent -and -not (Test-Path -LiteralPath $dstParent)) {
+            New-Item -ItemType Directory -Path $dstParent -Force | Out-Null
+        }
+
+        # 幂等：已是指向同源的链接则跳过；旧副本/异源链接先移除后重建
+        $dstItem = Get-Item -LiteralPath $dst -Force -ErrorAction SilentlyContinue
+        if ($null -ne $dstItem) {
+            $dstTarget = $dstItem.Target
+            if ($dstTarget) {
+                $dstTarget = @($dstTarget)[0]
+                if (-not [System.IO.Path]::IsPathRooted($dstTarget)) {
+                    $dstTarget = Join-Path (Split-Path -Parent $dst) $dstTarget
+                }
+                try {
+                    if ((Resolve-Path -LiteralPath $dstTarget -ErrorAction Stop).Path -eq
+                        (Resolve-FullPath -Path $src)) { continue }
+                } catch { }
+            }
+            Remove-Item -LiteralPath $dst -Force -Recurse -ErrorAction SilentlyContinue
+        }
+
+        $srcIsDir = (Get-Item -LiteralPath $src -Force).PSIsContainer
+        $synced = $false
+
+        if (Get-IsWindows) {
+            # 目录用 Junction（支持跨卷、免提权），文件用 HardLink（仅限同卷）
+            $itemType = if ($srcIsDir) { 'Junction' } else { 'HardLink' }
+            try {
+                New-Item -ItemType $itemType -Path $dst -Target $src -ErrorAction Stop | Out-Null
+                Show-Detail ("伴生内容已链接(" + $itemType + "): " + $relName)
+                $synced = $true
+            } catch {
+                # 跨卷 HardLink 等场景落到下方 Copy 兜底
+            }
+        } else {
+            try {
+                New-Item -ItemType SymbolicLink -Path $dst -Target $src -ErrorAction Stop | Out-Null
+                Show-Detail ("伴生内容已链接(SymbolicLink): " + $relName)
+                $synced = $true
+            } catch { }
+        }
+
+        if (-not $synced) {
+            Copy-Item -LiteralPath $src -Destination $dst -Recurse -Force
+            Show-Detail ("伴生内容已复制: " + $relName + "（仓库更新后需重跑安装器同步）")
+        }
+    }
+}
+
 function New-SafeLink {
     param(
         [Parameter(Mandatory = $true)][string]$Link,
         [Parameter(Mandatory = $true)][string]$Target,
-        [string]$BackupDir
+        [string]$BackupDir,
+        # 主文件降级为 HardLink/Copy 时，需要按相同相对结构同步到链接目录的伴生路径
+        # （相对 Target 所在目录；如 profile.ps1 依赖 '_common.ps1' 和 'modules'）
+        [string[]]$CompanionPaths
     )
 
     if (-not (Test-Path -LiteralPath $Target)) {
@@ -221,6 +303,8 @@ function New-SafeLink {
             } else {
                 New-Item -ItemType HardLink -Path $Link -Target $Target -ErrorAction Stop | Out-Null
                 Show-Warn ("已用 HardLink（硬链接）替代符号链接: " + $Link + "（不随源文件独立更新，且不可跨卷）")
+                # 入口文件的同目录依赖不会随硬链接一起到达，需单独同步
+                Sync-CompanionPaths -Link $Link -Target $Target -CompanionPaths $CompanionPaths
             }
             return $true
         } catch {
@@ -232,6 +316,8 @@ function New-SafeLink {
             Copy-Item -LiteralPath $Target -Destination $Link -Recurse -Force
         } else {
             Copy-Item -LiteralPath $Target -Destination $Link -Force
+            # 入口文件的同目录依赖不会随复制一起到达，需单独同步
+            Sync-CompanionPaths -Link $Link -Target $Target -CompanionPaths $CompanionPaths
         }
         Show-Warn ("已复制内容替代链接（建议开启 Windows 开发者模式后重新安装以使用真正的符号链接）: " + $Link)
         return $true

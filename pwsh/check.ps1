@@ -1,4 +1,4 @@
-﻿﻿#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
   pwsh 模块体检脚本（PowerShell 原生）

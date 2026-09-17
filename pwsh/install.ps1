@@ -1,4 +1,4 @@
-﻿﻿#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
   pwsh 模块主安装器（跨平台：Windows 原生 / Linux / macOS）
@@ -57,7 +57,9 @@ $failures = 0
 Show-Step "链接 PowerShell Profile..."
 $profileSource = Join-Path $PwshDir 'profile.ps1'
 $profileTarget = $PROFILE.CurrentUserCurrentHost
-if (New-SafeLink -Link $profileTarget -Target $profileSource -BackupDir $BackupDir) {
+# profile.ps1 依赖同目录的 _common.ps1 与 modules/，HardLink/Copy 兜底时必须同步伴生内容
+if (New-SafeLink -Link $profileTarget -Target $profileSource -BackupDir $BackupDir `
+                 -CompanionPaths @('_common.ps1', 'modules')) {
     Show-Success ("Profile 已链接: " + $profileTarget)
 } else {
     Show-Error "Profile 链接失败"

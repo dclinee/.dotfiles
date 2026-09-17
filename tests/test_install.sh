@@ -660,13 +660,19 @@ test_pwsh_module() {
   assert_file_exists "pwsh/modules/02_functions.ps1 存在" "$DOTFILES_ROOT/pwsh/modules/02_functions.ps1"
   assert_file_exists "pwsh/modules/03_prompt.ps1 存在" "$DOTFILES_ROOT/pwsh/modules/03_prompt.ps1"
 
-  # .ps1 文件必须带 UTF-8 BOM（PS5.1 无 BOM 时按 GBK 解析会乱码）
+  # .ps1 文件必须带且仅带一个 UTF-8 BOM（PS5.1 无 BOM 时按 GBK 解析会乱码；
+  # 双 BOM 会使 #requires 指令失效并导致 [CmdletBinding()]param() 解析错误）
   local ps1_file
   for ps1_file in "$DOTFILES_ROOT"/pwsh/*.ps1 "$DOTFILES_ROOT"/pwsh/modules/*.ps1; do
     if head -c 3 "$ps1_file" | xxd -p | grep -q "efbbbf"; then
       assert_pass "UTF-8 BOM: $(basename "$ps1_file")"
     else
       assert_fail "UTF-8 BOM: $(basename "$ps1_file") 缺失"
+    fi
+    if head -c 6 "$ps1_file" | xxd -p | grep -q "efbbbfefbbbf"; then
+      assert_fail "UTF-8 BOM: $(basename "$ps1_file") 存在重复 BOM"
+    else
+      assert_pass "UTF-8 BOM 无重复: $(basename "$ps1_file")"
     fi
   done
 
@@ -677,6 +683,21 @@ test_pwsh_module() {
     "$DOTFILES_ROOT/pwsh/check.ps1" "Show-Step"
   assert_file_contains "check.ps1 包含失败退出码" \
     "$DOTFILES_ROOT/pwsh/check.ps1" "exit 1"
+
+  # Windows 链接降级的伴生内容同步（Copy/HardLink 单文件兜底依赖完整性）
+  assert_file_contains "_common.ps1 支持 CompanionPaths 参数" \
+    "$DOTFILES_ROOT/pwsh/_common.ps1" "CompanionPaths"
+  assert_file_contains "_common.ps1 含伴生同步函数" \
+    "$DOTFILES_ROOT/pwsh/_common.ps1" "Sync-CompanionPaths"
+  assert_file_contains "_common.ps1 伴生目录用 Junction 跨卷" \
+    "$DOTFILES_ROOT/pwsh/_common.ps1" "'Junction'"
+  assert_file_contains "install.ps1 链接 Profile 时传入 modules 伴生" \
+    "$DOTFILES_ROOT/pwsh/install.ps1" "'modules'"
+  # profile.ps1 多级路径回退链（覆盖跨盘 Documents 重定向场景）
+  assert_file_contains "profile.ps1 含 DOTFILES_ROOT 回退" \
+    "$DOTFILES_ROOT/pwsh/profile.ps1" "DOTFILES_ROOT"
+  assert_file_contains "profile.ps1 含 HOME/.dotfiles 标准位置回退" \
+    "$DOTFILES_ROOT/pwsh/profile.ps1" "Join-Path \$HOME '.dotfiles'"
 
   # bash 侧封装调用链
   assert_file_contains "check.sh 调用 check.ps1" \

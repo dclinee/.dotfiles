@@ -1,4 +1,4 @@
-﻿﻿#requires -Version 5.1
+﻿#requires -Version 5.1
 <# 交互式辅助函数（环境体检、Git 信息探测等） #>
 
 # 检测当前是否为管理员会话（Windows：Administrator 角色；Unix：uid 0）
