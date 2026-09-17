@@ -13,7 +13,7 @@
 - **`pwsh/` 跨平台 PowerShell 模块**：兼容 PowerShell 7+ 与 Windows PowerShell 5.1，覆盖 Profile/别名/函数/提示符/PSReadLine；Windows 符号链接三层降级（SymbolicLink → Junction/HardLink → Copy）；Git 配置联动（credential.helper 自动适配 Git for Windows）；bootstrap.sh `--pwsh`、Makefile `pwsh`/`pwsh-check`、`make doctor` 第 10 个模块
 - **PowerShell 体检与验证**：`pwsh/check.ps1`（PS 原生体检：版本/文件完整性/Profile 链接/PSReadLine/加载冒烟测试）+ `pwsh/check.sh`（bash 封装，无 pwsh 时跳过）；`validate.sh` 新增 PS AST 语法解析段；CI 新增 PowerShell syntax-check step；`tests/test_install.sh` 新增 30 项断言（BOM 校验、文件存在、集成检查）
 - **`lib/_module_loader.sh` 模块公共加载器**：统一 11 个模块 _common.sh 的路径解析样板，消除重复代码
-- **`make doctor` 全模块环境体检**：顺序聚合 9 个模块 check.sh，单模块失败不中断并汇总；补齐 brew/git/tmux/vim/zsh 五个缺失的 `*-check` target
+- **`make doctor` 全模块环境体检**：顺序聚合 10 个模块 check.sh，单模块失败不中断并汇总；补齐 brew/git/tmux/vim/zsh 五个缺失的 `*-check` target
 - **`bootstrap.sh --dry-run`**：预演模式，只打印将执行的软链操作不落地（复用 lib/common.sh 的 is_dry_run 机制）
 - **`validate.sh` 覆盖扩充**：新增 Git（git config 解析）、Tmux（start-server 语法）、Python、Rust、Vim（headless source）五项验证
 - 新增 brew/git/tmux/vim/zsh 五个模块的 `check.sh` 运行时体检脚本
@@ -21,6 +21,7 @@
 - 新增 `SECURITY.md` 安全策略文档
 - **VitePress 文档站补全**：新增决策记录（ADR-001~010 拆分页）、贡献指南、测试文档、变更日志等 14 个页面；新增 `docs/archive/` 归档目录
 - Emacs 新增 DeepSeek AI、consult-projectile 集成（见 Changed）
+- **Makefile install 输出美化**：新增 `lib/make-output.sh`，`make install` 显示 box-drawing 横幅、步骤计数 `[1/12]`、每模块耗时、汇总报告表；各子目标通过 `timed_bootstrap` 宏自动计时
 
 ### 🔄 Changed / 变更
 - **Emacs 补全体系从 Helm 迁移到 Vertico/Consult**：M-x、C-x b、C-x C-f、M-y 等统一走 Vertico + Orderless + Marginalia；C-s 恢复为标准 isearch（anzu 重新生效）；项目查找改用 consult-projectile

@@ -117,7 +117,7 @@ docs: clarify cross-platform brew path detection
 
 - [ ] `bash tests/test_install.sh static` 通过
 - [ ] `bash validate.sh` 通过
-- [ ] `make doctor` 通过（9 模块 check.sh 体检）
+- [ ] `make doctor` 通过（10 模块 check.sh 体检）
 - [ ] 没有硬编码个人信息（邮箱、用户名、密钥）
 - [ ] 没有引入新的外部依赖（或已在文档中说明）
 - [ ] 新增功能有对应的测试用例
