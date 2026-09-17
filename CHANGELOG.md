@@ -22,6 +22,7 @@
 - **VitePress 文档站补全**：新增决策记录（ADR-001~010 拆分页）、贡献指南、测试文档、变更日志等 14 个页面；新增 `docs/archive/` 归档目录
 - Emacs 新增 DeepSeek AI、consult-projectile 集成（见 Changed）
 - **Makefile install 输出美化**：新增 `lib/make-output.sh`，`make install` 显示 box-drawing 横幅、步骤计数 `[1/12]`、每模块耗时、汇总报告表；各子目标通过 `timed_bootstrap` 宏自动计时
+- **PowerShell 双行彩色 prompt 主题**：不依赖 Nerd Font（Cascadia/Consolas 可渲染）；第一行显示失败退出码/venv/智能缩短路径/Git 聚合状态（分支·ahead-behind·暂存/改动/未跟踪/冲突计数）/后台任务/命令耗时，第二行 `❯`（成功绿/失败红/管理员 ⚡）；新增 `Get-GitPromptInfo` 单次 porcelain 聚合；PSReadLine 语法配色与续行提示符；重定向时自动降级纯文本；`check.ps1` 冒烟测试增强为实际调用 `prompt`
 
 ### 🔄 Changed / 变更
 - **Emacs 补全体系从 Helm 迁移到 Vertico/Consult**：M-x、C-x b、C-x C-f、M-y 等统一走 Vertico + Orderless + Marginalia；C-s 恢复为标准 isearch（anzu 重新生效）；项目查找改用 consult-projectile

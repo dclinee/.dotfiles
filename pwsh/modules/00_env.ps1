@@ -65,6 +65,29 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
         } catch {
             # PSReadLine 2.0（Win11 自带的 PS5.1）无预测功能，忽略
         }
+
+        # 语法配色（颜色名在 2.0/2.4 均支持；256 色专有键独立容错）
+        try {
+            Set-PSReadLineOption -Colors @{
+                Command            = 'Yellow'
+                Parameter          = 'DarkGreen'
+                String             = 'DarkCyan'
+                Comment            = 'DarkGray'
+                Keyword            = 'Magenta'
+                Number             = 'DarkYellow'
+                Member             = 'Cyan'
+                Type               = 'Cyan'
+                Operator           = 'DarkGray'
+                ContinuationPrompt = 'DarkGray'
+                Selection          = "`e[48;5;60m"
+            } -ErrorAction Stop
+        } catch { }
+        try {
+            Set-PSReadLineOption -Colors @{ InlinePrediction = "$([char]27)[38;5;241m" } -ErrorAction Stop
+        } catch { }
+        try {
+            Set-PSReadLineOption -ContinuationPrompt ("$([char]27)[38;5;244m ·$([char]27)[0m ") -ErrorAction Stop
+        } catch { }
     } catch {
         # PSReadLine 加载失败不应影响 shell 启动
     }

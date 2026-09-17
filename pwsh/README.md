@@ -21,7 +21,7 @@
 | `modules/00_env.ps1` | UTF-8 编码、PATH、PSReadLine、EDITOR |
 | `modules/01_aliases.ps1` | Git 快捷函数（g/ga/gd…）、ll/la、which、touch、mkcd |
 | `modules/02_functions.ps1` | `check_ps` 体检、Git 分支探测、管理员检测 |
-| `modules/03_prompt.ps1` | starship 优先 + 内置轻量 prompt；zoxide 智能跳转 |
+| `modules/03_prompt.ps1` | 双行彩色 prompt（失败码/venv/路径缩短/Git 聚合状态/任务数/耗时 + `❯` 箭头；重定向降级纯文本；starship 存在则覆盖；zoxide 智能跳转） |
 | `modules/99_local.ps1` | 本地覆盖（**不入库**，需自行创建） |
 
 ## 安装
@@ -118,7 +118,18 @@ ll / la         # eza 增强列表（缺失时回退 Get-ChildItem）
 z <目录关键词>  # zoxide 智能跳转（需已安装）
 ```
 
-Prompt 优先使用 starship（与 zsh 侧外观统一）；未安装时使用内置的路径 + Git 分支提示符。
+Prompt 优先使用 starship（与 zsh 侧外观统一）；未安装时使用内置双行主题（无需 Nerd Font，Cascadia/Consolas 可渲染）：
+
+```text
+ ✗ 7 (myproj) ~/d/pwsh on main ↑1 +2 ~1 ?3  ⧗1.2s
+ ❯
+```
+
+- 第一行：失败退出码 → 虚拟环境（venv/conda）→ 智能缩短路径（`$HOME` 缩写为 `~`，超 3 层中间目录只留首字母）→
+  Git 段（分支、↑ahead/↓behind、`+`暂存/`~`改动/`?`未跟踪/`!!`冲突计数）→ 后台任务数 → 上条命令耗时（>300ms）
+- 第二行：`❯` 成功绿色/失败红色；管理员会话前缀 `⚡`
+- 终端不支持 ANSI 或输出被重定向时自动降级为纯文本
+- 设置 `$env:DOTFILES_PROMPT_COMPACT = '1'` 可关闭命令间空行
 
 ## 本地自定义
 

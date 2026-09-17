@@ -135,11 +135,12 @@ if (-not $profileInstalled) {
     Check-Skip '无法确定当前解释器路径，跳过 Profile 冒烟测试'
 } else {
     Show-Step 'Profile 加载冒烟测试（子进程）...'
-    $smokeCmd = 'if (Get-Command Show-Step -ErrorAction SilentlyContinue) { exit 0 } else { exit 3 }'
+    # 除函数定义外，实际调用 prompt 一次（返回非空且不抛异常），捕获 prompt 主题自身的运行时错误（如路径/ANSI 处理回归）
+    $smokeCmd = 'try { if ((Get-Command Show-Step -ErrorAction SilentlyContinue) -and (prompt)) { exit 0 } else { exit 3 } } catch { exit 4 }'
     & $currentBin -NoLogo -NonInteractive -Command $smokeCmd | Out-Null
     $smokeRc = $LASTEXITCODE
     if ($smokeRc -eq 0) {
-        Check-Ok 'Profile 加载正常（Show-Step 函数已定义）'
+        Check-Ok 'Profile 加载正常（Show-Step 已定义，prompt 渲染无异常）'
     } else {
         Check-Fail ('Profile 加载异常（退出码 ' + $smokeRc + '）')
         Show-Detail '请手动运行 pwsh -NoLogo -Command "exit" 查看加载报错'

@@ -699,6 +699,36 @@ test_pwsh_module() {
   assert_file_contains "profile.ps1 含 HOME/.dotfiles 标准位置回退" \
     "$DOTFILES_ROOT/pwsh/profile.ps1" "Join-Path \$HOME '.dotfiles'"
 
+  # 双行 prompt 主题
+  assert_file_contains "03_prompt 定义全局 prompt 函数" \
+    "$DOTFILES_ROOT/pwsh/modules/03_prompt.ps1" "function global:prompt"
+  assert_file_contains "03_prompt 含智能缩短路径函数" \
+    "$DOTFILES_ROOT/pwsh/modules/03_prompt.ps1" "Format-PromptPath"
+  assert_file_contains "03_prompt 含耗时格式化函数" \
+    "$DOTFILES_ROOT/pwsh/modules/03_prompt.ps1" "Format-PromptDuration"
+  assert_file_contains "03_prompt 使用 ANSI-256 色" \
+    "$DOTFILES_ROOT/pwsh/modules/03_prompt.ps1" "38;5;"
+  assert_file_contains "03_prompt 含失败退出码片段" \
+    "$DOTFILES_ROOT/pwsh/modules/03_prompt.ps1" "\$exitCode = \$LASTEXITCODE"
+  assert_file_contains "03_prompt 含 Git 聚合调用" \
+    "$DOTFILES_ROOT/pwsh/modules/03_prompt.ps1" "Get-GitPromptInfo"
+  assert_file_contains "03_prompt 含 venv 片段" \
+    "$DOTFILES_ROOT/pwsh/modules/03_prompt.ps1" "VIRTUAL_ENV"
+  assert_file_contains "03_prompt 提供无 ANSI 纯文本回退" \
+    "$DOTFILES_ROOT/pwsh/modules/03_prompt.ps1" "UseAnsiColor"
+  assert_file_contains "02_functions 含 Git 聚合函数" \
+    "$DOTFILES_ROOT/pwsh/modules/02_functions.ps1" "function Get-GitPromptInfo"
+  assert_file_contains "02_functions 解析 ahead 计数" \
+    "$DOTFILES_ROOT/pwsh/modules/02_functions.ps1" "-match 'ahead"
+  assert_file_contains "02_functions 统计未跟踪文件" \
+    "$DOTFILES_ROOT/pwsh/modules/02_functions.ps1" "Untracked++"
+  assert_file_contains "00_env 配置 PSReadLine 配色" \
+    "$DOTFILES_ROOT/pwsh/modules/00_env.ps1" "Set-PSReadLineOption -Colors"
+  assert_file_contains "00_env 配置续行提示符" \
+    "$DOTFILES_ROOT/pwsh/modules/00_env.ps1" "ContinuationPrompt"
+  assert_file_contains "check.ps1 冒烟测试实际渲染 prompt" \
+    "$DOTFILES_ROOT/pwsh/check.ps1" "(prompt)"
+
   # bash 侧封装调用链
   assert_file_contains "check.sh 调用 check.ps1" \
     "$DOTFILES_ROOT/pwsh/check.sh" "check.ps1"

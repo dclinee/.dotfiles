@@ -44,6 +44,64 @@ function Test-GitDirty {
 
 <#
 .SYNOPSIS
+  单次 git status 聚合 prompt 所需的全部 Git 信息（避免每个片段各调一次 git）
+.OUTPUTS
+  非 Git 目录返回 $null；否则返回 Hashtable：
+  Branch / Ahead / Behind / Staged / Unstaged / Untracked / Conflicted
+#>
+function Get-GitPromptInfo {
+    if (-not (Test-Command git)) { return $null }
+    $lines = @(& git status --porcelain=v1 --branch --untracked-files=normal 2>$null)
+    if (-not $lines -or $lines.Count -eq 0) { return $null }
+
+    $info = @{
+        Branch     = $null
+        Ahead      = 0
+        Behind     = 0
+        Staged     = 0
+        Unstaged   = 0
+        Untracked  = 0
+        Conflicted = 0
+    }
+
+    foreach ($line in $lines) {
+        if ($line.Length -eq 0) { continue }
+        if ($line.StartsWith('## ')) {
+            $head = $line.Substring(3)
+            # 解析 ahead/behind 计数
+            if ($head -match 'ahead (\d+)') { $info.Ahead = [int]$Matches[1] }
+            if ($head -match 'behind (\d+)') { $info.Behind = [int]$Matches[1] }
+            # 分支名：'main...origin/main' / 'main' / 'HEAD (no branch)'（分离头指针）
+            if ($head -like 'HEAD *') {
+                $info.Branch = (& git rev-parse --short HEAD 2>$null)
+            } else {
+                $namePart = ($head -split '\.\.')[0].Trim()
+                $namePart = $namePart -replace '^No commits yet on ', ''
+                $info.Branch = $namePart
+            }
+            continue
+        }
+
+        # XY 状态码（porcelain 每行前两列）
+        $x = $line.Substring(0, 1)
+        $y = $line.Substring(1, 1)
+        if ($x -eq '?' -and $y -eq '?') {
+            $info.Untracked++
+        } elseif ($x -eq 'U' -or $y -eq 'U' -or ($x -eq 'A' -and $y -eq 'A') -or
+                  ($x -eq 'D' -and $y -eq 'D')) {
+            $info.Conflicted++
+        } else {
+            if ($x -ne ' ' -and $x -ne '?') { $info.Staged++ }
+            if ($y -ne ' ' -and $y -ne '?') { $info.Unstaged++ }
+        }
+    }
+
+    if (-not $info.Branch) { return $null }
+    return $info
+}
+
+<#
+.SYNOPSIS
   PowerShell + dotfiles 交互式环境体检（对应 bash 侧的 check_env）
 #>
 function Invoke-EnvironmentCheck {

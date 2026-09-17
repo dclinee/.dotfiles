@@ -57,7 +57,7 @@ emacs/
 
 ## 清华镜像包源
 
-[init-elpa.el](lisp/init-elpa.el) 配置：
+[init-elpa.el](https://github.com/dclinee/.dotfiles/blob/main/emacs/lisp/init-elpa.el) 配置：
 
 ```lisp
 (setq package-archives
@@ -76,8 +76,8 @@ emacs/
 | 优化 | 原理 |
 |------|------|
 | `early-init.el` | Emacs 27+ 在 package.el 前运行，设置 `package-enable-at-startup nil` |
-| `gc-cons-threshold` | 启动时放大到 128MB，启动后恢复 20MB（[init.el:27-31](init.el#L27-L31)） |
-| `use-package-always-defer` | 延迟加载非核心包（[init.el:46](init.el#L46)） |
+| `gc-cons-threshold` | 启动时放大到 128MB，启动后恢复 20MB（[init.el:27-31](https://github.com/dclinee/.dotfiles/blob/main/emacs/init.el#L27-L31)） |
+| `use-package-always-defer` | 延迟加载非核心包（[init.el:46](https://github.com/dclinee/.dotfiles/blob/main/emacs/init.el#L46)） |
 | 包版本隔离 | 多版本 Emacs 用不同 elpa- 目录，避免重复解析 |
 | 原生编译 (28+) | `native-comp-async` 自动编译 .el→.eln |
 
