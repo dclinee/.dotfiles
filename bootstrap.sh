@@ -487,10 +487,11 @@ install_zsh() {
     fi
   fi
 
-  # 运行 zsh 安装脚本
-  bash "${DOTFILES_DIR}/zsh/install.sh" 2>>"${LOG_FILE}" || {
-    echo_warning "Zsh 安装脚本出现错误，请查看日志: ${LOG_FILE}"
-  }
+  # 运行 zsh 安装脚本（失败必须传播退出码，交由 _run_with_rollback 记为失败并回滚）
+  if ! bash "${DOTFILES_DIR}/zsh/install.sh" 2>>"${LOG_FILE}"; then
+    echo_error "Zsh 安装脚本失败，请查看日志: ${LOG_FILE}"
+    return 1
+  fi
 
   # 询问是否设为默认 shell（跨平台：Linux 用 getent，macOS 用 dscl）
   _current_login_shell() {
