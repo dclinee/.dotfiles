@@ -23,7 +23,9 @@ if [[ -n "$trailing_files" ]]; then
 fi
 
 # 检查行尾（Windows 行尾转义）
-crlf_files=$(echo "$files" | xargs grep -l $'\r' 2>/dev/null || true)
+# 用变量传递 CR：MSYS2 下 $'\r' 字面量在 $() 命令替换内会退化为空模式，导致 grep 匹配所有文件（全量误报）
+_cr=$(printf '\r')
+crlf_files=$(echo "$files" | xargs grep -l "$_cr" 2>/dev/null || true)
 if [[ -n "$crlf_files" ]]; then
   echo "❌ 以下文件包含 CRLF 行尾:"
   echo "$crlf_files"
