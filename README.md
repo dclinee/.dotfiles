@@ -15,6 +15,7 @@
 ## ✨ 功能特性
 
 ### 🎯 核心功能
+
 - **一键安装**：`bootstrap.sh` 或 `make install` 自动完成全部配置
 - **现代化 Zsh 配置**：基于 Zsh 5.9+，提供高效的命令行体验
 - **插件管理**：使用 Zinit 作为插件管理器，支持并行加载和异步安装
@@ -29,6 +30,7 @@
 - **统一命令入口**：Makefile 暴露 install/update/backup/test/check 等命令
 
 ### 📦 内置插件
+
 - `zsh-users/zsh-autosuggestions` - 智能命令补全
 - `zsh-users/zsh-syntax-highlighting` - 语法高亮
 - `wfxr/forgit` - Git 快捷操作
@@ -38,6 +40,7 @@
 - `Aloxaf/fzf-tab` - 模糊查找补全
 
 ### 🎨 主题与外观
+
 - **Starship** - 现代化、高度可定制的提示符
 - **响应式设计** - 根据屏幕宽度自动调整
 - **丰富的状态信息** - 显示 Git 状态、命令执行时间、Python 虚拟环境等
@@ -46,6 +49,7 @@
 ## 🚀 安装
 
 ### 前置要求
+
 - **Git** - 用于克隆仓库
 - **Zsh** - 5.9+ 版本
 - **curl** - 用于下载安装脚本
@@ -115,10 +119,10 @@ make help       # 查看所有可用命令
 
 ### 前置条件
 
-| 依赖 | 最低版本 | 安装命令 |
-|------|---------|---------|
-| Zsh  | 5.9     | `sudo apt install zsh` / `brew install zsh` |
-| Git  | 2.20+   | `sudo apt install git` / `brew install git` |
+| 依赖   | 最低版本  | 安装命令                                          |
+| ---- | ----- | --------------------------------------------- |
+| Zsh  | 5.9   | `sudo apt install zsh` / `brew install zsh`   |
+| Git  | 2.20+ | `sudo apt install git` / `brew install git`   |
 | curl | 任意    | `sudo apt install curl` / `brew install curl` |
 
 ### 一键部署（推荐）
@@ -189,16 +193,21 @@ eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
 #### 步骤 5：安装核心工具
 
-```bash
-# starship 提示符
+\# starship 提示符
+
 brew install starship
 
-# eza（ls 替代品）+ zoxide（cd 替代品）
+<br />
+
+\# eza（ls 替代品）+ zoxide（cd 替代品）
+
 brew install eza zoxide
 
-# 其他常用工具
+<br />
+
+\# 其他常用工具
+
 brew install fzf ripgrep bat gh lazygit
-```
 
 #### 步骤 6：安装 zinit 插件管理器
 
@@ -253,14 +262,14 @@ platform/macos.zsh
 
 以下插件由 zinit 自动管理，首次启动时会自动下载：
 
-| 插件 | 说明 | 加载方式 |
-|------|------|---------|
-| `zsh-users/zsh-autosuggestions` | 历史命令补全建议（→ 接受） | 同步 |
-| `wfxr/forgit` | Git 交互式增强（g、ga、gd） | 同步 |
-| `zsh-users/zsh-history-substring-search` | 历史命令子串搜索（↑↓） | 同步 |
-| `agkozak/zsh-z` | 智能目录跳转 | 同步 |
-| `Aloxaf/fzf-tab` | Tab 补全模糊查找 | 懒加载 |
-| `zsh-users/zsh-syntax-highlighting` | 命令行语法高亮 | 懒加载 |
+| 插件                                       | 说明                 | 加载方式 |
+| ---------------------------------------- | ------------------ | ---- |
+| `zsh-users/zsh-autosuggestions`          | 历史命令补全建议（→ 接受）     | 同步   |
+| `wfxr/forgit`                            | Git 交互式增强（g、ga、gd） | 同步   |
+| `zsh-users/zsh-history-substring-search` | 历史命令子串搜索（↑↓）       | 同步   |
+| `agkozak/zsh-z`                          | 智能目录跳转             | 同步   |
+| `Aloxaf/fzf-tab`                         | Tab 补全模糊查找         | 懒加载  |
+| `zsh-users/zsh-syntax-highlighting`      | 命令行语法高亮            | 懒加载  |
 
 ### 常用命令
 
@@ -344,9 +353,18 @@ ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 
 ```
 ~/.dotfiles/
-├── bootstrap.sh          # 一键安装入口（新机器推荐）
-├── Makefile              # 统一命令入口（install/update/backup/test/check）
+├── bootstrap.sh          # 一键安装入口（新机器推荐，支持 --dry-run/--rollback）
+├── Makefile              # 统一命令入口（install/update/doctor/backup/test/check）
+├── validate.sh           # 配置验证脚本
 ├── .editorconfig         # 跨编辑器代码风格统一配置
+├── lib/                  # 公共函数库（所有模块复用，仓库根目录）
+│   ├── common.sh           # 核心函数库（体检统计/批量软链/通用工具）
+│   ├── _module_loader.sh   # 模块公共加载器（各模块 _common.sh 只需 1 行）
+│   ├── output.sh           # 统一输出函数（echo_step/echo_success...）
+│   ├── make-output.sh      # Makefile install 输出美化（横幅/进度/汇总表）
+│   ├── symlink.sh          # 符号链接安全创建（safe_symlink）
+│   ├── net.sh              # 网络下载 + 三级镜像回退（dotfiles_curl/clone/...）
+│   └── README.md           # 函数库文档
 ├── zsh/                  # Zsh 配置
 │   ├── .zshrc            # 主配置入口
 │   ├── .zshenv           # 最早加载的环境变量（PATH/Homebrew）
@@ -357,68 +375,78 @@ ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 │   │   ├── 03_functions.zsh # 自定义函数（含 check_env 诊断）
 │   │   ├── 04_plugins.zsh # 插件配置（zinit）
 │   │   └── 05_starship.zsh # Starship 主题配置
-│   ├── lib/              # 公共库
-│   │   ├── common.sh       # 核心函数库（safe_symlink, require-package, check_*）
-│   │   ├── _module_loader.sh # 模块公共加载器（替代 11 份 _common.sh 样板）
-│   │   ├── output.sh       # 统一输出函数（echo_step/echo_success...）
-│   │   └── symlink.sh      # 符号链接安全创建
-│   ├── platform/         # 平台特定配置
-│   │   ├── linux.zsh      # Linux 配置
-│   │   └── macos.zsh      # macOS 配置
-│   ├── plugins/          # 插件目录
-│   │   ├── zinit/        # Zinit 插件管理器
-│   │   └── zoxide/       # Zoxide 插件
-│   ├── starship/          # Starship 提示符配置
+│   ├── platform/         # 平台特定配置（linux/macos/wsl）
+│   ├── plugins/          # 插件目录（zinit 插件管理器 / zoxide）
+│   ├── starship/         # Starship 提示符配置
 │   │   ├── starship.toml     # Nerd Font 版本
 │   │   └── starship_fallback.toml # Unicode 回退版本
-│   ├── install.sh        # Zsh 安装脚本（集成 brew bundle）
+│   ├── install.sh        # Zsh 安装脚本（zinit/starship/zoxide，依赖 Brew）
 │   └── profile_performance.sh # 启动性能分析
 ├── vim/                  # Vim 配置
 │   ├── core/             # 核心配置
 │   │   ├── 00_basic.vim     # 基础配置
 │   │   └── 01_keybindings.vim # 快捷键映射
+│   ├── lua/              # Lua 模块（dotfiles_modules + user 自定义）
+│   ├── ftplugin/         # 文件类型配置（go/python/rust...）
 │   ├── plugins/          # 插件配置
-│   │   └── plugins.vim      # 插件管理配置
+│   │   └── plugins.vim      # vim-plug 插件管理配置
 │   ├── platform/         # 平台特定配置
 │   │   ├── linux.vim        # Linux 配置
 │   │   └── macos.vim        # macOS 配置
 │   ├── .vimrc            # 主配置入口
 │   ├── install.sh        # Vim 安装脚本
 │   └── README.md         # Vim 配置文档
+├── emacs/                # Emacs 配置
+│   ├── init.el           # 主配置入口
+│   ├── early-init.el     # 早期初始化（GUI/性能）
+│   ├── lisp/             # init-*.el 模块化配置（补全/git/org...）
+│   └── install.sh        # Emacs 安装脚本
+├── wezterm/              # WezTerm 终端配置
+│   ├── wezterm.lua       # 主配置入口
+│   ├── core/             # 基础/键位/配色/事件/域配置
+│   ├── platform/         # 平台特定配置（linux/macos/windows）
+│   └── install.sh        # WezTerm 安装脚本
+├── pwsh/                 # PowerShell 跨平台配置
+│   ├── profile.ps1       # Profile 入口
+│   ├── modules/          # env/aliases/functions/prompt 模块
+│   ├── install.ps1       # PowerShell 安装脚本
+│   └── install.sh        # 跨平台引导（无 pwsh 时优雅跳过）
 ├── tmux/                 # Tmux 配置
 │   └── .tmux.conf        # Tmux 主配置（TPM + Vim 风格快捷键）
 ├── git/                  # Git 全局配置
 │   ├── .gitconfig        # Git 配置模板（别名/颜色/pager）
-│   └── .gitignore_global # 全局忽略规则
+│   ├── .gitignore_global # 全局忽略规则
+│   └── hooks/            # pre-commit/commit-msg/pre-push 模板
+├── ssh/                  # SSH 配置（Include 分片，多机通用）
+│   ├── config            # 主入口（软链到 ~/.ssh/config）
+│   ├── config.d/         # 通用片段（core/github 加速/共享主机）
+│   └── platform/         # 平台片段（macOS/Linux）
+├── editorconfig/         # EditorConfig 配置（极简：只有一个软链）
+├── brew/                 # Homebrew 配置
+│   ├── Brewfile          # 通用包（git/gh/fzf/ripgrep/bat/eza...）
+│   ├── Brewfile.linux    # Linux 特定包
+│   └── Brewfile.macos    # macOS 特定包
+├── python/               # Python 配置（uv 优先）
+│   ├── pythonrc.py       # Python 交互式配置
+│   ├── pip.conf          # Pip 配置
+│   ├── pyproject.toml.template / uv.toml.template # 项目模板
+│   └── requirements-*.txt # 按需依赖（dev/data/web）
+├── rust/                 # Rust 配置
+│   ├── rust-toolchain.toml  # 工具链版本锁定
+│   ├── rustfmt.toml / clippy.toml # 格式化与 lint 配置
+│   └── tools.list        # cargo 工具清单
 ├── docker/               # Docker 模块（开发环境 + CI 测试）
 │   ├── Dockerfile          # 主多阶段构建（Ubuntu 24.04）
 │   ├── Dockerfile.ci       # CI 集成测试镜像
 │   ├── Dockerfile.{ubuntu,debian,fedora} # 多发行版矩阵
 │   ├── docker-compose.yml  # 编排（dev + 测试矩阵 + validate + test）
-│   ├── build.sh            # 统一操作脚本（build/up/down/shell/test）
-│   └── README.md           # Docker 模块文档
-├── editorconfig/         # EditorConfig 配置（极简：只有一个软链）
-│   ├── install.sh         # 创建 .editorconfig 软链
-│   └── _common.sh
-├── brew/                 # Homebrew 配置
-│   ├── Brewfile          # 通用包（git/gh/fzf/ripgrep/bat/eza...）
-│   ├── Brewfile.linux    # Linux 特定包
-│   ├── Brewfile.macos    # macOS 特定包
-│   └── install.sh       # Brew 安装脚本
-├── python/               # Python 配置
-│   ├── pythonrc.py       # Python 交互式配置
-│   ├── pip.conf          # Pip 配置
-│   ├── requirements.txt  # Python 依赖
-│   └── requirements-*.txt # 按需依赖（dev/data/web）
-├── wezterm/              # WezTerm 终端配置
-├── ssh/                  # SSH 配置（Include 分片，多机通用）
-│   ├── config            # 主入口（软链到 ~/.ssh/config）
-│   ├── config.d/         # 通用片段（core/github 加速/共享主机）
-│   └── platform/         # 平台片段（macOS/Linux）
+│   └── build.sh            # 统一操作脚本（build/up/down/shell/test）
 ├── tests/                # 测试脚本目录
 │   ├── test_install.sh       # 静态与动态测试脚本
+│   ├── test_lib_*.sh         # lib 层单元测试（common/net/symlink）
+│   ├── test_docker_smoke.sh  # Docker 冒烟测试
 │   └── test_integration.sh   # Docker 集成测试脚本
-├── validate.sh           # 配置验证脚本
+├── docs/                 # VitePress 文档站点（模块文档/ADR 决策/架构/贡献指南）
 └── README.md             # 项目文档
 ```
 
@@ -427,6 +455,7 @@ ZSH_DEBUG_PLUGINS=1 zsh -c 'exit' 2>&1 | grep "PLUGIN DEBUG"
 ### 🔧 插件管理
 
 我们的插件管理系统具有以下特点：
+
 - **智能加载**：自动跟踪已加载插件，防止重复加载
 - **错误处理**：完善的错误处理机制，提供清晰的警告信息
 - **版本锁定**：支持通过 .lock 文件锁定插件版本
@@ -531,11 +560,9 @@ zinit update zsh-users/zsh-autosuggestions
 1. **Zinit 插件无法加载**
    - 检查 `~/.dotfiles/zsh/plugins/zinit` 目录是否存在
    - 重新运行安装脚本：`./zsh/install.sh`
-
 2. **Starship 主题不显示**
    - 检查 `starship` 命令是否安装：`command -v starship`
    - 重新安装 starship：`curl -sS https://starship.rs/install.sh | sh -s -- -y`
-
 3. **安装脚本失败**
    - 检查是否有 sudo 权限
    - 检查网络连接
@@ -564,6 +591,6 @@ ZSH_DEBUG=1 zsh
 - GitHub Issues: [提交问题](https://github.com/dclinee/.dotfiles/issues)
 - GitHub Discussions: [参与讨论](https://github.com/dclinee/.dotfiles/discussions)
 
----
+***
 
 **享受高效的命令行体验！** 🎉
