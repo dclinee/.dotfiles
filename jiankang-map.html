@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>南齐建康城 · 永元元年形势图</title>
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --surface: #faf8f3;
+    --border: #d4c8b0;
+    --text: #3a3226;
+    --text-muted: #7a6e5c;
+    --brand: #8b4513;
+    --rebel: #c0392b;
+    --govt: #2c5f8a;
+    --water: #5b9bd5;
+    --accent-gold: #b8860b;
+  }
+
+  [data-widget-theme="dark"],
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1b18;
+      --surface: #2a2620;
+      --border: #4a4035;
+      --text: #e0d8c8;
+      --text-muted: #9a8e7c;
+      --brand: #c77d4a;
+      --rebel: #e74c3c;
+      --govt: #5b9bd5;
+      --water: #4a8bc2;
+      --accent-gold: #d4a017;
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 900px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    letter-spacing: 2px;
+    color: var(--brand);
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+    letter-spacing: 1px;
+  }
+
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    font-size: 12px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .legend-dot.rebel { background: var(--rebel); }
+  .legend-dot.govt  { background: var(--govt); }
+  .legend-dot.water { background: var(--water); }
+
+  .map-wrap {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fdfaf3;
+    transition: background 0.3s, border-color 0.3s;
+    cursor: default;
+  }
+  @media (prefers-color-scheme: dark) {
+    .map-wrap { background: #2a2620; }
+  }
+
+  .map-wrap svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* tooltip */
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    max-width: 260px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    transition: opacity 0.18s;
+    z-index: 10;
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip .tt-title {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 2px;
+    display: block;
+  }
+  .tooltip .tt-tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+  .tt-tag.rebel { background: #fdecea; color: var(--rebel); }
+  .tt-tag.govt  { background: #e8f0f8; color: var(--govt); }
+
+  .note {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 14px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 1; }
+  }
+  @keyframes dash {
+    to { stroke-dashoffset: -24; }
+  }
+  @keyframes glow {
+    0%, 100% { filter: drop-shadow(0 0 3px rgba(192,57,43,0.3)); }
+    50%      { filter: drop-shadow(0 0 9px rgba(192,57,43,0.7)); }
+  }
+  .connector-line {
+    stroke-dasharray: 8 4;
+    animation: dash 2s linear infinite;
+  }
+  .rebel-pulse {
+    animation: glow 2.5s ease-in-out infinite;
+  }
+
+  .clickable {
+    cursor: pointer;
+    transition: transform 0.2s, filter 0.2s;
+  }
+  .clickable:hover {
+    transform: scale(1.04);
+    filter: brightness(1.1);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>南齐·建康城形势图</h1>
+  <div class="subtitle">永元元年（499年）八月 · 萧遥光起兵东府</div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot rebel"></span> 叛军（萧遥光）</div>
+    <div class="legend-item"><span class="legend-dot govt"></span> 台军（朝廷）</div>
+    <div class="legend-item"><span class="legend-dot water"></span> 水系</div>
+  </div>
+
+  <div class="map-wrap" id="mapWrap">
+    <svg viewBox="0 0 780 600" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrowhead" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+          <path d="M1 1 L7 4 L1 7 Z" fill="#7a6e5c"/>
+        </marker>
+        <marker id="arrowhead-brand" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+          <path d="M1 1 L7 4 L1 7 Z" fill="#8b4513"/>
+        </marker>
+        <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+          <feDropShadow dx="1" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+        </filter>
+        <linearGradient id="waterGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#5b9bd5" stop-opacity="0.15"/>
+          <stop offset="50%" stop-color="#5b9bd5" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#5b9bd5" stop-opacity="0.15"/>
+        </linearGradient>
+      </defs>
+
+      <!-- 长江 -->
+      <rect x="0" y="8" width="780" height="42" rx="6" fill="url(#waterGrad)" stroke="#5b9bd5" stroke-width="1.5" stroke-opacity="0.5"/>
+      <text x="60" y="34" font-size="13" fill="#5b9bd5" font-weight="600" letter-spacing="6">长 江</text>
+      <text x="620" y="34" font-size="11" fill="#5b9bd5" font-weight="400" opacity="0.7">→ 东流入海</text>
+
+      <!-- 玄武湖 -->
+      <ellipse cx="390" cy="110" rx="110" ry="38" fill="#5b9bd5" fill-opacity="0.12" stroke="#5b9bd5" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="390" y="114" text-anchor="middle" font-size="12" fill="#5b9bd5" font-weight="500" letter-spacing="3">玄 武 湖</text>
+
+      <!-- 秦淮河 -->
+      <path d="M 0 530 Q 200 520, 390 525 Q 580 530, 780 520" fill="none" stroke="#5b9bd5" stroke-width="2.5" stroke-opacity="0.55"/>
+      <path d="M 0 545 Q 200 535, 390 540 Q 580 545, 780 535" fill="none" stroke="#5b9bd5" stroke-width="1" stroke-opacity="0.3"/>
+      <text x="390" y="558" text-anchor="middle" font-size="13" fill="#5b9bd5" font-weight="600" letter-spacing="4">秦 淮 河</text>
+
+      <!-- 青溪河道 -->
+      <path d="M 480 70 Q 490 200, 485 330 Q 478 420, 475 480" fill="none" stroke="#5b9bd5" stroke-width="2.8" stroke-opacity="0.5"/>
+      <path d="M 490 70 Q 500 200, 495 330 Q 488 420, 485 480" fill="none" stroke="#5b9bd5" stroke-width="1" stroke-opacity="0.25"/>
+      <text x="510" y="300" font-size="11" fill="#5b9bd5" font-weight="500" letter-spacing="2" transform="rotate(90 510 300)">青 溪</text>
+
+      <!-- === 连接线 === -->
+      <!-- 石头城 → 台城（陆路） -->
+      <path d="M 155 175 Q 270 200, 365 235" fill="none" stroke="#7a6e5c" stroke-width="1.6" stroke-dasharray="6 3" marker-end="url(#arrowhead)" class="connector-line"/>
+      <rect x="230" y="192" width="52" height="18" rx="6" fill="var(--surface)" stroke="var(--border)" stroke-width="0.8"/>
+      <text x="256" y="205" text-anchor="middle" font-size="10" fill="#7a6e5c">陆路</text>
+
+      <!-- 台城 → 东府城 -->
+      <path d="M 430 255 Q 510 280, 570 315" fill="none" stroke="#8b4513" stroke-width="2" stroke-dasharray="8 4" marker-end="url(#arrowhead-brand)" class="connector-line"/>
+      <rect x="474" y="275" width="68" height="18" rx="6" fill="var(--surface)" stroke="var(--border)" stroke-width="0.8"/>
+      <text x="508" y="288" text-anchor="middle" font-size="10" fill="#8b4513">东南 4 里</text>
+
+      <!-- 台城 → 青溪 → 青溪大桥 -->
+      <path d="M 440 270 L 488 300 L 488 360" fill="none" stroke="#5b9bd5" stroke-width="1.2" stroke-dasharray="4 2" opacity="0.6"/>
+
+      <!-- 青溪大桥 → 东府城 -->
+      <path d="M 505 385 Q 540 370, 570 340" fill="none" stroke="#2c5f8a" stroke-width="1.8" stroke-dasharray="6 3" marker-end="url(#arrowhead)" class="connector-line"/>
+
+      <!-- 东府城 → 秦淮河 -->
+      <path d="M 580 370 Q 590 420, 580 495" fill="none" stroke="#c0392b" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#arrowhead)"/>
+      <rect x="590" y="420" width="52" height="16" rx="5" fill="var(--surface)" stroke="var(--border)" stroke-width="0.8"/>
+      <text x="616" y="432" text-anchor="middle" font-size="10" fill="#c0392b">南临</text>
+
+      <!-- 东府城 → 湘宫寺 -->
+      <path d="M 560 370 Q 480 400, 420 430" fill="none" stroke="#2c5f8a" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#arrowhead)" class="connector-line"/>
+
+      <!-- === 地点节点 === -->
+
+      <!-- 石头城 -->
+      <g class="clickable" data-loc="stone" transform="translate(80, 148)" filter="url(#shadow)">
+        <rect x="0" y="0" width="120" height="42" rx="10" fill="#faf8f3" stroke="#2c5f8a" stroke-width="2.2"/>
+        <text x="60" y="18" text-anchor="middle" font-size="14" font-weight="700" fill="#2c5f8a">石头城</text>
+        <text x="60" y="34" text-anchor="middle" font-size="10" fill="#7a6e5c">西线江防要塞</text>
+      </g>
+
+      <!-- 台城（皇宫） -->
+      <g class="clickable" data-loc="taicheng" transform="translate(340, 210)" filter="url(#shadow)">
+        <rect x="0" y="0" width="150" height="62" rx="12" fill="#faf8f3" stroke="#2c5f8a" stroke-width="2.4"/>
+        <text x="75" y="16" text-anchor="middle" font-size="11" fill="#7a6e5c">皇宫中枢</text>
+        <text x="75" y="34" text-anchor="middle" font-size="15" font-weight="700" fill="#2c5f8a">台 城</text>
+        <text x="75" y="52" text-anchor="middle" font-size="10" fill="#7a6e5c">皇帝 · 朝廷 · 台军大本营</text>
+      </g>
+
+      <!-- 青溪大桥 -->
+      <g class="clickable" data-loc="qingxibridge" transform="translate(470, 358)" filter="url(#shadow)">
+        <rect x="0" y="0" width="108" height="46" rx="8" fill="#faf8f3" stroke="#2c5f8a" stroke-width="2"/>
+        <text x="54" y="17" text-anchor="middle" font-size="13" font-weight="700" fill="#2c5f8a">青溪大桥</text>
+        <text x="54" y="33" text-anchor="middle" font-size="10" fill="#7a6e5c">萧坦之阵地 · 台军屯兵</text>
+      </g>
+
+      <!-- 东府城（叛军据点） -->
+      <g class="clickable rebel-pulse" data-loc="dongfu" transform="translate(530, 300)" filter="url(#shadow)">
+        <rect x="0" y="0" width="150" height="72" rx="12" fill="#fff5f5" stroke="#c0392b" stroke-width="2.6"/>
+        <line x1="8" y1="0" x2="142" y2="72" stroke="#c0392b" stroke-width="0.6" stroke-dasharray="5 5" opacity="0.25"/>
+        <line x1="142" y1="0" x2="8" y2="72" stroke="#c0392b" stroke-width="0.6" stroke-dasharray="5 5" opacity="0.25"/>
+        <text x="75" y="16" text-anchor="middle" font-size="10" fill="#c0392b">★ 叛军据点</text>
+        <text x="75" y="35" text-anchor="middle" font-size="15" font-weight="700" fill="#c0392b">东 府 城</text>
+        <text x="75" y="52" text-anchor="middle" font-size="10" fill="#7a6e5c">扬州刺史治所 · 相府</text>
+        <text x="75" y="66" text-anchor="middle" font-size="9" fill="#c0392b">八月起兵 · 无北门</text>
+      </g>
+
+      <!-- 湘宫寺 -->
+      <g class="clickable" data-loc="xianggong" transform="translate(355, 430)" filter="url(#shadow)">
+        <rect x="0" y="0" width="112" height="42" rx="10" fill="#faf8f3" stroke="#2c5f8a" stroke-width="2"/>
+        <text x="56" y="18" text-anchor="middle" font-size="13" font-weight="700" fill="#2c5f8a">湘宫寺</text>
+        <text x="56" y="34" text-anchor="middle" font-size="10" fill="#7a6e5c">台军屯兵 · 围城阵地</text>
+      </g>
+
+      <!-- 朝向文字 -->
+      <text x="682" y="70" font-size="12" fill="#7a6e5c" opacity="0.5">北 ↑</text>
+    </svg>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+
+  <div class="note">悬停或点击地图上的地点查看详情</div>
+</div>
+
+<script>
+(function() {
+  const tooltip = document.getElementById('tooltip');
+  const mapWrap = document.getElementById('mapWrap');
+  const mapRect = mapWrap.getBoundingClientRect();
+
+  const detailMap = {
+    stone: {
+      title: '石头城',
+      tag: '台军（朝廷）',
+      tagClass: 'govt',
+      text: '六朝江防要塞，扼守长江天险。东晋以来为京师西大门，驻重庆把守，是建康城西线最重要的军事堡垒。'
+    },
+    taicheng: {
+      title: '台城（皇宫）',
+      tag: '台军（朝廷）',
+      tagClass: 'govt',
+      text: '南齐皇宫与朝廷中枢所在，皇帝居所。永元元年八月，台城为台军大本营，主持平叛调度，萧坦之、徐孝嗣等在此奉命讨逆。'
+    },
+    qingxibridge: {
+      title: '青溪大桥',
+      tag: '台军（朝廷）',
+      tagClass: 'govt',
+      text: '青溪上的关键桥梁，萧坦之率台军主力在此屯兵布阵，是阻断东府城叛军北上冲击台城的咽喉防线。'
+    },
+    dongfu: {
+      title: '东府城',
+      tag: '叛军（萧遥光）',
+      tagClass: 'rebel',
+      text: '原为扬州刺史治所兼丞相府。永元元年八月，始安王萧遥光以此为大本营举兵反叛。城仅东、南、西三门，无北门，南临秦淮河。'
+    },
+    xianggong: {
+      title: '湘宫寺',
+      tag: '台军（朝廷）',
+      tagClass: 'govt',
+      text: '位于东府城西南方向，秦淮河北岸。台军在此设立围城阵地，与青溪大桥的萧坦之部形成掎角之势，合围东府城叛军。'
+    }
+  };
+
+  let activeLoc = null;
+
+  function showTooltip(locKey, x, y) {
+    const d = detailMap[locKey];
+    if (!d) return;
+    tooltip.innerHTML =
+      '<span class="tt-title">' + d.title + '</span>' +
+      '<span class="tt-tag ' + d.tagClass + '">' + d.tag + '</span>' +
+      '<p style="margin-top:6px">' + d.text + '</p>';
+    tooltip.classList.add('show');
+    positionTooltip(x, y);
+  }
+
+  function positionTooltip(x, y) {
+    const tw = tooltip.offsetWidth;
+    const th = tooltip.offsetHeight;
+    const wrapRect = mapWrap.getBoundingClientRect();
+    let left = x - wrapRect.left + 18;
+    let top  = y - wrapRect.top - th - 14;
+    if (top < 4) top = y - wrapRect.top + 18;
+    if (left + tw > wrapRect.width - 4) left = wrapRect.width - tw - 8;
+    if (left < 4) left = 4;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top  = top + 'px';
+  }
+
+  function hideTooltip() {
+    tooltip.classList.remove('show');
+    activeLoc = null;
+  }
+
+  mapWrap.addEventListener('mousemove', function(e) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const g = el ? el.closest('g[data-loc]') : null;
+    if (g) {
+      const locKey = g.getAttribute('data-loc');
+      if (locKey !== activeLoc) {
+        activeLoc = locKey;
+        showTooltip(locKey, e.clientX, e.clientY);
+      }
+    } else {
+      if (activeLoc) hideTooltip();
+    }
+    if (activeLoc) positionTooltip(e.clientX, e.clientY);
+  });
+
+  mapWrap.addEventListener('mouseleave', hideTooltip);
+
+  mapWrap.addEventListener('click', function(e) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const g = el ? el.closest('g[data-loc]') : null;
+    if (g) {
+      const locKey = g.getAttribute('data-loc');
+      const rect = mapWrap.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + 70;
+      showTooltip(locKey, cx, cy);
+    }
+  });
+})();
+</script>
+</body>
+</html>
