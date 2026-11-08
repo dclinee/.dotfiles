@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>中国历史疆域图 · 高德底图</title>
+<style>
+  :root{
+    --ink:#2a241c;
+    --ink2:#6d5d49;
+    --ink3:#94836c;
+    --paper:#fbf7ee;
+    --line:rgba(96,74,46,.18);
+    --shadow:0 12px 34px rgba(70,50,25,.16);
+    --accent:#b8432f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:#e9e3d6;
+    color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+  button{font-family:inherit}
+
+  #map{position:fixed;inset:0;z-index:0;background:#e9e3d6}
+  .vignette{position:fixed;inset:0;z-index:2;pointer-events:none;
+    background:radial-gradient(125% 95% at 50% 45%,rgba(255,252,246,0) 52%,rgba(120,95,60,.20) 100%);
+    box-shadow:inset 0 0 140px rgba(120,95,60,.22)}
+
+  .ui{position:fixed;z-index:10}
+
+  /* ---------- 品牌 ---------- */
+  .brand{top:20px;left:20px;display:flex;align-items:center;gap:12px;
+    padding:10px 16px 10px 12px;background:rgba(251,247,238,.9);
+    border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .seal{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;
+    color:#a8382a;border:2px solid #b8432f;border-radius:4px;
+    font-family:"Songti SC","STSong","Noto Serif CJK SC",serif;font-size:21px;font-weight:700;
+    background:linear-gradient(180deg,#fff9ef,#f6ecda)}
+  .brand h1{margin:0;font-size:16px;letter-spacing:.14em;font-weight:700;
+    font-family:"Songti SC","STSong","Noto Serif CJK SC",serif}
+  .brand p{margin:3px 0 0;font-size:11px;color:var(--ink3);letter-spacing:.04em}
+
+  /* ---------- 信息卡 ---------- */
+  .info{top:96px;left:20px;width:328px;max-height:calc(100vh - 250px);overflow:auto;
+    padding:18px 20px 16px;background:rgba(251,247,238,.94);
+    border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    transition:opacity .22s ease,transform .22s ease}
+  .info.swap{opacity:0;transform:translateY(6px)}
+  .info::-webkit-scrollbar{width:4px}
+  .info::-webkit-scrollbar-thumb{background:rgba(120,95,60,.25);border-radius:2px}
+
+  .era-head{display:flex;align-items:baseline;gap:10px}
+  .era-head .name{font-family:"Songti SC","STSong","Noto Serif CJK SC",serif;
+    font-size:40px;line-height:1;font-weight:700;letter-spacing:.04em}
+  .era-head .full{font-size:13px;color:var(--ink3);letter-spacing:.08em}
+  .era-years{margin-top:8px;display:inline-block;font-size:12px;color:#fff8ee;
+    background:var(--c,#b8432f);padding:3px 9px;border-radius:3px;letter-spacing:.06em}
+  .era-desc{margin:14px 0 0;font-size:13px;line-height:1.85;color:var(--ink2);text-align:justify}
+  .facts{margin:16px 0 0;padding:12px 0 0;border-top:1px dashed var(--line)}
+  .fact{display:flex;gap:10px;font-size:12.5px;line-height:1.7;margin-bottom:6px}
+  .fact dt{flex:0 0 58px;color:var(--ink3);margin:0}
+  .fact dd{margin:0;color:var(--ink);font-weight:500}
+  .tags{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font-size:11px;color:var(--c,#b8432f);padding:2px 8px;border-radius:20px;
+    border:1px solid color-mix(in srgb,var(--c,#b8432f) 35%,transparent);
+    background:color-mix(in srgb,var(--c,#b8432f) 8%,transparent)}
+  .note{margin-top:12px;font-size:10.5px;line-height:1.6;color:var(--ink3)}
+
+  /* ---------- 右侧控制 ---------- */
+  .ctrl{top:20px;right:20px;width:206px;padding:12px 14px;
+    background:rgba(251,247,238,.9);border:1px solid var(--line);border-radius:6px;
+    box-shadow:var(--shadow);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .ctrl-title{font-size:10px;letter-spacing:.2em;color:var(--ink3);margin-bottom:8px}
+  .switch{display:flex;align-items:center;justify-content:space-between;
+    padding:6px 0;font-size:12.5px;color:var(--ink2);cursor:pointer}
+  .track{position:relative;width:34px;height:18px;border-radius:20px;
+    background:rgba(120,95,60,.22);transition:background .2s}
+  .track::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;
+    border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+  .switch input{display:none}
+  .switch input:checked + .track{background:var(--accent)}
+  .switch input:checked + .track::after{transform:translateX(16px)}
+  .ctrl-actions{margin-top:8px;padding-top:10px;border-top:1px dashed var(--line);
+    display:flex;flex-direction:column;gap:7px}
+  .btn{appearance:none;border:1px solid var(--line);background:rgba(255,252,246,.8);
+    color:var(--ink2);border-radius:4px;padding:7px 10px;font-size:12px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:6px;transition:.18s}
+  .btn:hover{border-color:rgba(120,95,60,.45);color:var(--ink);background:#fffdf7}
+  .btn.on{background:var(--accent);border-color:var(--accent);color:#fff8ee}
+  .btn svg{width:11px;height:11px;fill:currentColor}
+
+  .legend{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:11px;color:var(--ink3)}
+  .legend i{display:inline-block;width:16px;height:9px;border-radius:2px;margin-right:7px;
+    vertical-align:-1px;border:1px solid;background:rgba(184,67,47,.24);border-color:#b8432f}
+
+  /* ---------- 时间轴 ---------- */
+  .timeline{bottom:20px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:stretch;gap:4px;padding:8px;
+    background:rgba(251,247,238,.94);border:1px solid var(--line);border-radius:6px;
+    box-shadow:var(--shadow);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    max-width:calc(100vw - 40px);overflow-x:auto;scrollbar-width:none}
+  .timeline::-webkit-scrollbar{display:none}
+  .chip{position:relative;appearance:none;border:1px solid transparent;background:transparent;
+    border-radius:4px;padding:7px 13px 6px;cursor:pointer;text-align:center;
+    min-width:62px;transition:background .18s,color .18s,border-color .18s}
+  .chip b{display:block;font-family:"Songti SC","STSong","Noto Serif CJK SC",serif;
+    font-size:16px;font-weight:700;letter-spacing:.06em;color:var(--ink);line-height:1.15}
+  .chip em{display:block;margin-top:3px;font-style:normal;font-size:9.5px;
+    letter-spacing:.02em;color:var(--ink3);white-space:nowrap}
+  .chip:hover{background:rgba(120,95,60,.07)}
+  .chip.active{background:var(--c);border-color:var(--c);box-shadow:0 4px 12px color-mix(in srgb,var(--c) 35%,transparent)}
+  .chip.active b{color:#fff8ee}
+  .chip.active em{color:rgba(255,248,238,.78)}
+
+  .disclaimer{bottom:8px;right:20px;max-width:330px;text-align:right;
+    font-size:9.5px;line-height:1.6;color:rgba(90,72,50,.62);pointer-events:none;z-index:9}
+
+  /* ---------- 都城标记 ---------- */
+  .cap{position:relative;width:14px;height:14px}
+  .cap .dot{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;
+    background:#b8432f;border:2px solid #fff8ee;box-shadow:0 0 0 2px rgba(184,67,47,.28)}
+  .cap .ring{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;
+    border:1px solid rgba(184,67,47,.75);animation:pulse 2.2s ease-out infinite}
+  .cap .lbl{position:absolute;left:20px;top:-5px;white-space:nowrap;
+    font-family:"Songti SC","STSong","Noto Serif CJK SC",serif;font-size:13px;font-weight:700;
+    letter-spacing:.1em;color:#3a2e22;background:rgba(255,250,240,.9);
+    padding:2px 7px;border:1px solid rgba(150,120,80,.32);border-radius:3px;
+    box-shadow:0 2px 8px rgba(80,60,35,.12)}
+  @keyframes pulse{0%{transform:scale(1);opacity:.85}70%{transform:scale(2.6);opacity:0}100%{transform:scale(2.6);opacity:0}}
+
+  /* ---------- Key 引导 ---------- */
+  .gate{position:fixed;inset:0;z-index:50;display:none;place-items:center;padding:20px;
+    background:rgba(38,31,22,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .gate.show{display:grid}
+  .gate-card{width:100%;max-width:430px;padding:30px 30px 24px;border-radius:8px;
+    background:var(--paper);border:1px solid rgba(120,95,60,.3);
+    box-shadow:0 30px 80px rgba(30,20,10,.4);position:relative;overflow:hidden}
+  .gate-card::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;
+    background:linear-gradient(90deg,#b8432f,#d4a03c,#6f8f5a,#5b7fa6,#9b4a6b)}
+  .gate-kicker{font-size:10.5px;letter-spacing:.22em;color:var(--ink3);margin-bottom:10px}
+  .gate-card h2{margin:0;font-family:"Songti SC","STSong","Noto Serif CJK SC",serif;
+    font-size:26px;letter-spacing:.1em;font-weight:700}
+  .gate-sub{margin:10px 0 20px;font-size:12.5px;line-height:1.8;color:var(--ink2)}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:11.5px;color:var(--ink2);margin-bottom:5px;letter-spacing:.04em}
+  .field label span{color:var(--ink3);font-size:10.5px}
+  .field input{width:100%;padding:10px 12px;font-size:13px;color:var(--ink);
+    background:#fffdf7;border:1px solid rgba(120,95,60,.3);border-radius:4px;outline:none;
+    transition:border-color .18s,box-shadow .18s;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .field input:focus{border-color:#b8432f;box-shadow:0 0 0 3px rgba(184,67,47,.12)}
+  .gate-go{width:100%;margin-top:6px;padding:11px;border:none;border-radius:4px;cursor:pointer;
+    background:#b8432f;color:#fff8ee;font-size:13.5px;letter-spacing:.16em;
+    transition:background .18s}
+  .gate-go:hover{background:#a2361f}
+  .gate-go:disabled{opacity:.6;cursor:wait}
+  .gate-tip{margin:14px 0 0;font-size:10.5px;line-height:1.7;color:var(--ink3)}
+  .gate-tip code{background:rgba(120,95,60,.12);padding:1px 5px;border-radius:3px;font-size:10px}
+  .gate-err{display:none;margin:12px 0 0;font-size:11.5px;line-height:1.6;color:#b0341f;
+    background:rgba(184,67,47,.08);border-left:2px solid #b8432f;padding:7px 9px;border-radius:2px}
+  .gate-err.show{display:block}
+
+  .loading{position:fixed;inset:0;z-index:40;display:none;place-items:center;
+    background:rgba(251,247,238,.72);backdrop-filter:blur(3px)}
+  .loading.show{display:grid}
+  .spinner{width:26px;height:26px;border:2px solid rgba(184,67,47,.25);
+    border-top-color:#b8432f;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width:820px){
+    .brand{top:12px;left:12px;padding:8px 12px 8px 9px}
+    .brand h1{font-size:14px}
+    .brand p{display:none}
+    .seal{width:32px;height:32px;flex-basis:32px;font-size:18px}
+    .info{top:76px;left:12px;right:12px;width:auto;max-height:38vh;padding:14px 15px 12px}
+    .era-head .name{font-size:30px}
+    .era-desc{font-size:12px;line-height:1.7;margin-top:10px}
+    .ctrl{top:12px;right:12px;width:auto;padding:8px 10px;display:flex;align-items:center;gap:8px}
+    .ctrl-title,.switch,.legend{display:none}
+    .ctrl-actions{margin:0;padding:0;border:0;flex-direction:row;gap:6px}
+    .btn{padding:6px 9px;font-size:11px}
+    .timeline{bottom:12px;left:12px;right:12px;transform:none;max-width:none;padding:6px}
+    .chip{min-width:52px;padding:6px 9px 5px}
+    .chip b{font-size:14px}
+    .chip em{display:none}
+    .disclaimer{display:none}
+  }
+  @media (max-width:560px){
+    .brand>div:last-child{display:none}
+    .brand{padding:7px}
+    .info{top:62px;max-height:34vh}
+    .ctrl{padding:6px 7px}
+    .btn{padding:5px 7px;font-size:10.5px}
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+<div class="vignette"></div>
+
+<header class="ui brand">
+  <div class="seal">疆</div>
+  <div>
+    <h1>中国历史疆域图</h1>
+    <p>高德底图 · 七朝疆域示意</p>
+  </div>
+</header>
+
+<aside class="ui info" id="info"></aside>
+
+<div class="ui ctrl">
+  <div class="ctrl-title">图层控制</div>
+  <label class="switch">都城标注
+    <input type="checkbox" id="tg-cap" checked><span class="track"></span>
+  </label>
+  <label class="switch">疆域题字
+    <input type="checkbox" id="tg-wm" checked><span class="track"></span>
+  </label>
+  <div class="legend"><i></i>疆域范围（示意）</div>
+  <div class="ctrl-actions">
+    <button class="btn" id="btn-play">
+      <svg viewBox="0 0 16 16" id="ico-play"><path d="M4 2.5v11l9-5.5z"/></svg>
+      <span>自动播放</span>
+    </button>
+    <button class="btn" id="btn-reset">重置视角</button>
+    <button class="btn" id="btn-key">更换 Key</button>
+  </div>
+</div>
+
+<nav class="ui timeline" id="timeline"></nav>
+
+<p class="disclaimer">
+  疆域为依据《中国历史地图集》等资料简化的示意复原，非精确历史边界；
+  历史坐标为 WGS-84，叠加至高德 GCJ-02 底图存在约百米级偏差。
+</p>
+
+<div class="gate" id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="off">
+    <div class="gate-kicker">高德地图 JS API 2.0</div>
+    <h2>中国历史疆域图</h2>
+    <p class="gate-sub">本页以高德地图为现代底图，叠加七朝疆域。需要你的 Web 端（JS API）Key 才能加载底图。Key 仅保存在本机浏览器，不会上传到任何服务器。</p>
+    <div class="field">
+      <label>Web 端 Key</label>
+      <input id="in-key" placeholder="在高德控制台创建 Web端(JS API) Key" spellcheck="false">
+    </div>
+    <div class="field">
+      <label>安全密钥 securityJsCode <span>（2021 年 12 月后申请的 Key 必填）</span></label>
+      <input id="in-sec" placeholder="可留空" spellcheck="false">
+    </div>
+    <button class="gate-go" id="gate-go" type="submit">进入地图</button>
+    <p class="gate-tip">申请：console.amap.com/dev/key/app　·　若以 file:// 打开，需把 Key 的域名白名单设为 <code>*</code>，否则请用本地 HTTP 服务访问。</p>
+    <p class="gate-err" id="gate-err"></p>
+  </form>
+</div>
+
+<div class="loading" id="loading"><div class="spinner"></div></div>
+
+<script>
+/* =========================================================================
+   中国历史疆域图：朝代数据（疆域为示意简化，非精确边界）
+   ========================================================================= */
+const ERAS = [
+  {
+    id: 'qin', short: '秦', full: '秦朝', years: '前 221 — 前 206', span: '前221',
+    color: '#b8432f',
+    capital: { name: '咸阳', coord: [108.71, 34.33] },
+    labelPos: [110.5, 34.2],
+    area: '约 340 万 km²',
+    desc: '秦灭六国，北却匈奴、南平百越，推行郡县制，首次将中原、巴蜀、岭南与河套纳入同一政权，奠定此后两千年中国疆域的基本骨架。',
+    tags: ['首次大一统', '郡县制', '书同文 · 车同轨'],
+    polys: [[
+      [103.2,35.2],[103.6,36.9],[105.0,38.0],[106.3,39.6],[108.2,40.9],[110.6,41.2],
+      [113.2,41.6],[116.0,42.3],[118.8,42.5],[120.8,41.6],[122.3,40.6],[121.6,39.2],
+      [120.4,37.8],[121.0,36.2],[120.3,34.6],[121.6,31.9],[121.2,30.2],[120.2,28.3],
+      [118.6,26.4],[117.6,24.0],[114.8,22.4],[112.0,21.3],[110.0,21.0],[108.2,21.3],
+      [106.6,22.2],[105.0,23.4],[104.2,25.0],[103.6,27.0],[102.6,29.2],[102.9,31.4],
+      [103.2,33.2],[103.0,34.3]
+    ]]
+  },
+  {
+    id: 'xihan', short: '西汉', full: '西汉', years: '前 202 — 公元 8', span: '前202',
+    color: '#c9793f',
+    capital: { name: '长安', coord: [108.94, 34.34] },
+    labelPos: [108.0, 33.0],
+    area: '约 600 万 km²（含西域都护府）',
+    desc: '汉武帝北击匈奴、收河西走廊，设河西四郡；张骞通西域后置西域都护府，将塔里木盆地纳入版图，东并朝鲜北部、南定南越，形成“东抵朝鲜、西至葱岭”的格局。',
+    tags: ['丝绸之路', '西域都护府', '河西四郡'],
+    polys: [
+      [
+        [103.0,35.0],[103.8,37.0],[105.5,38.6],[107.0,40.0],[109.0,41.1],[111.2,41.3],
+        [114.0,41.7],[117.0,42.4],[119.5,42.6],[121.0,41.8],[122.6,40.2],[123.4,38.6],
+        [124.0,37.0],[123.3,35.5],[122.0,34.0],[121.6,32.0],[121.6,30.2],[120.6,28.3],
+        [119.0,26.3],[118.0,24.0],[115.2,22.4],[112.4,21.3],[110.4,20.9],[108.8,21.4],
+        [107.0,22.3],[105.4,23.6],[104.6,25.2],[104.0,27.2],[103.0,29.2],[103.2,31.6],
+        [103.0,33.6]
+      ],
+      [
+        [103.0,37.3],[101.0,39.0],[98.0,40.2],[95.0,41.0],[91.5,41.6],[88.0,42.0],
+        [84.5,41.6],[81.0,41.0],[78.0,40.0],[75.0,39.2],[76.0,37.8],[79.0,36.8],
+        [82.0,36.3],[86.0,36.8],[89.5,37.2],[93.0,37.6],[96.0,37.9],[99.5,37.6],
+        [102.0,37.2]
+      ],
+      [
+        [124.0,40.0],[126.0,40.5],[127.5,39.8],[127.0,38.6],[126.0,38.0],[124.8,38.4],
+        [124.2,39.2]
+      ]
+    ]
+  },
+  {
+    id: 'tang', short: '唐', full: '唐朝', years: '618 — 907', span: '618',
+    color: '#d4a03c',
+    capital: { name: '长安', coord: [108.94, 34.34] },
+    labelPos: [108.0, 32.6],
+    area: '约 1237 万 km²（极盛）',
+    desc: '唐前期灭东突厥、薛延陀，置安西、北庭都护府控扼西域，安东都护府一度辖至朝鲜半岛北部，疆域东至库页岛、西抵咸海，是当时世界上疆域最辽阔的帝国之一。',
+    tags: ['安西四镇', '都护府体系', '万国来朝'],
+    polys: [
+      [
+        [104.0,35.0],[104.8,37.2],[107.0,39.0],[109.5,40.6],[112.0,41.2],[115.0,41.8],
+        [118.0,42.5],[120.5,42.8],[122.5,41.8],[124.5,40.8],[126.0,40.2],[127.8,40.0],
+        [128.5,38.5],[129.0,36.5],[128.0,35.0],[126.5,34.0],[125.0,33.0],[123.5,31.5],
+        [122.5,30.0],[121.5,28.2],[120.0,26.3],[118.8,23.8],[116.0,22.3],[113.0,21.2],
+        [110.5,20.8],[108.5,21.2],[106.8,22.4],[105.2,23.8],[104.0,25.5],[103.0,27.5],
+        [102.0,29.5],[102.5,32.0],[103.2,34.0]
+      ],
+      [
+        [103.5,37.5],[101.0,39.2],[97.5,40.3],[94.0,41.0],[90.0,41.6],[86.0,41.8],
+        [82.0,41.3],[78.5,40.6],[75.0,40.0],[72.0,40.0],[69.0,40.5],[66.5,40.0],
+        [65.5,38.5],[67.5,37.0],[71.0,36.8],[74.5,37.0],[78.0,36.8],[81.5,36.5],
+        [85.0,36.8],[88.5,37.2],[92.0,37.5],[96.0,37.8],[99.5,37.6],[102.0,37.3]
+      ]
+    ]
+  },
+  {
+    id: 'beisong', short: '北宋', full: '北宋', years: '960 — 1127', span: '960',
+    color: '#7a9a5b',
+    capital: { name: '东京开封', coord: [114.31, 34.80] },
+    labelPos: [110.5, 31.5],
+    area: '约 280 万 km²',
+    desc: '北宋统一中原与江南，但燕云十六州未复、河西为西夏所据，北界大致沿白沟河与辽对峙，西北与西夏长期拉锯，形成“守内虚外”的疆域格局。',
+    tags: ['幽云未复', '守内虚外', '商业繁荣'],
+    polys: [[
+      [104.0,34.8],[104.5,36.2],[106.0,37.2],[107.5,38.0],[109.5,38.6],[111.5,39.2],
+      [113.0,39.2],[114.8,38.6],[116.2,39.0],[117.5,39.2],[118.8,38.6],[119.5,37.5],
+      [120.8,37.0],[122.2,36.5],[120.5,34.6],[121.0,32.8],[122.0,31.0],[121.5,29.5],
+      [120.3,28.2],[119.0,26.0],[117.5,23.9],[115.0,22.6],[112.5,21.5],[110.3,21.2],
+      [108.5,21.6],[106.8,22.6],[105.2,24.2],[104.0,26.2],[103.5,28.6],[103.3,31.2],
+      [103.8,33.0],[103.7,34.4]
+    ]]
+  },
+  {
+    id: 'yuan', short: '元', full: '元朝', years: '1271 — 1368', span: '1271',
+    color: '#5b7fa6',
+    capital: { name: '大都', coord: [116.40, 39.90] },
+    labelPos: [103.0, 38.5],
+    area: '约 1372 万 km²',
+    desc: '元朝由蒙古汗国演变而来，疆域东起日本海、西包西藏与云南，首次将青藏高原纳入中央政权直接管辖（宣政院），行省制度深刻影响后世。',
+    tags: ['行省制', '宣政院', '驿传网络'],
+    polys: [[
+      [74.0,39.5],[77.0,41.5],[81.0,44.5],[85.0,47.5],[89.5,49.5],[94.0,51.0],
+      [98.5,51.6],[103.0,51.2],[107.5,50.6],[112.0,50.2],[116.5,49.9],[121.0,50.3],
+      [125.5,49.2],[129.5,47.2],[132.5,45.0],[131.5,42.8],[129.5,42.5],[127.5,41.5],
+      [125.5,40.3],[123.5,40.2],[121.8,40.8],[120.2,39.2],[121.3,37.3],[122.6,36.2],
+      [120.8,34.6],[121.8,32.2],[122.2,30.6],[121.0,28.4],[119.4,26.4],[118.0,24.4],
+      [115.2,22.7],[112.5,21.6],[110.2,21.3],[108.2,21.6],[106.4,22.6],[104.8,23.8],
+      [103.2,25.4],[101.8,27.2],[100.0,29.2],[99.0,31.4],[97.6,33.0],[95.5,34.2],
+      [93.0,34.6],[90.0,34.0],[87.5,32.5],[85.0,30.5],[82.5,29.5],[80.0,30.5],
+      [78.0,32.0],[76.5,34.5],[75.0,36.5],[74.0,38.2]
+    ]]
+  },
+  {
+    id: 'ming', short: '明', full: '明朝', years: '1368 — 1644', span: '1368',
+    color: '#9b4a6b',
+    capital: { name: '北京', coord: [116.40, 39.92] },
+    labelPos: [110.0, 32.5],
+    area: '约 1000 万 km²（含羁縻）',
+    desc: '明朝北筑长城、设九边，西抵嘉峪关，东至辽东都司，并在东北设奴儿干都司、西南推行土司羁縻；郑和下西洋一度将影响力推至印度洋沿岸。',
+    tags: ['九边重镇', '奴儿干都司', '郑和下西洋'],
+    polys: [[
+      [98.0,40.0],[100.5,40.8],[103.0,41.2],[106.0,41.5],[109.0,41.5],[112.0,41.2],
+      [115.0,41.0],[117.5,41.0],[119.5,41.0],[121.0,40.8],[122.5,41.2],[124.0,41.5],
+      [125.5,41.5],[126.5,40.5],[125.0,39.5],[123.5,39.0],[122.5,38.0],[123.5,36.8],
+      [122.0,35.5],[121.0,33.5],[121.8,31.5],[121.5,30.2],[120.3,28.2],[119.0,26.0],
+      [117.5,23.8],[115.0,22.6],[112.5,21.5],[110.3,21.2],[108.5,21.6],[106.8,22.6],
+      [105.2,23.6],[103.8,25.2],[102.2,27.2],[100.5,29.0],[99.2,31.2],[98.6,33.4],
+      [98.0,35.5],[97.8,37.8]
+    ]]
+  },
+  {
+    id: 'qing', short: '清', full: '清朝', years: '1636 — 1912', span: '1636',
+    color: '#4a6f7d',
+    capital: { name: '北京', coord: [116.40, 39.92] },
+    labelPos: [104.0, 37.5],
+    area: '约 1316 万 km²（1820 年）',
+    desc: '清朝极盛时东至库页岛、北抵外兴安岭、西达巴尔喀什湖、南包南海诸岛，通过盟旗、驻藏大臣、将军辖区等制度整合多元疆域，奠定现代中国版图的基础。',
+    tags: ['康乾盛世', '改土归流', '多元一体'],
+    polys: [
+      [
+        [73.5,39.5],[75.5,41.5],[79.0,44.5],[83.0,47.5],[87.5,49.5],[92.0,50.5],
+        [96.5,51.0],[100.5,51.5],[104.5,51.0],[108.5,50.5],[112.5,50.0],[116.5,50.0],
+        [120.5,50.5],[124.5,52.0],[128.5,53.5],[132.0,53.0],[135.0,52.0],[137.5,53.5],
+        [140.0,53.0],[141.5,51.5],[141.0,49.0],[140.0,46.5],[138.0,45.0],[135.5,43.5],
+        [133.0,42.5],[131.0,42.0],[130.5,40.5],[129.5,39.5],[128.0,38.5],[126.5,37.5],
+        [126.0,36.0],[125.0,34.5],[123.5,33.0],[122.5,31.5],[121.8,30.0],[121.0,28.2],
+        [119.5,26.0],[118.0,24.0],[115.5,22.8],[113.0,21.8],[111.0,21.3],[109.5,21.5],
+        [108.0,21.8],[106.5,22.5],[105.0,23.5],[103.5,25.0],[102.0,27.0],[100.5,29.0],
+        [99.0,31.0],[97.5,33.0],[96.0,31.5],[94.0,29.8],[92.0,28.6],[89.0,27.8],
+        [86.0,28.2],[83.0,29.2],[80.5,30.6],[79.0,32.6],[78.0,35.0],[77.5,37.2],
+        [75.5,38.5]
+      ],
+      [
+        [120.0,25.3],[121.5,25.4],[122.0,24.5],[121.5,23.0],[120.8,22.0],[120.0,22.6],
+        [119.9,24.0]
+      ],
+      [
+        [108.6,20.1],[110.0,20.2],[111.0,19.6],[110.3,18.2],[109.2,18.3],[108.5,19.2]
+      ]
+    ]
+  }
+];
+
+/* =========================================================================
+   状态与工具
+   ========================================================================= */
+const state = { key: '', sec: '', current: 0, playing: false, cap: true, wm: true };
+let map = null, overlays = [], capMarker = null, waterMark = null, timer = null, ready = false;
+
+const $ = id => document.getElementById(id);
+
+function readConfig() {
+  const qs = new URLSearchParams(location.search);
+  state.key = qs.get('key') || localStorage.getItem('amap_key') || '';
+  state.sec = qs.get('sec') || localStorage.getItem('amap_sec') || '';
+}
+function saveConfig() {
+  localStorage.setItem('amap_key', state.key);
+  if (state.sec) localStorage.setItem('amap_sec', state.sec);
+  else localStorage.removeItem('amap_sec');
+}
+function gateError(msg) {
+  const el = $('gate-err');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function openGate(msg) {
+  stopPlay();
+  $('gate').classList.add('show');
+  $('loading').classList.remove('show');
+  $('gate-go').disabled = false;
+  if (msg) gateError(msg);
+  setTimeout(() => $('in-key').focus(), 60);
+}
+function closeGate() {
+  $('gate').classList.remove('show');
+  $('gate-err').classList.remove('show');
+}
+
+/* =========================================================================
+   加载高德 JS API
+   ========================================================================= */
+function boot() {
+  closeGate();
+  $('loading').classList.add('show');
+  if (state.sec) window._AMapSecurityConfig = { securityJsCode: state.sec };
+
+  if (window.AMap && window.AMap.Map) {
+    initMap();
+    return;
+  }
+
+  const s = document.createElement('script');
+  s.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(state.key) +
+          '&plugin=AMap.Scale';
+  s.onload = () => {
+    if (!window.AMap) {
+      openGate('高德脚本已返回，但未取得 AMap 对象。请检查 Key 是否为「Web端(JS API)」类型。');
+      return;
+    }
+    initMap();
+  };
+  s.onerror = () => openGate('高德地图脚本加载失败：请检查网络连接、Key 是否有效。');
+  document.head.appendChild(s);
+
+  setTimeout(() => {
+    if (!ready) {
+      const g = $('gate');
+      if (!g.classList.contains('show')) {
+        openGate('加载超时。常见原因：Key 与安全密钥不匹配、域名白名单未放行（file:// 打开需设为 *）。');
+      }
+    }
+  }, 9000);
+}
+
+/* =========================================================================
+   初始化地图
+   ========================================================================= */
+function initMap() {
+  try {
+    map = new AMap.Map('map', {
+      zoom: 4.2,
+      zooms: [3, 7],
+      center: [104, 35.5],
+      mapStyle: 'amap://styles/whitesmoke',
+      viewMode: '2D',
+      resizeEnable: true,
+      showLabel: true
+    });
+    map.addControl(new AMap.Scale({ position: 'LB' }));
+    map.on('complete', () => {
+      ready = true;
+      $('loading').classList.remove('show');
+      renderEra(state.current);
+    });
+    // 兜底：complete 偶发不触发
+    setTimeout(() => {
+      if (!ready) {
+        ready = true;
+        $('loading').classList.remove('show');
+        renderEra(state.current);
+      }
+    }, 2200);
+  } catch (e) {
+    openGate('地图初始化失败：' + e.message);
+  }
+}
+
+/* =========================================================================
+   渲染
+   ========================================================================= */
+function renderEra(index) {
+  if (!map || !ready) { state.current = index; return; }
+  state.current = index;
+  const era = ERAS[index];
+
+  map.remove(overlays);
+  overlays = [];
+  capMarker = null;
+  waterMark = null;
+
+  era.polys.forEach((ring, i) => {
+    const poly = new AMap.Polygon({
+      path: ring,
+      fillColor: era.color,
+      fillOpacity: 0,
+      strokeColor: era.color,
+      strokeWeight: 2,
+      strokeOpacity: 0,
+      bubble: true,
+      cursor: 'pointer',
+      zIndex: 60 + i
+    });
+    poly.on('mouseover', () => {
+      poly.setOptions({ fillOpacity: 0.4, strokeWeight: 3 });
+    });
+    poly.on('mouseout', () => {
+      poly.setOptions({ fillOpacity: 0.24, strokeWeight: 2 });
+    });
+    poly.on('click', () => showInfo(era));
+    map.add(poly);
+    overlays.push(poly);
+    fadeIn(poly);
+  });
+
+  // 疆域题字
+  waterMark = new AMap.Text({
+    text: era.short,
+    position: era.labelPos,
+    anchor: 'center',
+    zIndex: 40,
+    style: {
+      'background': 'transparent',
+      'border': 'none',
+      'color': era.color,
+      'opacity': '0.22',
+      'font-size': '86px',
+      'font-weight': '700',
+      'font-family': '"Songti SC","STSong",serif',
+      'letter-spacing': '0.1em',
+      'pointer-events': 'none',
+      'text-shadow': 'none'
+    }
+  });
+  map.add(waterMark);
+  overlays.push(waterMark);
+
+  // 都城
+  capMarker = new AMap.Marker({
+    position: era.capital.coord,
+    anchor: 'center',
+    zIndex: 220,
+    content: '<div class="cap"><span class="ring"></span><span class="dot"></span>' +
+             '<span class="lbl">' + era.capital.name + '</span></div>'
+  });
+  map.add(capMarker);
+  overlays.push(capMarker);
+
+  applyToggles();
+  showInfo(era);
+  updateTimeline();
+}
+
+function fadeIn(poly) {
+  const t0 = performance.now(), dur = 420;
+  function step(t) {
+    const k = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    poly.setOptions({ fillOpacity: 0.26 * e, strokeOpacity: 0.88 * e });
+    if (k < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function applyToggles() {
+  if (capMarker) capMarker[state.cap ? 'show' : 'hide']();
+  if (waterMark) waterMark[state.wm ? 'show' : 'hide']();
+}
+
+function showInfo(era) {
+  const box = $('info');
+  box.classList.add('swap');
+  const tags = era.tags.map(t => '<span class="tag">' + t + '</span>').join('');
+  const html =
+    '<div class="era-head"><span class="name" style="color:' + era.color + '">' + era.short +
+      '</span><span class="full">' + era.full + '</span></div>' +
+    '<div class="era-years" style="--c:' + era.color + '">' + era.years + '</div>' +
+    '<p class="era-desc">' + era.desc + '</p>' +
+    '<dl class="facts">' +
+      '<div class="fact"><dt>都　城</dt><dd>' + era.capital.name + '</dd></div>' +
+      '<div class="fact"><dt>疆域面积</dt><dd>' + era.area + '</dd></div>' +
+    '</dl>' +
+    '<div class="tags" style="--c:' + era.color + '">' + tags + '</div>' +
+    '<p class="note">提示：点击地图上的疆域可查看该朝信息；疆域为示意复原，面积取学界常用估算值。</p>';
+  setTimeout(() => {
+    box.innerHTML = html;
+    box.classList.remove('swap');
+  }, 160);
+}
+
+/* =========================================================================
+   时间轴
+   ========================================================================= */
+function buildTimeline() {
+  const nav = $('timeline');
+  nav.innerHTML = '';
+  ERAS.forEach((era, i) => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.style.setProperty('--c', era.color);
+    b.dataset.i = i;
+    b.innerHTML = '<b>' + era.short + '</b><em>' + era.span + '</em>';
+    b.addEventListener('click', () => { stopPlay(); animateTo(i); });
+    nav.appendChild(b);
+  });
+}
+
+function updateTimeline() {
+  document.querySelectorAll('.chip').forEach((c, i) => {
+    c.classList.toggle('active', i === state.current);
+  });
+}
+
+function animateTo(i) {
+  if (!ready) { state.current = i; updateTimeline(); return; }
+  renderEra(i);
+}
+
+/* =========================================================================
+   自动播放
+   ========================================================================= */
+function play() {
+  if (state.playing) return;
+  state.playing = true;
+  const btn = $('btn-play');
+  btn.classList.add('on');
+  btn.querySelector('svg').innerHTML = '<rect x="3.5" y="2.5" width="3" height="11" rx=".6"/><rect x="9.5" y="2.5" width="3" height="11" rx=".6"/>';
+  btn.querySelector('span').textContent = '暂停播放';
+  timer = setInterval(() => {
+    const next = (state.current + 1) % ERAS.length;
+    animateTo(next);
+  }, 3800);
+}
+function stopPlay() {
+  if (!state.playing) return;
+  state.playing = false;
+  clearInterval(timer);
+  timer = null;
+  const btn = $('btn-play');
+  btn.classList.remove('on');
+  btn.querySelector('svg').innerHTML = '<path d="M4 2.5v11l9-5.5z"/>';
+  btn.querySelector('span').textContent = '自动播放';
+}
+
+/* =========================================================================
+   事件
+   ========================================================================= */
+$('tg-cap').addEventListener('change', e => { state.cap = e.target.checked; applyToggles(); });
+$('tg-wm').addEventListener('change', e => { state.wm = e.target.checked; applyToggles(); });
+$('btn-play').addEventListener('click', () => state.playing ? stopPlay() : play());
+$('btn-reset').addEventListener('click', () => {
+  if (!map) return;
+  map.setZoomAndCenter(4.2, [104, 35.5], false, 350);
+});
+$('btn-key').addEventListener('click', () => {
+  $('in-key').value = state.key;
+  $('in-sec').value = state.sec;
+  openGate('');
+});
+
+$('gate-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const key = $('in-key').value.trim();
+  if (!key) { gateError('请先填写 Web 端 Key。'); return; }
+  state.key = key;
+  state.sec = $('in-sec').value.trim();
+  saveConfig();
+  $('gate-go').disabled = true;
+  boot();
+  setTimeout(() => { $('gate-go').disabled = false; }, 2500);
+});
+
+document.addEventListener('keydown', e => {
+  if ($('gate').classList.contains('show')) return;
+  if (e.key === 'ArrowRight') { stopPlay(); animateTo((state.current + 1) % ERAS.length); }
+  if (e.key === 'ArrowLeft') { stopPlay(); animateTo((state.current + ERAS.length - 1) % ERAS.length); }
+  if (e.code === 'Space') { e.preventDefault(); state.playing ? stopPlay() : play(); }
+});
+
+/* =========================================================================
+   启动
+   ========================================================================= */
+buildTimeline();
+readConfig();
+
+if (state.key) {
+  boot();
+} else {
+  $('loading').classList.remove('show');
+  openGate('');
+}
+</script>
+</body>
+</html>
